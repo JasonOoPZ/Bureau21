@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import BattleLog from '@/components/BattleLog';
@@ -18,6 +18,23 @@ export default function BattlePage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const loadTargets = useCallback(async (myId: string, myLevel: number) => {
+    const { data } = await supabase
+      .from('characters')
+      .select('*')
+      .neq('id', myId)
+      .eq('is_dead', false)
+      .gte('level', Math.max(1, myLevel - 5))
+      .lte('level', myLevel + 5)
+      .limit(10);
+    if (data) {
+      const eligible = (data as Character[]).filter(
+        (c) => !isProtected(c.age_days, c.level)
+      );
+      setTargets(eligible);
+    }
+  }, [supabase]);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
@@ -34,24 +51,7 @@ export default function BattlePage() {
         loadTargets(data.id, data.level);
       }
     });
-  }, [supabase, router]);
-
-  async function loadTargets(myId: string, myLevel: number) {
-    const { data } = await supabase
-      .from('characters')
-      .select('*')
-      .neq('id', myId)
-      .eq('is_dead', false)
-      .gte('level', Math.max(1, myLevel - 5))
-      .lte('level', myLevel + 5)
-      .limit(10);
-    if (data) {
-      const eligible = (data as Character[]).filter(
-        (c) => !isProtected(c.age_days, c.level)
-      );
-      setTargets(eligible);
-    }
-  }
+  }, [supabase, router, loadTargets]);
 
   async function handleBattle() {
     if (!character || !selectedTarget) return;
