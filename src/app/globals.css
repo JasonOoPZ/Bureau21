@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 226, 232, 240;
+  --background-start-rgb: 2, 10, 23;
+  --background-end-rgb: 5, 15, 36;
+}
+
+body {
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    140deg,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+}
+
+.font-display {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+}

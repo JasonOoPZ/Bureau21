@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  role           String    @default("player")
+  suspended      Boolean   @default(false)
+  pilotState     PilotState?
+  accounts       Account[]
+  sessions       Session[]
+  boardPosts         BoardPost[]
+  chatMessages       ChatMessage[]
+  quickPostsSent     QuickPost[]     @relation("QuickPostFrom")
+  quickPostsReceived QuickPost[]     @relation("QuickPostTo")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model PilotState {
+  id                String          @id @default(cuid())
+  userId            String          @unique
+  callsign          String
+  characterSlug     String          @default("ember-754")
+  level             Int             @default(1)
+  xp                Int             @default(0)
+  credits           Int             @default(300)
+  tokens            Int             @default(0)
+  fuel              Int             @default(10)
+  hull              Int             @default(100)
+  lifeForce         Int             @default(15)
+  motivation        Int             @default(100)
+  strength          Float           @default(3.0)
+  speed             Float           @default(5.0)
+  endurance         Float           @default(0.2)
+  panic             Float           @default(0.0)
+  confidence        Int             @default(10)
+  atkSplit          Int             @default(50)
+  gymStreak         Int             @default(0)
+  currentSector     String          @default("Fringe Expanse")
+  kills             Int             @default(0)
+  bounty            Int             @default(0)
+  ore               Int             @default(0)
+  herbs             Int             @default(0)
+  lastActionAt      DateTime        @default(now())
+  lastFuelRegen     DateTime        @default(now())
+  lastGymAt         DateTime?
+  lastMotivationAt  DateTime        @default(now())
+  lastHydroAt       DateTime        @default(now())
+  lastDockAt        DateTime        @default(now())
+  lastFabAt         DateTime        @default(now())
+  missions          Mission[]
+  inventory         InventoryItem[]
+  battleLogs        BattleLog[]
+  syndicateMember   SyndicateMember?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BattleLog {
+  id            String     @id @default(cuid())
+  pilotId       String
+  opponentName  String
+  result        String
+  xpGained      Int
+  creditsGained Int
+  roundsCount   Int
+  logText       String
+  createdAt     DateTime   @default(now())
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model InventoryItem {
+  id        String   @id @default(cuid())
+  pilotId   String
+  name      String
+  type      String
+  tier      Int
+  bonusType String
+  bonusAmt  Int
+  equipped  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model Mission {
+  id           String   @id @default(cuid())
+  pilotId      String
+  title        String
+  description  String
+  rewardXp     Int
+  rewardCredits Int
+  targetCount  Int
+  currentCount Int      @default(0)
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+model BoardPost {
+  id        String   @id @default(cuid())
+  authorId  String
+  category  String   @default("general")
+  title     String
+  body      String
+  karma     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Syndicate {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  tag         String            @unique
+  description String            @default("")
+  treasury    Int               @default(0)
+  leaderId    String
+  members     SyndicateMember[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model SyndicateMember {
+  id          String    @id @default(cuid())
+  syndicateId String
+  pilotId     String    @unique
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now())
+
+  syndicate   Syndicate  @relation(fields: [syndicateId], references: [id], onDelete: Cascade)
+  pilot       PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model QuickPost {
+  id          String   @id @default(cuid())
+  fromId      String
+  toId        String
+  body        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  from User @relation("QuickPostFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("QuickPostTo",   fields: [toId],   references: [id], onDelete: Cascade)
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionToken])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
