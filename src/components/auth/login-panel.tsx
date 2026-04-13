@@ -2,6 +2,7 @@
 
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
 import { defaultStarterCharacter, starterCharacters } from "@/lib/starter-characters";
+import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 
@@ -122,27 +123,62 @@ export function LoginPanel() {
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-10 sm:px-6 lg:px-10">
+      <Image
+        className="absolute inset-0 -z-30 h-full w-full object-cover"
+        src="/bureau21-welcome.png"
+        alt="Bureau 21 landing background"
+        fill
+        priority
+      />
+      <div className="absolute inset-0 -z-20 bg-slate-950/70" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_85%_15%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_85%,rgba(245,158,11,0.15),transparent_40%)]" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgba(2,6,23,0.94),rgba(7,20,38,0.9))]" />
 
       <section className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-center">
-        <div className="space-y-6 lg:pr-10">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/90">Bureau 21 Access Hub</p>
-          <h1 className="font-display text-5xl font-semibold uppercase leading-[0.95] text-slate-50 sm:text-6xl">
-            Enter The Fringe Network
-          </h1>
-          <p className="max-w-xl text-base text-slate-300 sm:text-lg">
-            Sign in with your command account or begin private onboarding with an encrypted email profile.
-            Your pilot identity stays portable across every sector of Bureau 21.
-          </p>
-
-          {/* Hero character portrait */}
-          <div className="flex justify-center lg:justify-start">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full blur-3xl opacity-30" style={{ background: "radial-gradient(circle, #ff4937 0%, transparent 70%)" }} />
-              <StarterCharacterPortrait slug="ember-754" size="xl" />
+        <div className="lg:col-span-2 overflow-hidden rounded-3xl border border-cyan-300/25 bg-black/40 shadow-[0_0_35px_rgba(8,145,178,0.22)]">
+          <div className="relative h-[220px] sm:h-[280px]">
+            <Image
+              className="absolute inset-0 h-full w-full object-cover"
+              src="/bureau21-welcome.png"
+              alt="Welcome to Bureau 21 header"
+              fill
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/90">Main Header</p>
+              <h1 className="font-display text-4xl font-semibold leading-[0.95] text-slate-50 sm:text-5xl">
+                Welcome to Bureau 21
+              </h1>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-6 lg:pr-10">
+          <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/90">Bureau 21 Access Hub</p>
+          <h2 className="font-display text-3xl font-semibold leading-tight text-slate-50 sm:text-4xl">
+            Welcome to Bureau 21 - where classified meets chaotic.
+          </h2>
+          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
+            Ever wanted to infiltrate a top-secret agency where the missions are questionable and the dress code is worse?
+            Bureau 21 lets you dive straight into the action from any browser - no downloads, no installations, no suspicious USB drives.
+            Whether you are on a desktop, phone, or some dusty PDA you found in a drawer, you are good to go.
+          </p>
+          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
+            Fight your way up the ranks, or do not - we will not judge. Take a breather in our suspiciously well-maintained herb gardens.
+            Try your luck at the casino (your life savings were just sitting there doing nothing anyway).
+            Cast a line and enjoy some fishing, because even secret operatives need a hobby.
+            And if you are feeling adventurous, there is always human abduction - strictly off the books, of course.
+          </p>
+          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
+            Still not convinced? Bureau 21 was recently awarded &ldquo;The game I was definitely going to review but then my microwave caught fire and honestly who even reads these, I could literally just type my grocery list here and nobody would blink. I need milk.&rdquo;
+            So there is that.
+          </p>
+          <p className="max-w-xl text-sm text-slate-100 sm:text-base">
+            Best part? It is 100% free. No hidden fees, no shady government funding (that we know of).
+            So quit stalling, hit that signup button - your clearance level awaits.
+            Or at the very least, take the tour before we redact it.
+          </p>
 
           <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.25em] text-cyan-200/90">
             <span className="rounded-full border border-cyan-300/40 bg-cyan-400/10 px-4 py-2">Browser-First</span>
