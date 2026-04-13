@@ -59,10 +59,12 @@ model PilotState {
   lastHydroAt       DateTime        @default(now())
   lastDockAt        DateTime        @default(now())
   lastFabAt         DateTime        @default(now())
+  lastPackAt        DateTime?
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]
   syndicateMember   SyndicateMember?
+  heroes            PlayerHero[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -210,4 +212,16 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model PlayerHero {
+  id        String   @id @default(cuid())
+  pilotId   String
+  heroSlug  String
+  level     Int      @default(1)
+  xp        Int      @default(0)
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 }

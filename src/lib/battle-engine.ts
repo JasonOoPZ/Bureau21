@@ -1,4 +1,5 @@
 import { calculateATK, calculateDEF, GAME_CONSTANTS } from "@/lib/constants";
+import type { HeroBonuses } from "@/lib/hero-data";
 
 export interface BotTemplate {
   name: string;
@@ -134,9 +135,9 @@ function buildBot(bot: BotTemplate, playerLevel: number): BattleFighter {
   };
 }
 
-function rollDamage(atk: number, def: number): { damage: number; crit: boolean } {
+function rollDamage(atk: number, def: number, critBonus = 0): { damage: number; crit: boolean } {
   const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
-  const crit = Math.random() < 0.07;
+  const crit = Math.random() < (0.07 + critBonus);
   let damage = Math.max(1, atk - def + variance);
   if (crit) damage = Math.floor(damage * 2);
   return { damage, crit };
@@ -153,7 +154,8 @@ export function resolveBattle(
     atkSplit: number;
     inventory: { type: string; bonusType: string; bonusAmt: number; equipped: boolean }[];
   },
-  botSlug: string
+  botSlug: string,
+  heroBonuses?: HeroBonuses
 ): BattleOutcome {
   const botTemplate = NPC_BOTS.find((b) => b.slug === botSlug);
   if (!botTemplate) throw new Error("Unknown bot: " + botSlug);
@@ -163,9 +165,21 @@ export function resolveBattle(
   const shieldBonus =
     pilot.inventory.filter((i) => i.equipped && i.type === "shield").reduce((sum, i) => sum + i.bonusAmt, 0);
 
-  const playerATK = Math.max(1, calculateATK(pilot.strength, pilot.atkSplit, weaponBonus));
-  const playerDEF = Math.max(0, calculateDEF(pilot.strength, pilot.atkSplit, Math.floor(shieldBonus / 2)));
-  const playerMaxLf = maxLF(pilot.level);
+  // Apply hero multipliers
+  const heroAtkMult  = 1 + ((heroBonuses?.atkPct         ?? 0) / 100);
+  const heroDefMult  = 1 + ((heroBonuses?.defPct         ?? 0) / 100);
+  const heroLfMult   = 1 + ((heroBonuses?.maxLfPct       ?? 0) / 100);
+  const heroSpd      = heroBonuses?.speedFlat     ?? 0;
+  const heroConf     = heroBonuses?.confidenceFlat ?? 0;
+  const heroXpMult   = 1 + ((heroBonuses?.xpPct          ?? 0) / 100);
+
+  const appliedConfidence = Math.min(GAME_CONSTANTS.CONFIDENCE_CAP, pilot.confidence + heroConf);
+  // Confidence boosts crit chance: 7% base → up to 15% at max confidence
+  const critBonus = (appliedConfidence / GAME_CONSTANTS.CONFIDENCE_CAP) * 0.08;
+
+  const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
+  const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, Math.floor(shieldBonus / 2)) * heroDefMult));
+  const playerMaxLf = Math.floor(maxLF(pilot.level) * heroLfMult);
 
   const player: BattleFighter = {
     name: pilot.callsign,
@@ -173,7 +187,7 @@ export function resolveBattle(
     maxLf: playerMaxLf,
     atk: playerATK,
     def: playerDEF,
-    speed: pilot.speed,
+    speed: pilot.speed + heroSpd,
   };
 
   const bot = buildBot(botTemplate, pilot.level);
@@ -190,7 +204,7 @@ export function resolveBattle(
 
     if (playerFirst || round % 2 === 1) {
       // Player attacks bot
-      const { damage, crit } = rollDamage(player.atk, bot.def);
+      const { damage, crit } = rollDamage(player.atk, bot.def, critBonus);
       botLf = Math.max(0, botLf - damage);
       rounds.push({
         round,
@@ -241,7 +255,8 @@ export function resolveBattle(
   }
 
   const playerWon = botLf <= 0;
-  const xpGained = playerWon ? botTemplate.xpReward : Math.floor(botTemplate.xpReward * 0.2);
+  const baseXp = playerWon ? botTemplate.xpReward : Math.floor(botTemplate.xpReward * 0.2);
+  const xpGained = Math.round(baseXp * heroXpMult);
   const creditsGained = playerWon ? botTemplate.creditReward : 0;
   const confidenceDelta = playerWon
     ? Math.min(2, GAME_CONSTANTS.CONFIDENCE_CAP - pilot.confidence)
@@ -251,6 +266,20 @@ export function resolveBattle(
     const critTag = r.crit ? " [CRIT]" : "";
     return `Round ${r.round} — ${r.attacker} hits ${r.defender} for ${r.damage} dmg${critTag}. ${r.defender} LF: ${r.defenderLfAfter}`;
   });
+
+  // Hero support summary at top of log
+  if (heroBonuses) {
+    const parts: string[] = [];
+    if (heroBonuses.atkPct > 0)        parts.push(`+${heroBonuses.atkPct.toFixed(1)}% ATK`);
+    if (heroBonuses.defPct > 0)        parts.push(`+${heroBonuses.defPct.toFixed(1)}% DEF`);
+    if (heroBonuses.speedFlat > 0)     parts.push(`+${heroBonuses.speedFlat.toFixed(1)} SPD`);
+    if (heroBonuses.maxLfPct > 0)      parts.push(`+${heroBonuses.maxLfPct.toFixed(1)}% LF`);
+    if (heroBonuses.confidenceFlat > 0) parts.push(`+${heroBonuses.confidenceFlat.toFixed(0)} CONF`);
+    if (heroBonuses.xpPct > 0)         parts.push(`+${heroBonuses.xpPct.toFixed(1)}% XP`);
+    if (parts.length > 0) {
+      logLines.unshift(`〔Hero Support: ${parts.join(' · ')}〕`);
+    }
+  }
 
   logLines.push(
     playerWon

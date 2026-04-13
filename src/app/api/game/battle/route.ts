@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
 import { resolveBattle, NPC_BOTS } from "@/lib/battle-engine";
+import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -34,6 +35,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // Fetch active heroes and compute their aggregate bonuses
+  const activeHeroes = await prisma.playerHero.findMany({
+    where: { pilotId: pilot.id, active: true },
+  });
+  const heroBonuses = computeHeroBonuses(activeHeroes);
+
   const outcome = resolveBattle(
     {
       callsign: pilot.callsign,
@@ -45,7 +52,8 @@ export async function POST(request: Request) {
       atkSplit: pilot.atkSplit,
       inventory: pilot.inventory,
     },
-    parsed.data.botSlug
+    parsed.data.botSlug,
+    heroBonuses
   );
 
   const progressed = applyLevelProgression(
@@ -70,6 +78,20 @@ export async function POST(request: Request) {
       lastActionAt: new Date(),
     },
   });
+
+  // Give each active hero XP for participating
+  if (activeHeroes.length > 0) {
+    const heroXpGain = outcome.winner === "player" ? 20 : 5;
+    await Promise.all(
+      activeHeroes.map(async (hero) => {
+        const progressed = applyHeroXpProgression(hero.xp + heroXpGain, hero.level);
+        await prisma.playerHero.update({
+          where: { id: hero.id },
+          data: { xp: progressed.xp, level: progressed.level },
+        });
+      })
+    );
+  }
 
   await prisma.battleLog.create({
     data: {
