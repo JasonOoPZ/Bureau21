@@ -10,7 +10,25 @@ type LeaderboardEntry = {
   credits: number;
   kills: number;
   sector: string;
+  characterSlug: string;
   isYou: boolean;
+};
+
+type Category = "overall" | "pvp" | "wealth" | "xp";
+
+const CATEGORIES: { key: Category; label: string; color: string; activeColor: string }[] = [
+  { key: "overall", label: "Overall", color: "text-slate-400", activeColor: "bg-cyan-500/20 text-cyan-200" },
+  { key: "pvp",     label: "PVP Kills", color: "text-slate-400", activeColor: "bg-red-500/20 text-red-200" },
+  { key: "wealth",  label: "Wealth", color: "text-slate-400", activeColor: "bg-amber-500/20 text-amber-200" },
+  { key: "xp",      label: "Experience", color: "text-slate-400", activeColor: "bg-emerald-500/20 text-emerald-200" },
+];
+
+// Highlight column based on category
+const HIGHLIGHT: Record<Category, string> = {
+  overall: "level",
+  pvp: "kills",
+  wealth: "credits",
+  xp: "xp",
 };
 
 interface LeaderboardProps {
@@ -19,15 +37,27 @@ interface LeaderboardProps {
 
 export function Leaderboard({ compact = false }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [category, setCategory] = useState<Category>("overall");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/game/leaderboard")
-      .then((r) => r.json())
-      .then((d: { leaderboard: LeaderboardEntry[] }) => setEntries(d.leaderboard))
+    let cancelled = false;
+    fetch(`/api/game/leaderboard?category=${category}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => { if (!cancelled && d) setEntries(d.leaderboard); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [category]);
+
+  function switchCategory(cat: Category) {
+    if (cat !== category) {
+      setLoading(true);
+      setCategory(cat);
+    }
+  }
+
+  const hl = HIGHLIGHT[category];
 
   return (
     <section className={`border border-slate-800 bg-[#0a0d11] ${compact ? "rounded-md p-3" : "rounded-2xl p-6"}`}>
@@ -39,6 +69,23 @@ export function Leaderboard({ compact = false }: LeaderboardProps) {
           Commander Board
         </h2>
       </div>
+
+      {/* Category tabs */}
+      {!compact && (
+        <div className="mb-4 flex flex-wrap gap-1 rounded-lg border border-slate-800 bg-black/40 p-1">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => switchCategory(cat.key)}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] transition ${
+                category === cat.key ? cat.activeColor : `${cat.color} hover:text-slate-200`
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <p className="py-4 text-center text-sm text-slate-400">Loading rankings...</p>
@@ -54,8 +101,8 @@ export function Leaderboard({ compact = false }: LeaderboardProps) {
                 <th className="pb-2 pr-3 text-right">Lvl</th>
                 <th className="pb-2 pr-3 text-right">XP</th>
                 <th className="pb-2 pr-3 text-right">Credits</th>
-                {!compact ? <th className="pb-2 pr-3 text-right">Kills</th> : null}
-                {!compact ? <th className="pb-2 text-left hidden md:table-cell">Sector</th> : null}
+                {!compact && <th className="pb-2 pr-3 text-right">Kills</th>}
+                {!compact && <th className="pb-2 text-left hidden md:table-cell">Sector</th>}
               </tr>
             </thead>
             <tbody>
@@ -87,11 +134,11 @@ export function Leaderboard({ compact = false }: LeaderboardProps) {
                       </span>
                     )}
                   </td>
-                  <td className="py-2.5 pr-3 text-right text-amber-300">{entry.level}</td>
-                  <td className="py-2.5 pr-3 text-right text-emerald-300">{entry.xp}</td>
-                  <td className="py-2.5 pr-3 text-right text-cyan-200">{entry.credits}</td>
-                  {!compact ? <td className="py-2.5 pr-3 text-right text-red-300">{entry.kills}</td> : null}
-                  {!compact ? <td className="py-2.5 text-slate-400 hidden md:table-cell">{entry.sector}</td> : null}
+                  <td className={`py-2.5 pr-3 text-right ${hl === "level" ? "text-cyan-300 font-semibold" : "text-amber-300"}`}>{entry.level}</td>
+                  <td className={`py-2.5 pr-3 text-right ${hl === "xp" ? "text-emerald-300 font-semibold" : "text-emerald-300/70"}`}>{entry.xp.toLocaleString()}</td>
+                  <td className={`py-2.5 pr-3 text-right ${hl === "credits" ? "text-amber-300 font-semibold" : "text-cyan-200/70"}`}>{entry.credits.toLocaleString()}</td>
+                  {!compact && <td className={`py-2.5 pr-3 text-right ${hl === "kills" ? "text-red-300 font-semibold" : "text-red-300/70"}`}>{entry.kills}</td>}
+                  {!compact && <td className="py-2.5 text-slate-400 hidden md:table-cell">{entry.sector}</td>}
                 </tr>
               ))}
             </tbody>

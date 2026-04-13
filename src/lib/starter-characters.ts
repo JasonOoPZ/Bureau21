@@ -3,89 +3,87 @@ export type StarterCharacter = {
   name: string;
   title: string;
   summary: string;
-  palette: {
-    shell: string;
-    glow: string;
-    core: string;
-    eye: string;
-  };
+  image: string;
+  glow: string;
 };
 
-export const defaultStarterCharacter = "ember-754";
+export const defaultStarterCharacter = "base-red";
 
 export const starterCharacters: StarterCharacter[] = [
   {
-    slug: "ember-754",
-    name: "Ember-754",
+    slug: "base-red",
+    name: "Unit 754",
     title: "Faultborn Oracle",
-    summary: "Obsidian shell, molten fracture lines, stellar eyes, and a live reactor core.",
-    palette: { shell: "#201a1e", glow: "#ff4937", core: "#ff7e6d", eye: "#7e8fff" },
+    summary: "Obsidian shell threaded with molten fractures and a live reactor core.",
+    image: "/characters/Bureau21BaseRed.png",
+    glow: "#ff4937",
   },
   {
-    slug: "void-monk",
-    name: "Void Monk",
-    title: "Silent Navigator",
-    summary: "Ash-grey mystic built for discipline, speed, and long-range tracing.",
-    palette: { shell: "#444b5c", glow: "#8dd6ff", core: "#bfe9ff", eye: "#d8f4ff" },
-  },
-  {
-    slug: "copper-saint",
-    name: "Copper Saint",
-    title: "Refinery Pilgrim",
-    summary: "Brass-plated drifter threaded with refinery heat and old station signal marks.",
-    palette: { shell: "#5a3724", glow: "#ff9d4d", core: "#ffd38b", eye: "#fff1c4" },
-  },
-  {
-    slug: "glacier-wisp",
-    name: "Glacier Wisp",
-    title: "Cryo Archivist",
-    summary: "Frost-veined operator carrying archival memory and clean precision fire.",
-    palette: { shell: "#27465a", glow: "#7ef3ff", core: "#ddfdff", eye: "#d6f8ff" },
-  },
-  {
-    slug: "toxin-jester",
-    name: "Toxin Jester",
+    slug: "base-green",
+    name: "Unit 872",
     title: "Underbelly Trickster",
     summary: "Neon poison circuits and corrosive humor from the worst decks in the station.",
-    palette: { shell: "#262229", glow: "#8dff42", core: "#daff97", eye: "#d0ff78" },
+    image: "/characters/Bureau21BaseGreen.png",
+    glow: "#39ff14",
   },
   {
-    slug: "seraph-static",
-    name: "Seraph Static",
-    title: "Signal Choir",
-    summary: "Cathedral-grade comms construct laced with gold static and halo interference.",
-    palette: { shell: "#40373b", glow: "#ffd866", core: "#fff2a3", eye: "#ffe98a" },
+    slug: "base-onyx",
+    name: "Unit 617",
+    title: "Silent Navigator",
+    summary: "Polished onyx chassis laced with cyan signal lines and deep-space optics.",
+    image: "/characters/Bureau21BaseOnyx.png",
+    glow: "#00e5ff",
   },
   {
-    slug: "night-suture",
-    name: "Night Suture",
+    slug: "base-orange",
+    name: "Unit 374",
+    title: "Refinery Pilgrim",
+    summary: "Brass-plated drifter threaded with refinery heat and old station signal marks.",
+    image: "/characters/Bureau21BaseOrange.png",
+    glow: "#ff9d4d",
+  },
+  {
+    slug: "base-purple",
+    name: "Unit 481",
     title: "Recovery Unit",
     summary: "Midnight medical chassis with violet repair seams and surgical patience.",
-    palette: { shell: "#241f34", glow: "#b07dff", core: "#dec5ff", eye: "#cdb8ff" },
+    image: "/characters/Bureau21BasePurple.png",
+    glow: "#b07dff",
   },
   {
-    slug: "rust-halo",
-    name: "Rust Halo",
-    title: "Dockyard Relic",
-    summary: "Recovered from a dead shipyard, still humming with redline ignition scars.",
-    palette: { shell: "#3b2a24", glow: "#ff6b57", core: "#ffc0aa", eye: "#ffd7cf" },
+    slug: "base-white",
+    name: "Unit 841",
+    title: "Cryo Archivist",
+    summary: "Marble-white frame with faint cryo filaments and archival precision.",
+    image: "/characters/Bureau21BaseWhite.png",
+    glow: "#b0e0ff",
   },
   {
-    slug: "cinder-veil",
-    name: "Cinder Veil",
-    title: "Smuggler Ghost",
-    summary: "Smoke-black skin and dim ember veins for silent work in bad districts.",
-    palette: { shell: "#22252a", glow: "#ff6b4a", core: "#ffac8f", eye: "#ffe5d8" },
-  },
-  {
-    slug: "solar-ivy",
-    name: "Solar Ivy",
-    title: "Hydroponics Bloom",
-    summary: "Bioluminescent plant-synthetic with warm solar filaments and adaptive growth.",
-    palette: { shell: "#263626", glow: "#5df08a", core: "#d7ff9e", eye: "#e5ffd5" },
+    slug: "base-yellow",
+    name: "Unit 627",
+    title: "Signal Choir",
+    summary: "Cathedral-grade comms construct laced with gold static and halo interference.",
+    image: "/characters/Bureau21BaseYellow.png",
+    glow: "#ffd866",
   },
 ];
 
+// Map legacy SVG-era slugs to current image-based characters
+const LEGACY_SLUG_MAP: Record<string, string> = {
+  "ember-754": "base-red",
+  "void-monk": "base-onyx",
+  "copper-saint": "base-orange",
+  "glacier-wisp": "base-white",
+  "toxin-jester": "base-green",
+  "seraph-static": "base-yellow",
+  "night-suture": "base-purple",
+  "rust-halo": "base-red",
+  "cinder-veil": "base-onyx",
+  "solar-ivy": "base-green",
+};
+
 export function getStarterCharacter(slug?: string | null): StarterCharacter {
-  return starterCharacters.find((character) => character.slug === slug) ?? starterCharacters[0];
+  if (!slug) return starterCharacters[0];
+  const resolved = LEGACY_SLUG_MAP[slug] ?? slug;
+  return starterCharacters.find((c) => c.slug === resolved) ?? starterCharacters[0];
 }

@@ -1,7 +1,5 @@
 "use client";
 
-import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
-import { defaultStarterCharacter, starterCharacters } from "@/lib/starter-characters";
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
@@ -20,7 +18,6 @@ export function LoginPanel() {
   const [onboardEmail, setOnboardEmail] = useState("");
   const [onboardPassword, setOnboardPassword] = useState("");
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
-  const [starterCharacter, setStarterCharacter] = useState(defaultStarterCharacter);
 
   const isOnboardingValid = useMemo(() => {
     return (
@@ -90,7 +87,6 @@ export function LoginPanel() {
         pilotName,
         email: onboardEmail,
         password: onboardPassword,
-        starterCharacter,
       }),
     });
 
@@ -122,234 +118,235 @@ export function LoginPanel() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-10 sm:px-6 lg:px-10">
+    <main className="relative min-h-screen overflow-hidden">
+      {/* ── Full-bleed background layers ── */}
       <Image
-        className="absolute inset-0 -z-30 h-full w-full object-cover"
+        className="absolute inset-0 -z-30 h-full w-full object-cover scale-105 blur-[2px]"
         src="/bureau21-welcome.png"
         alt="Bureau 21 landing background"
         fill
         priority
       />
-      <div className="absolute inset-0 -z-20 bg-slate-950/70" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_85%_15%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_85%,rgba(245,158,11,0.15),transparent_40%)]" />
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgba(2,6,23,0.94),rgba(7,20,38,0.9))]" />
+      <div className="absolute inset-0 -z-20 bg-gradient-to-b from-black/70 via-slate-950/60 to-black/80" />
+      {/* Colored atmosphere blobs */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(600px_circle_at_20%_15%,rgba(6,182,212,0.15),transparent),radial-gradient(500px_circle_at_80%_10%,rgba(168,85,247,0.12),transparent),radial-gradient(700px_circle_at_50%_95%,rgba(245,158,11,0.08),transparent)]" />
+      {/* Scan-lines */}
+      <div className="pointer-events-none absolute inset-0 -z-[5] opacity-[0.025] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(255,255,255,0.1)_2px,rgba(255,255,255,0.1)_4px)]" />
+      {/* Top vignette */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-[4] h-40 bg-gradient-to-b from-black/50 to-transparent" />
 
-      <section className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-center">
-        <div className="lg:col-span-2 overflow-hidden rounded-3xl border border-cyan-300/25 bg-black/40 shadow-[0_0_35px_rgba(8,145,178,0.22)]">
-          <div className="relative h-[220px] sm:h-[280px]">
-            <Image
-              className="absolute inset-0 h-full w-full object-cover"
-              src="/bureau21-welcome.png"
-              alt="Welcome to Bureau 21 header"
-              fill
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/90">Main Header</p>
-              <h1 className="font-display text-4xl font-semibold leading-[0.95] text-slate-50 sm:text-5xl">
-                Welcome to Bureau 21
-              </h1>
+      {/* ── Hero section ── */}
+      <section className="relative mx-auto flex min-h-[56vh] max-w-5xl flex-col items-center justify-center px-4 pt-14 text-center">
+        {/* Status line */}
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+          <p className="font-display text-[10px] uppercase tracking-[0.6em] text-emerald-300/80">
+            Signal Acquired
+          </p>
+        </div>
+
+        {/* Title */}
+        <h1 className="mt-5 font-display text-6xl font-black uppercase leading-none tracking-tight sm:text-7xl lg:text-8xl">
+          <span className="bg-gradient-to-b from-white via-white to-slate-400 bg-clip-text text-transparent drop-shadow-[0_0_40px_rgba(255,255,255,0.15)]">
+            Bureau
+          </span>
+          <span className="ml-3 bg-gradient-to-b from-cyan-300 via-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_50px_rgba(34,211,238,0.3)] sm:ml-4">
+            21
+          </span>
+        </h1>
+
+        {/* Tagline */}
+        <p className="mt-5 max-w-lg text-sm leading-relaxed text-slate-300/90 sm:text-base">
+          A <span className="font-semibold text-amber-300">free-to-play</span> browser{" "}
+          <span className="font-display font-bold text-fuchsia-400">MMORPG</span> set aboard a
+          deep-space orbital station. Build your pilot, run missions, and dominate through{" "}
+          <span className="font-semibold text-red-400">PVP</span>{" "}
+          <span className="text-slate-500">&amp;</span>{" "}
+          <span className="font-semibold text-sky-400">PVE</span> combat.
+        </p>
+
+        {/* Feature pills */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <span className="font-display rounded-full border border-cyan-400/40 bg-cyan-950/50 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(34,211,238,0.1)]">
+            Browser-First
+          </span>
+          <span className="font-display rounded-full border border-red-400/35 bg-red-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-red-300 shadow-[0_0_18px_rgba(239,68,68,0.1),inset_0_1px_0_rgba(239,68,68,0.08)]">
+            PVP &amp; PVE
+          </span>
+          <span className="font-display rounded-full border border-fuchsia-400/35 bg-fuchsia-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-fuchsia-300 shadow-[0_0_18px_rgba(192,38,211,0.1),inset_0_1px_0_rgba(192,38,211,0.08)]">
+            MMORPG
+          </span>
+          <span className="font-display rounded-full border border-amber-400/35 bg-amber-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-amber-300 shadow-[0_0_18px_rgba(245,158,11,0.1),inset_0_1px_0_rgba(245,158,11,0.08)]">
+            Free-to-Play
+          </span>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="mt-12 flex flex-col items-center gap-1.5">
+          <span className="font-display text-[8px] uppercase tracking-[0.4em] text-slate-500">Board the Station</span>
+          <svg className="h-4 w-4 animate-bounce text-cyan-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </section>
+
+      {/* ── Auth card ── */}
+      <section className="relative mx-auto max-w-md px-4 pb-20 pt-4">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-950/85 shadow-[0_8px_80px_rgba(0,0,0,0.5),0_0_40px_rgba(8,145,178,0.08)] backdrop-blur-2xl">
+          {/* Top glow strip */}
+          <div className="h-[2px] bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
+
+          <div className="p-5 sm:p-7">
+            {/* Tab switcher */}
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-black/50 p-1 font-display text-xs uppercase tracking-[0.2em]">
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className={`rounded-md px-3 py-2.5 transition-all ${
+                  mode === "signin"
+                    ? "bg-cyan-500/20 text-cyan-200 shadow-[inset_0_1px_0_rgba(34,211,238,0.15)]"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("onboarding")}
+                className={`rounded-md px-3 py-2.5 transition-all ${
+                  mode === "onboarding"
+                    ? "bg-amber-500/20 text-amber-200 shadow-[inset_0_1px_0_rgba(245,158,11,0.15)]"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Sign Up
+              </button>
             </div>
-          </div>
-        </div>
 
-        <div className="space-y-6 lg:pr-10">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/90">Bureau 21 Access Hub</p>
-          <h2 className="font-display text-3xl font-semibold leading-tight text-slate-50 sm:text-4xl">
-            Welcome to Bureau 21 - where classified meets chaotic.
-          </h2>
-          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
-            Ever wanted to infiltrate a top-secret agency where the missions are questionable and the dress code is worse?
-            Bureau 21 lets you dive straight into the action from any browser - no downloads, no installations, no suspicious USB drives.
-            Whether you are on a desktop, phone, or some dusty PDA you found in a drawer, you are good to go.
-          </p>
-          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
-            Fight your way up the ranks, or do not - we will not judge. Take a breather in our suspiciously well-maintained herb gardens.
-            Try your luck at the casino (your life savings were just sitting there doing nothing anyway).
-            Cast a line and enjoy some fishing, because even secret operatives need a hobby.
-            And if you are feeling adventurous, there is always human abduction - strictly off the books, of course.
-          </p>
-          <p className="max-w-xl text-sm text-slate-200 sm:text-base">
-            Still not convinced? Bureau 21 was recently awarded &ldquo;The game I was definitely going to review but then my microwave caught fire and honestly who even reads these, I could literally just type my grocery list here and nobody would blink. I need milk.&rdquo;
-            So there is that.
-          </p>
-          <p className="max-w-xl text-sm text-slate-100 sm:text-base">
-            Best part? It is 100% free. No hidden fees, no shady government funding (that we know of).
-            So quit stalling, hit that signup button - your clearance level awaits.
-            Or at the very least, take the tour before we redact it.
-          </p>
-
-          <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.25em] text-cyan-200/90">
-            <span className="rounded-full border border-cyan-300/40 bg-cyan-400/10 px-4 py-2">Browser-First</span>
-            <span className="rounded-full border border-sky-300/40 bg-sky-400/10 px-4 py-2">Cross-Sector Identity</span>
-            <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-4 py-2">Private Email Onboarding</span>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-cyan-300/25 bg-slate-950/70 p-5 shadow-[0_0_40px_rgba(8,145,178,0.22)] backdrop-blur-xl sm:p-7">
-          <div className="mb-5 grid grid-cols-2 rounded-xl border border-slate-800 bg-slate-900/70 p-1 text-sm">
+            {/* Google button */}
             <button
               type="button"
-              onClick={() => setMode("signin")}
-              className={`rounded-lg px-4 py-2 transition ${
-                mode === "signin" ? "bg-cyan-400/20 text-cyan-100" : "text-slate-400 hover:text-slate-200"
-              }`}
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="mb-5 flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700/80 bg-slate-900/80 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Sign In
+              <svg className="h-4 w-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              Continue with Google
             </button>
-            <button
-              type="button"
-              onClick={() => setMode("onboarding")}
-              className={`rounded-lg px-4 py-2 transition ${
-                mode === "onboarding" ? "bg-cyan-400/20 text-cyan-100" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              Onboarding
-            </button>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="mb-5 flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-cyan-400/60 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <span className="text-base">G</span>
-            Continue with Google
-          </button>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+              <span className="font-display text-[9px] uppercase tracking-[0.25em] text-slate-600">or</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+            </div>
 
-          <div className="mb-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-800" />
-            <span className="text-xs uppercase tracking-[0.2em] text-slate-500">or with email</span>
-            <div className="h-px flex-1 bg-slate-800" />
-          </div>
-
-          {mode === "signin" ? (
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <label className="block text-sm text-slate-300">
-                Email
-                <input
-                  type="email"
-                  value={signInEmail}
-                  onChange={(event) => setSignInEmail(event.target.value)}
-                  placeholder="captain@private-mail.com"
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-                  required
-                />
-              </label>
-              <label className="block text-sm text-slate-300">
-                Password
-                <input
-                  type="password"
-                  value={signInPassword}
-                  onChange={(event) => setSignInPassword(event.target.value)}
-                  placeholder="At least 8 characters"
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-                  required
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {loading ? "Authenticating..." : "Launch Session"}
-              </button>
-              <a
-                href="/forgot-password"
-                className="block text-center text-xs uppercase tracking-[0.2em] text-slate-500 hover:text-slate-300 transition"
-              >
-                Forgot credentials?
-              </a>
-            </form>
-          ) : (
-            <form onSubmit={handleOnboarding} className="space-y-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Starter Character</p>
-                <p className="mt-1 text-sm text-slate-400">
-                  Choose your shell. Ember-754 is the default Bureau 21 operator.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {starterCharacters.map((character) => {
-                    const selected = starterCharacter === character.slug;
-
-                    return (
-                      <button
-                        key={character.slug}
-                        type="button"
-                        onClick={() => setStarterCharacter(character.slug)}
-                        className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
-                          selected
-                            ? "border-cyan-400 bg-cyan-400/10 text-cyan-100"
-                            : "border-slate-800 bg-slate-950/80 text-slate-300 hover:border-slate-600"
-                        }`}
-                      >
-                        <StarterCharacterPortrait slug={character.slug} size="sm" />
-                        <div>
-                          <p className="text-sm font-semibold">{character.name}</p>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{character.title}</p>
-                          <p className="mt-1 text-xs text-slate-400">{character.summary}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
+            {mode === "signin" ? (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <label className="block">
+                  <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Email</span>
+                  <input
+                    type="email"
+                    value={signInEmail}
+                    onChange={(event) => setSignInEmail(event.target.value)}
+                    placeholder="pilot@bureau21.net"
+                    className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Password</span>
+                  <input
+                    type="password"
+                    value={signInPassword}
+                    onChange={(event) => setSignInPassword(event.target.value)}
+                    placeholder="At least 8 characters"
+                    className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+                    required
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3.5 font-display text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(6,182,212,0.25)] transition hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="relative z-10">{loading ? "Authenticating..." : "Launch Session"}</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 transition group-hover:opacity-100" />
+                </button>
+                <a
+                  href="/forgot-password"
+                  className="block text-center font-display text-[9px] uppercase tracking-[0.25em] text-slate-600 transition hover:text-cyan-400"
+                >
+                  Forgot credentials?
+                </a>
+              </form>
+            ) : (
+              <form onSubmit={handleOnboarding} className="space-y-4">
+                <div className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-950/20 p-3">
+                  <p className="font-display text-[10px] uppercase tracking-[0.2em] text-fuchsia-300">Alien Model</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Choose your alien on the first loading screen after sign-up.
+                  </p>
                 </div>
-              </div>
 
-              <label className="block text-sm text-slate-300">
-                Pilot Alias
-                <input
-                  type="text"
-                  value={pilotName}
-                  onChange={(event) => setPilotName(event.target.value)}
-                  placeholder="Nova-21"
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-                  required
-                />
-              </label>
-              <label className="block text-sm text-slate-300">
-                Private Email
-                <input
-                  type="email"
-                  value={onboardEmail}
-                  onChange={(event) => setOnboardEmail(event.target.value)}
-                  placeholder="newpilot@private-mail.com"
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-                  required
-                />
-              </label>
-              <label className="block text-sm text-slate-300">
-                Create Password
-                <input
-                  type="password"
-                  value={onboardPassword}
-                  onChange={(event) => setOnboardPassword(event.target.value)}
-                  placeholder="Minimum 8 characters"
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-                  required
-                />
-              </label>
-              <label className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={acceptedPrivacy}
-                  onChange={(event) => setAcceptedPrivacy(event.target.checked)}
-                  className="mt-0.5"
-                />
-                I consent to private account provisioning and secure session telemetry for gameplay operations.
-              </label>
-              <button
-                type="submit"
-                disabled={!isOnboardingValid || loading}
-                className="w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "Provisioning..." : "Create Pilot Account"}
-              </button>
-            </form>
-          )}
+                <label className="block">
+                  <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Pilot Alias</span>
+                  <input
+                    type="text"
+                    value={pilotName}
+                    onChange={(event) => setPilotName(event.target.value)}
+                    placeholder="Nova-21"
+                    className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Email</span>
+                  <input
+                    type="email"
+                    value={onboardEmail}
+                    onChange={(event) => setOnboardEmail(event.target.value)}
+                    placeholder="newpilot@bureau21.net"
+                    className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Password</span>
+                  <input
+                    type="password"
+                    value={onboardPassword}
+                    onChange={(event) => setOnboardPassword(event.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+                    required
+                  />
+                </label>
+                <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-black/30 p-3 text-[11px] text-slate-500">
+                  <input
+                    type="checkbox"
+                    checked={acceptedPrivacy}
+                    onChange={(event) => setAcceptedPrivacy(event.target.checked)}
+                    className="mt-0.5 accent-amber-400"
+                  />
+                  I consent to account provisioning and secure session telemetry for gameplay.
+                </label>
+                <button
+                  type="submit"
+                  disabled={!isOnboardingValid || loading}
+                  className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3.5 font-display text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(245,158,11,0.2)] transition hover:shadow-[0_0_30px_rgba(245,158,11,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="relative z-10">{loading ? "Provisioning..." : "Create Pilot Account"}</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 opacity-0 transition group-hover:opacity-100" />
+                </button>
+              </form>
+            )}
 
-          {notice ? <p className="mt-5 text-sm text-cyan-200/90">{notice}</p> : null}
+            {notice ? (
+              <p className="mt-5 rounded-lg border border-cyan-500/20 bg-cyan-950/20 p-3 font-display text-[10px] uppercase tracking-[0.15em] text-cyan-200/90">
+                {notice}
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
     </main>

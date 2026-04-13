@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { AppearanceSelector } from "@/components/game/appearance-selector";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
@@ -100,6 +101,16 @@ export default async function AccountPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Appearance management */}
+          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
+            <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-slate-500">Alien Model</p>
+            <AppearanceSelector
+              currentSlug={pilot.characterSlug}
+              initialCredits={pilot.credits}
+              initialSelections={pilot.appearanceSelections}
+            />
           </div>
 
           {/* Navigation shortcuts */}

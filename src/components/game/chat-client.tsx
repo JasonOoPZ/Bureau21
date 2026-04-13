@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatMsg {
   id: string;
@@ -19,31 +19,59 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const feedRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [unread, setUnread] = useState(0);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // Track if the user is scrolled to bottom
+  function handleScroll() {
+    const el = feedRef.current;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    setAtBottom(near);
+    if (near) setUnread(0);
+  }
 
-  // Poll every 10 seconds
+  // Auto-scroll if at bottom
   useEffect(() => {
-    const interval = setInterval(async () => {
+    if (atBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      setUnread(0);
+    }
+  }, [messages, atBottom]);
+
+  const fetchMessages = useCallback(async () => {
+    try {
       const res = await fetch("/api/game/chat");
       if (res.ok) {
         const data = await res.json();
-        setMessages(
-          data.messages.map((m: { id: string; body: string; author: { name: string }; createdAt: string }) => ({
+        const fetched: ChatMsg[] = data.messages.map(
+          (m: { id: string; body: string; author: { name: string }; createdAt: string }) => ({
             id: m.id,
             body: m.body,
             authorName: m.author?.name ?? "Unknown",
             createdAt: m.createdAt,
-          }))
+          })
         );
+        setMessages((prev) => {
+          const newMsgCount = fetched.length - prev.length;
+          if (newMsgCount > 0 && !atBottom) {
+            setUnread((u) => u + newMsgCount);
+          }
+          return fetched;
+        });
+        if (data.onlineCount != null) setOnlineCount(data.onlineCount);
       }
-    }, 10_000);
+    } catch { /* ignore */ }
+  }, [atBottom]);
+
+  // Poll every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchMessages, 5_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchMessages]);
 
   async function send() {
     const text = input.trim();
@@ -72,6 +100,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
         },
       ]);
       setInput("");
+      setAtBottom(true);
     } catch {
       setError("Connection error.");
     } finally {
@@ -86,13 +115,30 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
     }
   }
 
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    setAtBottom(true);
+    setUnread(0);
+  }
+
   const fmt = (iso: string) =>
     new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="flex h-[70vh] flex-col rounded-md border border-slate-800 bg-[#0a0d11]">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">Station Chat</p>
+        {onlineCount != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
+            <span className="text-[10px] text-emerald-400">{onlineCount} online</span>
+          </div>
+        )}
+      </div>
+
       {/* Message feed */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+      <div ref={feedRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto px-3 py-3 space-y-1">
         {messages.length === 0 && (
           <p className="py-8 text-center text-[11px] text-slate-600">
             No messages yet. Start the conversation.
@@ -121,6 +167,16 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
           );
         })}
         <div ref={bottomRef} />
+
+        {/* Unread badge */}
+        {unread > 0 && !atBottom && (
+          <button
+            onClick={scrollToBottom}
+            className="sticky bottom-2 left-1/2 -translate-x-1/2 z-10 rounded-full border border-cyan-600 bg-cyan-950/90 px-3 py-1 text-[10px] font-semibold text-cyan-200 shadow-lg transition hover:bg-cyan-900"
+          >
+            {unread} new message{unread > 1 ? "s" : ""} ↓
+          </button>
+        )}
       </div>
 
       {/* Input */}
@@ -146,7 +202,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
             {sending ? "..." : "Send"}
           </button>
         </div>
-        <p className="mt-1 text-[9px] text-slate-700">Auto-refreshes every 10s · 3s cooldown between messages</p>
+        <p className="mt-1 text-[9px] text-slate-700">Auto-refreshes every 5s · 3s cooldown between messages</p>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { defaultStarterCharacter } from "@/lib/starter-characters";
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -12,6 +13,15 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = rateLimit(`register:${ip}`, 5, 900_000);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: "Too many registration attempts. Try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
@@ -42,6 +52,7 @@ export async function POST(request: Request) {
           create: {
             callsign: pilotName,
             characterSlug: starterCharacter ?? defaultStarterCharacter,
+            appearanceNeedsSetup: true,
           },
         },
       },

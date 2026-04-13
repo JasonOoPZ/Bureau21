@@ -28,6 +28,9 @@ export default async function LobbyPage() {
 
   const isAdmin = session.user.role === "admin";
   const pilotState = await getOrCreatePilotState(session.user.id, session.user.name);
+  if (pilotState.appearanceNeedsSetup) {
+    redirect("/onboarding/appearance");
+  }
   const starterCharacter = getStarterCharacter(pilotState.characterSlug);
   const now = new Date();
   const gameTime = now.toLocaleString("en-GB", {

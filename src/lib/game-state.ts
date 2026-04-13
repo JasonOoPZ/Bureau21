@@ -12,6 +12,7 @@ export async function getOrCreatePilotState(userId: string, displayName?: string
       userId,
       callsign,
       characterSlug: defaultStarterCharacter,
+      appearanceNeedsSetup: true,
     },
     include: { inventory: true, missions: true },
   });

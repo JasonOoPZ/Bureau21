@@ -31,7 +31,7 @@ model PilotState {
   id                String          @id @default(cuid())
   userId            String          @unique
   callsign          String
-  characterSlug     String          @default("ember-754")
+  characterSlug     String          @default("base-red")
   level             Int             @default(1)
   xp                Int             @default(0)
   credits           Int             @default(300)
@@ -46,6 +46,8 @@ model PilotState {
   panic             Float           @default(0.0)
   confidence        Int             @default(10)
   atkSplit          Int             @default(50)
+  appearanceSelections Int          @default(0)
+  appearanceNeedsSetup Boolean      @default(false)
   gymStreak         Int             @default(0)
   currentSector     String          @default("Fringe Expanse")
   kills             Int             @default(0)

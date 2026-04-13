@@ -1,18 +1,32 @@
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+type Category = "overall" | "pvp" | "wealth" | "xp";
+
+const ORDER_MAP: Record<Category, Prisma.PilotStateOrderByWithRelationInput[]> = {
+  overall: [{ level: "desc" }, { xp: "desc" }, { credits: "desc" }],
+  pvp: [{ kills: "desc" }, { level: "desc" }],
+  wealth: [{ credits: "desc" }, { level: "desc" }],
+  xp: [{ xp: "desc" }, { level: "desc" }],
+};
+
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const cat = (searchParams.get("category") ?? "overall") as Category;
+  const category: Category = cat in ORDER_MAP ? cat : "overall";
+
   const pilots = await prisma.pilotState.findMany({
-    orderBy: [{ level: "desc" }, { xp: "desc" }, { credits: "desc" }],
-    take: 15,
+    orderBy: ORDER_MAP[category],
+    take: 25,
     select: {
       callsign: true,
       level: true,
@@ -20,6 +34,7 @@ export async function GET() {
       credits: true,
       kills: true,
       currentSector: true,
+      characterSlug: true,
       userId: true,
     },
   });
@@ -32,8 +47,9 @@ export async function GET() {
     credits: p.credits,
     kills: p.kills,
     sector: p.currentSector,
+    characterSlug: p.characterSlug,
     isYou: p.userId === session.user!.id,
   }));
 
-  return NextResponse.json({ leaderboard });
+  return NextResponse.json({ leaderboard, category });
 }

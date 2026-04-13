@@ -3,6 +3,7 @@ import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
 import { resolveBattle, NPC_BOTS } from "@/lib/battle-engine";
 import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,6 +14,14 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const rl = rateLimit(`battle:${session.user.id}`, 10, 60_000);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: "Too many battles. Try again shortly." },
+      { status: 429 }
+    );
   }
 
   const body = await request.json().catch(() => null);

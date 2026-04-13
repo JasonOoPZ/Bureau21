@@ -51,5 +51,11 @@ export async function GET() {
     include: { author: { select: { name: true } } },
   });
 
-  return NextResponse.json({ messages });
+  // Count pilots active in the last 5 minutes
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const onlineCount = await prisma.pilotState.count({
+    where: { lastActionAt: { gte: fiveMinAgo } },
+  });
+
+  return NextResponse.json({ messages, onlineCount });
 }

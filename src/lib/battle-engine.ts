@@ -84,9 +84,48 @@ export const NPC_BOTS: BotTemplate[] = [
     xpReward: 800,
     creditReward: 650,
   },
+  {
+    name: "Phantom Warden",
+    slug: "phantom-warden",
+    description: "A cloaked enforcement unit that patrols dead sectors with lethal precision.",
+    diffMult: 6.0,
+    levelReq: 26,
+    xpReward: 1050,
+    creditReward: 850,
+  },
+  {
+    name: "Obsidian Archon",
+    slug: "obsidian-archon",
+    description: "A fortress-class construct armored in ultra-dense alloy from a collapsed star.",
+    diffMult: 7.5,
+    levelReq: 30,
+    xpReward: 1400,
+    creditReward: 1100,
+  },
+  {
+    name: "Eclipse Sovereign",
+    slug: "eclipse-sovereign",
+    description: "A rogue command intelligence that seized an entire orbital fleet.",
+    diffMult: 9.0,
+    levelReq: 35,
+    xpReward: 1900,
+    creditReward: 1500,
+  },
+  {
+    name: "Null Harbinger",
+    slug: "null-harbinger",
+    description: "The final anomaly — an entity from beyond mapped space that consumes all signal.",
+    diffMult: 12.0,
+    levelReq: 40,
+    xpReward: 2800,
+    creditReward: 2200,
+  },
 ];
 
-export const OUTER_RING_SLUGS = ["voidborn-sentinel", "apex-marauder", "void-titan"];
+export const OUTER_RING_SLUGS = [
+  "voidborn-sentinel", "apex-marauder", "void-titan",
+  "phantom-warden", "obsidian-archon", "eclipse-sovereign", "null-harbinger",
+];
 export interface BattleFighter {
   name: string;
   lf: number;
