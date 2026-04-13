@@ -32,10 +32,13 @@ export function applyLevelProgression(xp: number, level: number) {
 export function applyPassiveRegeneration(state: {
   fuel: number;
   hull: number;
+  lifeForce: number;
+  level: number;
   lastFuelRegen: Date;
 }) {
   let fuel = state.fuel;
   let hull = state.hull;
+  let lifeForce = state.lifeForce;
 
   const now = new Date();
   const secondsElapsed = (now.getTime() - state.lastFuelRegen.getTime()) / 1000;
@@ -48,11 +51,17 @@ export function applyPassiveRegeneration(state: {
   const hullGain = Math.floor(secondsElapsed / 60);
   hull = Math.min(100, hull + hullGain);
 
-  const hasRegen = fuelGain > 0 || hullGain > 0;
+  // Regenerate 1 Life Force every 2 minutes, capped at level * 5 (min 15)
+  const maxLF = Math.max(15, state.level * 5);
+  const lfGain = Math.floor(secondsElapsed / 120);
+  lifeForce = Math.min(maxLF, lifeForce + lfGain);
+
+  const hasRegen = fuelGain > 0 || hullGain > 0 || lfGain > 0;
 
   return {
     fuel,
     hull,
+    lifeForce,
     lastFuelRegen: hasRegen ? now : state.lastFuelRegen,
   };
 }

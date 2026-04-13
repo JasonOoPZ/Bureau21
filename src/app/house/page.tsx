@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
+import { HerbUseButton } from "@/components/game/herb-use-button";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
@@ -211,6 +212,13 @@ export default async function HousePage() {
                   <StatBar label="Fuel" value={pilot.fuel} max={10} color="cyan" />
                 </div>
               </section>
+
+              {/* Consumables */}
+              <HerbUseButton
+                initialHerbs={pilot.herbs ?? 0}
+                initialLf={pilot.lifeForce}
+                maxLf={maxLF}
+              />
 
               {/* Combat stats */}
               <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">

@@ -9,13 +9,14 @@ import {
   getOrCreatePilotState,
   tryDropItem,
 } from "@/lib/game-state";
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const schema = z.object({
-  action: z.enum(["scan", "mine", "patrol", "repair", "jump"]),
+  action: z.enum(["scan", "mine", "patrol", "repair", "jump", "use_herb"]),
 });
 
 export async function POST(request: Request) {
@@ -50,12 +51,15 @@ export async function POST(request: Request) {
   const regen = applyPassiveRegeneration({
     fuel: current.fuel,
     hull: current.hull,
+    lifeForce: current.lifeForce,
+    level: current.level,
     lastFuelRegen: current.lastFuelRegen,
   });
 
   let credits = current.credits;
   let fuel = regen.fuel;
   let hull = regen.hull;
+  let lifeForce = regen.lifeForce;
   let xp = current.xp;
   let level = current.level;
   let currentSector = current.currentSector;
@@ -97,6 +101,32 @@ export async function POST(request: Request) {
     baseCredits = 35;
     baseXp = 42;
     currentSector = sectors[nextIndex] ?? "Fringe Expanse";
+  } else if (action === "use_herb") {
+    if ((current.herbs ?? 0) < 1) {
+      return NextResponse.json({ error: "No Blue Herbs in inventory." }, { status: 400 });
+    }
+    const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, current.level * 5);
+    if (lifeForce >= maxLF) {
+      return NextResponse.json({ error: "Life Force is already at maximum." }, { status: 400 });
+    }
+    const restored = Math.min(GAME_CONSTANTS.BLUE_HERB_REVIVE_LF, maxLF - lifeForce);
+    lifeForce = Math.min(maxLF, lifeForce + GAME_CONSTANTS.BLUE_HERB_REVIVE_LF);
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: {
+        lifeForce,
+        herbs: { decrement: 1 },
+        lastActionAt: new Date(),
+      },
+    });
+    const finalState = await prisma.pilotState.findUnique({
+      where: { userId: session.user.id },
+      include: { missions: true, inventory: { orderBy: { createdAt: "desc" } } },
+    });
+    return NextResponse.json({
+      state: finalState,
+      message: `Blue Herb consumed. Life Force restored by ${restored}.`,
+    });
   }
 
   // Apply equipment bonuses to all non-repair actions
@@ -138,6 +168,7 @@ export async function POST(request: Request) {
       credits: Math.max(0, credits),
       fuel: Math.max(0, fuel),
       hull: Math.max(0, hull),
+      lifeForce,
       xp,
       level,
       currentSector,

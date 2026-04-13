@@ -84,6 +84,34 @@ export function AcademyClient({ pilotStrength, pilotSplit, pilotWeaponBonus, pil
   const [strength, setStrength] = useState(Math.round(pilotStrength * 10) / 10);
   const [weaponBonus, setWeaponBonus] = useState(pilotWeaponBonus);
   const [armorBonus, setArmorBonus] = useState(pilotArmorBonus);
+  const [savedSplit, setSavedSplit] = useState(pilotSplit);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+
+  async function saveSplit() {
+    setSaving(true);
+    setSaveMsg(null);
+    setSaveErr(null);
+    try {
+      const res = await fetch("/api/game/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ atkSplit: split }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveErr(data.error ?? "Failed to save.");
+        return;
+      }
+      setSavedSplit(split);
+      setSaveMsg(data.message ?? "Split saved.");
+    } catch {
+      setSaveErr("Connection error.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const atk = calculateATK(strength, split, weaponBonus);
   const def = calculateDEF(strength, split, armorBonus);
@@ -198,6 +226,26 @@ export function AcademyClient({ pilotStrength, pilotSplit, pilotWeaponBonus, pil
             Tip: At your current level, focus on Strength training first — even a 1.0 increase in Strength is worth more than tweaking the split.
           </p>
         )}
+
+        {/* Save ATK/DEF Split */}
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-cyan-900/40 bg-cyan-950/10 p-3">
+          <div className="text-xs text-slate-400">
+            {split === savedSplit ? (
+              <span className="text-emerald-400">✓ Active split: {savedSplit}% ATK / {100 - savedSplit}% DEF</span>
+            ) : (
+              <span className="text-amber-400">Unsaved change: {split}% ATK / {100 - split}% DEF</span>
+            )}
+          </div>
+          <button
+            onClick={saveSplit}
+            disabled={saving || split === savedSplit}
+            className="shrink-0 rounded border border-cyan-700 bg-cyan-950/40 px-3 py-1.5 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save Split"}
+          </button>
+        </div>
+        {saveMsg && <p className="mt-2 text-xs text-emerald-400">{saveMsg}</p>}
+        {saveErr && <p className="mt-2 text-xs text-red-400">{saveErr}</p>}
       </section>
 
       {/* ── Stat Reference Cards ─────────────────────────────────── */}
