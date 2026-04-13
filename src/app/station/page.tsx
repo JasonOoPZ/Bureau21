@@ -50,7 +50,7 @@ const DISTRICTS: District[] = [
     description: "Black-market deals, contraband labs, and high-risk high-reward economics.",
     icon: "☠",
     unlockDay: GAME_CONSTANTS.UNLOCK_UNDERBELLY_DAY,
-    status: "planned",
+    status: "live",
     accent: "border-red-900/60 hover:border-red-800",
   },
   {
@@ -59,7 +59,7 @@ const DISTRICTS: District[] = [
     description: "Advanced training modules and theory sessions to boost combat readiness.",
     icon: "📡",
     unlockDay: null,
-    status: "planned",
+    status: "live",
     accent: "border-emerald-900/60 hover:border-emerald-700",
   },
   {
@@ -68,7 +68,7 @@ const DISTRICTS: District[] = [
     description: "Craft and upgrade equipment using salvage materials from field operations.",
     icon: "🔧",
     unlockDay: GAME_CONSTANTS.UNLOCK_FULL_STATION_DAY,
-    status: "planned",
+    status: "live",
     accent: "border-slate-700 hover:border-slate-500",
   },
   {
@@ -77,7 +77,7 @@ const DISTRICTS: District[] = [
     description: "Grow supplies, Blue Herbs, and consumables for revival and buff effects.",
     icon: "🌿",
     unlockDay: null,
-    status: "planned",
+    status: "live",
     accent: "border-emerald-900/40 hover:border-emerald-800",
   },
   {
@@ -86,7 +86,7 @@ const DISTRICTS: District[] = [
     description: "Ship upgrades, hull augments, and long-range warp charting.",
     icon: "🚀",
     unlockDay: null,
-    status: "planned",
+    status: "live",
     accent: "border-cyan-900/40 hover:border-cyan-800",
   },
   {
@@ -95,7 +95,7 @@ const DISTRICTS: District[] = [
     description: "Frontier contracts, deep-space scouting, and access to restricted sectors.",
     icon: "🌌",
     unlockDay: GAME_CONSTANTS.UNLOCK_FULL_STATION_DAY,
-    status: "planned",
+    status: "live",
     accent: "border-slate-800 hover:border-slate-600",
   },
 ];
@@ -109,6 +109,24 @@ export default async function StationPage() {
   const accountAgeDays = Math.floor(
     (currentTime.getTime() - new Date(pilot.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
+  const unlockSchedule = [
+    { label: "Armory · Armory", unlockDay: null, display: "Day 1 (always open)" },
+    {
+      label: "Bazaar · Syndicate Row",
+      unlockDay: GAME_CONSTANTS.UNLOCK_BAZAAR_DAY,
+      display: `Day ${GAME_CONSTANTS.UNLOCK_BAZAAR_DAY}`,
+    },
+    {
+      label: "Underbelly",
+      unlockDay: GAME_CONSTANTS.UNLOCK_UNDERBELLY_DAY,
+      display: `Day ${GAME_CONSTANTS.UNLOCK_UNDERBELLY_DAY}`,
+    },
+    {
+      label: "Full Station Access",
+      unlockDay: GAME_CONSTANTS.UNLOCK_FULL_STATION_DAY,
+      display: `Day ${GAME_CONSTANTS.UNLOCK_FULL_STATION_DAY}`,
+    },
+  ] as const;
 
   return (
     <>
@@ -188,17 +206,16 @@ export default async function StationPage() {
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
             <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">District Unlock Schedule</p>
             <div className="grid gap-1 text-[11px] sm:grid-cols-2">
-              {[
-                { label: "Armory · Armory", day: "Day 1 (always open)" },
-                { label: "Bazaar · Syndicate Row", day: `Day ${GAME_CONSTANTS.UNLOCK_BAZAAR_DAY}` },
-                { label: "Underbelly", day: `Day ${GAME_CONSTANTS.UNLOCK_UNDERBELLY_DAY}` },
-                { label: "Full Station Access", day: `Day ${GAME_CONSTANTS.UNLOCK_FULL_STATION_DAY}` },
-              ].map(({ label, day }) => (
+              {unlockSchedule.map(({ label, unlockDay, display }) => {
+                const isUnlocked = unlockDay === null || accountAgeDays >= unlockDay;
+
+                return (
                 <div key={label} className="flex justify-between rounded border border-slate-800/60 bg-slate-900/30 px-2 py-1">
                   <span className="text-slate-400">{label}</span>
-                  <span className={accountAgeDays >= parseInt(day) ? "text-emerald-400" : "text-amber-500"}>{day}</span>
+                  <span className={isUnlocked ? "text-emerald-400" : "text-amber-500"}>{display}</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

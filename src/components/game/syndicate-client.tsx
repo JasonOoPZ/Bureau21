@@ -302,7 +302,7 @@ export function SyndicateClient({
               🤝 Join a Syndicate
             </p>
             <p className="text-[10px] text-slate-500">
-              Enter a faction's tag to request membership.
+              Enter a faction&apos;s tag to request membership.
             </p>
           </div>
 

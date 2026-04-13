@@ -15,7 +15,7 @@ const sectors = [
   { name: "Void Corridor", status: "Restricted", color: "amber" },
   { name: "The Meridian Rift", status: "Unstable", color: "red" },
   { name: "Bastion Hub", status: "Online", color: "cyan" },
-  { name: "Null Station", status: "Coming Soon", color: "slate" },
+  { name: "Null Station", status: "Online", color: "cyan" },
   { name: "Deep Archive", status: "Coming Soon", color: "slate" },
 ];
 
@@ -101,7 +101,7 @@ export default async function LobbyPage() {
             <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Latest Network Dispatch</p>
               <p className="text-sm text-slate-200">
-                Pilot operations are stable. New mining contracts and patrol routes are active in the Meridian corridor. Guild boards will open in a future update.
+                Pilot operations are stable. New mining contracts and patrol routes are active in the Meridian corridor. Boards and direct comms are now active across Bureau 21.
               </p>
             </div>
 
