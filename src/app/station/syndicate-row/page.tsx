@@ -62,6 +62,8 @@ export default async function SyndicateRowPage() {
         <div className="mx-auto max-w-3xl space-y-3">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
+            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">← Hub</Link>
+            <span className="text-slate-700">/</span>
             <Link href="/station" className="text-[11px] text-slate-500 hover:text-cyan-300">← Station</Link>
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-purple-400">Syndicate Row</span>

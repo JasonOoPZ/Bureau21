@@ -3,6 +3,7 @@ import { UserRoleManager } from "@/components/admin/user-role-manager";
 import { TopBar } from "@/components/layout/top-bar";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
@@ -42,6 +43,9 @@ export default async function AdminPage() {
       <main className="relative min-h-screen px-4 py-10 sm:px-8">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_60%_20%,rgba(245,158,11,0.12),transparent_40%)]" />
         <div className="mx-auto max-w-5xl space-y-8">
+          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+            <Link href="/lobby" className="hover:text-cyan-300 transition-colors">← Hub</Link>
+          </div>
           <section>
             <p className="text-xs uppercase tracking-[0.35em] text-amber-300/80">Admin Clearance</p>
             <h1 className="font-display mt-2 text-4xl uppercase text-slate-100">System Control</h1>
