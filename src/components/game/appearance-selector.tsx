@@ -92,15 +92,15 @@ export function AppearanceSelector({
         <p className="mt-1 text-slate-400">Current credits: <span className="text-cyan-300">{credits}</span></p>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 justify-items-center">
         {starterCharacters.map((character) => {
           const selected = selectedSlug === character.slug;
           return (
-            <div key={character.slug} className="relative">
+            <div key={character.slug} className="relative w-full">
               <button
                 type="button"
                 onClick={() => setSelectedSlug(character.slug)}
-                className={`w-full rounded-xl border-2 p-4 text-center transition ${
+                className={`flex h-full w-full flex-col items-center rounded-xl border-2 p-4 text-center transition ${
                   selected
                     ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-500/20"
                     : "border-slate-800 bg-[#0c1118] hover:border-slate-600"
@@ -112,7 +112,7 @@ export function AppearanceSelector({
                 <p className="text-base font-bold text-slate-200">{character.name}</p>
                 <p className="text-[11px] uppercase tracking-[0.15em] text-slate-500">{character.title}</p>
                 <p
-                  className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                  className="mt-auto pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
                   style={{ color: character.perk.color }}
                 >
                   {character.perk.name}
