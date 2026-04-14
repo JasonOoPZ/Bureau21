@@ -11,11 +11,16 @@ async function getCsrfToken(): Promise<string> {
   return data.csrfToken;
 }
 
-async function credentialsSignIn(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+async function credentialsSignIn(
+  email: string,
+  password: string,
+  onStatus: (msg: string) => void,
+): Promise<{ ok: boolean; error?: string }> {
+  onStatus("Getting security token...");
   const csrfToken = await getCsrfToken();
+  onStatus("Token acquired. Signing in...");
 
-  // POST with redirect: "manual" so the browser sets the session cookie
-  // from the 302 response without following the redirect itself
+  // Use redirect: "follow" so the browser follows the 302 and sets cookies normally
   const res = await fetch("/api/auth/callback/credentials", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -25,31 +30,34 @@ async function credentialsSignIn(email: string, password: string): Promise<{ ok:
       password,
       callbackUrl: "/lobby",
     }),
-    redirect: "manual",
+    redirect: "follow",
+    credentials: "same-origin",
   });
 
+  onStatus(`Callback responded (${res.status}). Checking session...`);
+
   // Verify the session was actually established
-  const sessionRes = await fetch("/api/auth/session");
+  const sessionRes = await fetch("/api/auth/session", {
+    credentials: "same-origin",
+  });
   const session = await sessionRes.json();
 
   if (session?.user) {
+    onStatus(`Session OK: ${session.user.email}. Redirecting...`);
     return { ok: true };
   }
 
-  // If we got a normal (non-redirect) response, try to read error from body
-  if (res.status === 200) {
-    try {
-      const data = await res.json();
-      if (data?.url) {
-        const u = new URL(data.url, window.location.origin);
-        if (u.searchParams.has("error")) {
-          return { ok: false, error: u.searchParams.get("error") ?? "Invalid credentials" };
-        }
-      }
-    } catch { /* response wasn't JSON */ }
+  // No session — check if the callback url has error info
+  const finalUrl = res.url;
+  onStatus(`No session. Response URL: ${finalUrl}`);
+
+  if (finalUrl.includes("error")) {
+    const u = new URL(finalUrl);
+    const error = u.searchParams.get("error");
+    return { ok: false, error: error ?? "Authentication rejected" };
   }
 
-  return { ok: false, error: "Session not established. Check your credentials." };
+  return { ok: false, error: `Session not established (callback status ${res.status}, url: ${finalUrl.substring(0, 80)})` };
 }
 
 export function LoginPanel() {
@@ -109,7 +117,7 @@ export function LoginPanel() {
     setLoading(true);
 
     try {
-      const result = await credentialsSignIn(signInEmail, signInPassword);
+      const result = await credentialsSignIn(signInEmail, signInPassword, setNotice);
       if (!result.ok) {
         setNotice(`Sign-in failed: ${result.error}`);
         setLoading(false);
@@ -132,6 +140,7 @@ export function LoginPanel() {
     }
 
     setLoading(true);
+    setNotice("Registering account...");
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -153,7 +162,7 @@ export function LoginPanel() {
         return;
       }
 
-      const loginResult = await credentialsSignIn(onboardEmail, onboardPassword);
+      const loginResult = await credentialsSignIn(onboardEmail, onboardPassword, setNotice);
       if (!loginResult.ok) {
         setNotice(`Account created but sign-in failed: ${loginResult.error}. Try signing in manually.`);
         setMode("signin");
