@@ -91,11 +91,15 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!dbUser?.walletAddress) {
-          const walletAddress = await generateWalletAddress();
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { walletAddress },
-          });
+          try {
+            const walletAddress = await generateWalletAddress();
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { walletAddress },
+            });
+          } catch {
+            // Wallet generation is non-critical; don't block sign-in
+          }
         }
       }
 

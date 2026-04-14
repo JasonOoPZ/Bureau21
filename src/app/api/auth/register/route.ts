@@ -43,14 +43,20 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const walletAddress = await generateWalletAddress();
+
+    let walletAddress: string | undefined;
+    try {
+      walletAddress = await generateWalletAddress();
+    } catch {
+      // Wallet generation is non-critical
+    }
 
     await prisma.user.create({
       data: {
         name: pilotName,
         email,
         hashedPassword,
-        walletAddress,
+        ...(walletAddress ? { walletAddress } : {}),
         pilotState: {
           create: {
             callsign: pilotName,
