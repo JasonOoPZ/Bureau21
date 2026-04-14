@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { BotTemplate, BattleOutcome } from "@/lib/battle-engine";
+import type { PvpTarget, BattleOutcome } from "@/lib/battle-engine";
 
 interface PilotInfo {
   level: number;
@@ -13,7 +13,7 @@ interface PilotInfo {
 }
 
 interface Props {
-  initialBots: BotTemplate[];
+  initialTargets: PvpTarget[];
   initialPilot: PilotInfo;
   initialLogs: Array<{
     id: string;
@@ -26,24 +26,23 @@ interface Props {
   }>;
 }
 
-// Helper to estimate difficulty (0-3 scale)
-function difficultyRating(botLevel: number, playerLevel: number): number {
-  const diff = botLevel - playerLevel;
-  if (diff < -2) return 0; // Easy
-  if (diff < 0) return 1; // Medium
-  if (diff < 2) return 2; // Hard
-  return 3; // Extreme
+function threatLevel(targetLevel: number, playerLevel: number): number {
+  const diff = targetLevel - playerLevel;
+  if (diff <= -5) return 0;
+  if (diff <= -1) return 1;
+  if (diff <= 3) return 2;
+  return 3;
 }
 
-const DIFFICULTY_COLORS = {
-  0: { label: "Easy", color: "text-emerald-400", bg: "bg-emerald-950/20", border: "border-emerald-800" },
+const THREAT_COLORS = {
+  0: { label: "Weak", color: "text-emerald-400", bg: "bg-emerald-950/20", border: "border-emerald-800" },
   1: { label: "Fair", color: "text-cyan-400", bg: "bg-cyan-950/20", border: "border-cyan-800" },
-  2: { label: "Hard", color: "text-amber-400", bg: "bg-amber-950/20", border: "border-amber-800" },
-  3: { label: "Extreme", color: "text-red-400", bg: "bg-red-950/20", border: "border-red-800" },
+  2: { label: "Tough", color: "text-amber-400", bg: "bg-amber-950/20", border: "border-amber-800" },
+  3: { label: "Deadly", color: "text-red-400", bg: "bg-red-950/20", border: "border-red-800" },
 };
 
-export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props) {
-  const [bots] = useState<BotTemplate[]>(initialBots);
+export function BattleConsole({ initialTargets, initialPilot, initialLogs }: Props) {
+  const [targets] = useState<PvpTarget[]>(initialTargets);
   const [pilot, setPilot] = useState<PilotInfo>(initialPilot);
   const [logs, setLogs] = useState(initialLogs);
   const [selected, setSelected] = useState<string | null>(null);
@@ -63,7 +62,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
       const res = await fetch("/api/game/battle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ botSlug: selected }),
+        body: JSON.stringify({ targetUserId: selected }),
       });
       const data = await res.json();
 
@@ -84,15 +83,15 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
         });
       }
 
-      // Prepend new log entry from outcome
       if (data.outcome) {
+        const target = targets.find((t) => t.userId === selected);
         setLogs((prev) => [
           {
             id: Date.now().toString(),
-            opponentName: bots.find((b) => b.slug === selected)?.name ?? selected,
-            result: data.outcome.winner === "player" ? "win" : "loss",
-            xpGained: data.outcome.xpGained,
-            creditsGained: data.outcome.creditsGained,
+            opponentName: target?.callsign ?? "Unknown",
+            result: data.outcome.winner === "attacker" ? "win" : "loss",
+            xpGained: data.outcome.attackerXp,
+            creditsGained: data.outcome.attackerCredits,
             roundsCount: data.outcome.totalRounds,
             createdAt: new Date().toISOString(),
           },
@@ -106,7 +105,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
     }
   }
 
-  const selectedBot = bots.find((b) => b.slug === selected);
+  const selectedTarget = targets.find((t) => t.userId === selected);
 
   return (
     <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -134,7 +133,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
                   style={{ width: `${Math.min(100, (pilot.lifeForce / maxLF) * 100)}%` }}
                 />
               </div>
-             </div>
+            </div>
             
             {/* Core stats grid */}
             <div className="grid grid-cols-2 gap-1">
@@ -182,44 +181,41 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
 
         {/* Opponent list */}
         <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-3">
-          <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">Available Targets</p>
-          {bots.length === 0 && (
-            <p className="text-[11px] text-slate-600">No targets available at your level yet.</p>
+          <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">Pilots in Range</p>
+          {targets.length === 0 && (
+            <p className="text-[11px] text-slate-600">No pilots available for PVP right now.</p>
           )}
-          {bots.map((bot) => {
-            const difficulty = difficultyRating(bot.levelReq, pilot.level);
-            const diffInfo = DIFFICULTY_COLORS[difficulty as 0 | 1 | 2 | 3];
-            return (
-              <button
-                key={bot.slug}
-                onClick={() => {
-                  setSelected(bot.slug);
-                  setOutcome(null);
-                  setError(null);
-                }}
-                className={`mb-1 w-full rounded border px-3 py-2 text-left transition ${
-                  selected === bot.slug
-                    ? "border-cyan-600 bg-cyan-950/30"
-                    : "border-slate-800 bg-slate-900/30 hover:border-slate-600"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-slate-200">{bot.name}</span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${diffInfo.color} ${diffInfo.bg} border ${diffInfo.border}`}>
-                    {diffInfo.label}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[10px] text-slate-500">{bot.description}</p>
-                <div className="mt-1.5 flex items-center justify-between text-[10px]">
-                  <span className="text-slate-600">Lv {bot.levelReq}+</span>
-                  <div className="flex gap-2">
-                    <span className="text-emerald-600">+{bot.xpReward} XP</span>
-                    <span className="text-amber-600">+{bot.creditReward} ₹</span>
+          <div className="space-y-1 max-h-72 overflow-y-auto">
+            {targets.map((target) => {
+              const threat = threatLevel(target.level, pilot.level);
+              const info = THREAT_COLORS[threat as 0 | 1 | 2 | 3];
+              return (
+                <button
+                  key={target.userId}
+                  onClick={() => {
+                    setSelected(target.userId);
+                    setOutcome(null);
+                    setError(null);
+                  }}
+                  className={`w-full rounded border px-3 py-2 text-left transition ${
+                    selected === target.userId
+                      ? "border-cyan-600 bg-cyan-950/30"
+                      : "border-slate-800 bg-slate-900/30 hover:border-slate-600"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-medium text-slate-200">{target.callsign}</span>
+                      <span className="text-[10px] text-slate-600">Lv {target.level}</span>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${info.color} ${info.bg} border ${info.border}`}>
+                      {info.label}
+                    </span>
                   </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Fight button */}
@@ -228,7 +224,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
           disabled={!selected || loading}
           className="w-full rounded-md border border-red-800 bg-red-950/40 py-2.5 text-sm font-semibold uppercase tracking-widest text-red-300 transition hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading ? "Fighting..." : selectedBot ? `Attack ${selectedBot.name}` : "Select Target"}
+          {loading ? "Fighting..." : selectedTarget ? `Attack ${selectedTarget.callsign}` : "Select Target"}
         </button>
 
         {error && (
@@ -244,7 +240,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
         {outcome ? (
           <div
             className={`rounded-md border p-4 space-y-3 ${
-              outcome.winner === "player"
+              outcome.winner === "attacker"
                 ? "border-emerald-800 bg-emerald-950/20"
                 : "border-red-800 bg-red-950/20"
             }`}
@@ -252,10 +248,10 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
             <div>
               <p
                 className={`mb-2 text-sm font-bold uppercase tracking-widest ${
-                  outcome.winner === "player" ? "text-emerald-300" : "text-red-400"
+                  outcome.winner === "attacker" ? "text-emerald-300" : "text-red-400"
                 }`}
               >
-                {outcome.winner === "player" ? "⚡ VICTORY" : "✗ DEFEATED"}
+                {outcome.winner === "attacker" ? "⚡ VICTORY" : "✗ DEFEATED"}
               </p>
             </div>
 
@@ -267,18 +263,18 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
               </div>
               <div className="rounded border border-slate-700/40 bg-black/40 p-2">
                 <span className="text-slate-500">Experience</span>
-                <p className="text-emerald-300 font-semibold">+{outcome.xpGained} XP</p>
+                <p className="text-emerald-300 font-semibold">+{outcome.attackerXp} XP</p>
               </div>
-              {outcome.creditsGained > 0 && (
+              {outcome.attackerCredits > 0 && (
                 <div className="rounded border border-slate-700/40 bg-black/40 p-2">
                   <span className="text-slate-500">Credits</span>
-                  <p className="text-amber-400 font-semibold">+{outcome.creditsGained}</p>
+                  <p className="text-amber-400 font-semibold">+{outcome.attackerCredits}</p>
                 </div>
               )}
               <div className="rounded border border-slate-700/40 bg-black/40 p-2">
                 <span className="text-slate-500">Confidence</span>
-                <p className={outcome.confidenceDelta > 0 ? "text-cyan-300 font-semibold" : "text-red-400 font-semibold"}>
-                  {outcome.confidenceDelta > 0 ? "+" : ""}{outcome.confidenceDelta}
+                <p className={outcome.attackerConfDelta > 0 ? "text-cyan-300 font-semibold" : "text-red-400 font-semibold"}>
+                  {outcome.attackerConfDelta > 0 ? "+" : ""}{outcome.attackerConfDelta}
                 </p>
               </div>
             </div>
@@ -294,7 +290,7 @@ export function BattleConsole({ initialBots, initialPilot, initialLogs }: Props)
         ) : (
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-6 text-center">
             <p className="text-[11px] text-slate-600">
-              Select a target on the left to begin combat.
+              Select a pilot on the left to engage in PVP combat.
             </p>
           </div>
         )}

@@ -1,14 +1,16 @@
 import { authOptions } from "@/auth";
 import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
-import { resolveBattle, NPC_BOTS } from "@/lib/battle-engine";
+import { resolvePvpBattle } from "@/lib/battle-engine";
+import type { PvpTarget } from "@/lib/battle-engine";
 import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const schema = z.object({ botSlug: z.string().min(1) });
+const schema = z.object({ targetUserId: z.string().min(1) });
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -30,27 +32,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const botTemplate = NPC_BOTS.find((b) => b.slug === parsed.data.botSlug);
-  if (!botTemplate) {
-    return NextResponse.json({ error: "Unknown opponent." }, { status: 400 });
+  if (parsed.data.targetUserId === session.user.id) {
+    return NextResponse.json({ error: "You cannot fight yourself." }, { status: 400 });
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  if (pilot.level < botTemplate.levelReq) {
+  // Fetch defender
+  const defenderPilot = await prisma.pilotState.findUnique({
+    where: { userId: parsed.data.targetUserId },
+    include: { inventory: true },
+  });
+  if (!defenderPilot) {
+    return NextResponse.json({ error: "Opponent not found." }, { status: 404 });
+  }
+
+  // Newbie protection check
+  if (pilot.level < GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL) {
     return NextResponse.json(
-      { error: `Requires level ${botTemplate.levelReq}.` },
+      { error: `You must be level ${GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL} to engage in PVP.` },
+      { status: 403 }
+    );
+  }
+  if (defenderPilot.level < GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL) {
+    return NextResponse.json(
+      { error: "That pilot is under newbie protection." },
       { status: 403 }
     );
   }
 
-  // Fetch active heroes and compute their aggregate bonuses
-  const activeHeroes = await prisma.playerHero.findMany({
-    where: { pilotId: pilot.id, active: true },
-  });
-  const heroBonuses = computeHeroBonuses(activeHeroes);
+  // Fetch active heroes for both players
+  const [attackerHeroes, defenderHeroes] = await Promise.all([
+    prisma.playerHero.findMany({ where: { pilotId: pilot.id, active: true } }),
+    prisma.playerHero.findMany({ where: { pilotId: defenderPilot.id, active: true } }),
+  ]);
+  const atkBonuses = computeHeroBonuses(attackerHeroes);
+  const defBonuses = computeHeroBonuses(defenderHeroes);
 
-  const outcome = resolveBattle(
+  const outcome = resolvePvpBattle(
     {
       callsign: pilot.callsign,
       level: pilot.level,
@@ -61,38 +80,64 @@ export async function POST(request: Request) {
       atkSplit: pilot.atkSplit,
       inventory: pilot.inventory,
     },
-    parsed.data.botSlug,
-    heroBonuses
+    {
+      callsign: defenderPilot.callsign,
+      level: defenderPilot.level,
+      lifeForce: defenderPilot.lifeForce,
+      strength: defenderPilot.strength,
+      speed: defenderPilot.speed,
+      confidence: defenderPilot.confidence,
+      atkSplit: defenderPilot.atkSplit,
+      inventory: defenderPilot.inventory,
+    },
+    atkBonuses,
+    defBonuses
   );
 
-  const progressed = applyLevelProgression(
-    pilot.xp + outcome.xpGained,
+  // Update attacker
+  const atkProgressed = applyLevelProgression(
+    pilot.xp + outcome.attackerXp,
     pilot.level
   );
-
-  const newConfidence = Math.max(
-    0,
-    Math.min(75, pilot.confidence + outcome.confidenceDelta)
-  );
+  const atkNewConf = Math.max(0, Math.min(75, pilot.confidence + outcome.attackerConfDelta));
 
   await prisma.pilotState.update({
     where: { userId: session.user.id },
     data: {
-      xp: progressed.xp,
-      level: progressed.level,
-      credits: { increment: outcome.creditsGained },
-      lifeForce: outcome.playerLfAfter,
-      confidence: newConfidence,
-      kills: outcome.winner === "player" ? { increment: 1 } : undefined,
+      xp: atkProgressed.xp,
+      level: atkProgressed.level,
+      credits: { increment: outcome.attackerCredits },
+      lifeForce: outcome.attackerLfAfter,
+      confidence: atkNewConf,
+      kills: outcome.winner === "attacker" ? { increment: 1 } : undefined,
       lastActionAt: new Date(),
     },
   });
 
-  // Give each active hero XP for participating
-  if (activeHeroes.length > 0) {
-    const heroXpGain = outcome.winner === "player" ? 20 : 5;
+  // Update defender
+  const defProgressed = applyLevelProgression(
+    defenderPilot.xp + outcome.defenderXp,
+    defenderPilot.level
+  );
+  const defNewConf = Math.max(0, Math.min(75, defenderPilot.confidence + outcome.defenderConfDelta));
+
+  await prisma.pilotState.update({
+    where: { userId: defenderPilot.userId },
+    data: {
+      xp: defProgressed.xp,
+      level: defProgressed.level,
+      credits: { increment: outcome.defenderCredits },
+      lifeForce: outcome.defenderLfAfter,
+      confidence: defNewConf,
+      kills: outcome.winner === "defender" ? { increment: 1 } : undefined,
+    },
+  });
+
+  // Hero XP for attacker's heroes
+  if (attackerHeroes.length > 0) {
+    const heroXpGain = outcome.winner === "attacker" ? 20 : 5;
     await Promise.all(
-      activeHeroes.map(async (hero) => {
+      attackerHeroes.map(async (hero) => {
         const progressed = applyHeroXpProgression(hero.xp + heroXpGain, hero.level);
         await prisma.playerHero.update({
           where: { id: hero.id },
@@ -102,17 +147,45 @@ export async function POST(request: Request) {
     );
   }
 
-  await prisma.battleLog.create({
-    data: {
-      pilotId: pilot.id,
-      opponentName: botTemplate.name,
-      result: outcome.winner === "player" ? "win" : "loss",
-      xpGained: outcome.xpGained,
-      creditsGained: outcome.creditsGained,
-      roundsCount: outcome.totalRounds,
-      logText: outcome.logText,
-    },
-  });
+  // Hero XP for defender's heroes
+  if (defenderHeroes.length > 0) {
+    const heroXpGain = outcome.winner === "defender" ? 20 : 5;
+    await Promise.all(
+      defenderHeroes.map(async (hero) => {
+        const progressed = applyHeroXpProgression(hero.xp + heroXpGain, hero.level);
+        await prisma.playerHero.update({
+          where: { id: hero.id },
+          data: { xp: progressed.xp, level: progressed.level },
+        });
+      })
+    );
+  }
+
+  // Battle logs for both players
+  await Promise.all([
+    prisma.battleLog.create({
+      data: {
+        pilotId: pilot.id,
+        opponentName: defenderPilot.callsign,
+        result: outcome.winner === "attacker" ? "win" : "loss",
+        xpGained: outcome.attackerXp,
+        creditsGained: outcome.attackerCredits,
+        roundsCount: outcome.totalRounds,
+        logText: outcome.logText,
+      },
+    }),
+    prisma.battleLog.create({
+      data: {
+        pilotId: defenderPilot.id,
+        opponentName: pilot.callsign,
+        result: outcome.winner === "defender" ? "win" : "loss",
+        xpGained: outcome.defenderXp,
+        creditsGained: outcome.defenderCredits,
+        roundsCount: outcome.totalRounds,
+        logText: outcome.logText,
+      },
+    }),
+  ]);
 
   const finalState = await prisma.pilotState.findUnique({
     where: { userId: session.user.id },
@@ -122,13 +195,30 @@ export async function POST(request: Request) {
   return NextResponse.json({ outcome, state: finalState });
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+
+  // Fetch all other pilots as potential PVP targets (exclude self + newbies)
+  const targets = await prisma.pilotState.findMany({
+    where: {
+      userId: { not: session.user.id },
+      level: { gte: GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL },
+    },
+    select: {
+      id: true,
+      userId: true,
+      callsign: true,
+      level: true,
+      characterSlug: true,
+    },
+    orderBy: { level: "asc" },
+    take: 50,
+  });
 
   const logs = await prisma.battleLog.findMany({
     where: { pilotId: pilot.id },
@@ -137,7 +227,7 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({
-    bots: NPC_BOTS.filter((b) => pilot.level >= b.levelReq),
+    targets: targets as PvpTarget[],
     logs,
     pilot: {
       level: pilot.level,

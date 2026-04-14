@@ -2,7 +2,7 @@ import { authOptions } from "@/auth";
 import { BattleConsole } from "@/components/game/battle-console";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { getAvailableBots } from "@/lib/battle-engine";
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
@@ -13,7 +13,23 @@ export default async function BattlePage() {
   if (!session?.user) redirect("/");
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
-  const availableBots = getAvailableBots(pilot.level);
+
+  // Fetch PVP targets: other players who are past newbie protection
+  const targets = await prisma.pilotState.findMany({
+    where: {
+      userId: { not: session.user.id },
+      level: { gte: GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL },
+    },
+    select: {
+      id: true,
+      userId: true,
+      callsign: true,
+      level: true,
+      characterSlug: true,
+    },
+    orderBy: { level: "asc" },
+    take: 50,
+  });
 
   const recentLogs = await prisma.battleLog.findMany({
     where: { pilotId: pilot.id },
@@ -42,14 +58,14 @@ export default async function BattlePage() {
           </div>
 
           <div className="rounded-md border border-red-900/40 bg-[#0f0a0a] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-red-300">Combat Terminal</h1>
+            <h1 className="text-xl font-bold uppercase tracking-widest text-red-300">PVP Arena</h1>
             <p className="mt-1 text-[11px] text-slate-400">
-              Choose a target. Win to gain XP, credits, and kills. Confidence shifts with outcomes.
+              Challenge other pilots. Win to gain XP, credits, and kills. Confidence shifts with outcomes.
             </p>
           </div>
 
           <BattleConsole
-            initialBots={availableBots}
+            initialTargets={targets}
             initialPilot={{
               level: pilot.level,
               lifeForce: pilot.lifeForce,
