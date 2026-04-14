@@ -7,10 +7,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const CHANGE_COST = 100;
 
+type Gender = "male" | "female" | "non-binary" | "unspecified";
+
 type AppearanceSelectorProps = {
   currentSlug: string;
   initialCredits: number;
   initialSelections: number;
+  initialCallsign?: string;
   setupMode?: boolean;
 };
 
@@ -18,6 +21,7 @@ export function AppearanceSelector({
   currentSlug,
   initialCredits,
   initialSelections,
+  initialCallsign = "",
   setupMode = false,
 }: AppearanceSelectorProps) {
   const router = useRouter();
@@ -28,6 +32,8 @@ export function AppearanceSelector({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspecting, setInspecting] = useState<StarterCharacter | null>(null);
+  const [callsign, setCallsign] = useState(initialCallsign);
+  const [gender, setGender] = useState<Gender>("unspecified");
 
   const currentCost = useMemo(() => (selections === 0 ? 0 : CHANGE_COST), [selections]);
   const canAfford = credits >= currentCost;
@@ -36,12 +42,24 @@ export function AppearanceSelector({
   async function saveAppearance() {
     setError(null);
     setNotice(null);
+
+    if (setupMode && callsign.trim().length < 2) {
+      setError("Pilot name must be at least 2 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
+      const payload: Record<string, string> = { characterSlug: selectedSlug };
+      if (setupMode) {
+        payload.callsign = callsign.trim();
+        payload.gender = gender;
+      }
+
       const res = await fetch("/api/game/appearance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterSlug: selectedSlug }),
+        body: JSON.stringify(payload),
       });
 
       const data = (await res.json().catch(() => null)) as
@@ -83,6 +101,44 @@ export function AppearanceSelector({
 
   return (
     <div className="space-y-4">
+      {/* ── Pilot Identity (setup mode only) ── */}
+      {setupMode && (
+        <div className="grid gap-4 sm:grid-cols-2 rounded-md border border-slate-800 bg-slate-900/40 p-4">
+          <label className="block">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Pilot Name</span>
+            <input
+              type="text"
+              value={callsign}
+              onChange={(e) => setCallsign(e.target.value)}
+              placeholder="Enter your callsign"
+              maxLength={24}
+              className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+            />
+            <p className="mt-1 text-[10px] text-slate-600">{callsign.length}/24 characters</p>
+          </label>
+
+          <fieldset>
+            <legend className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Gender</legend>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {(["male", "female", "non-binary", "unspecified"] as Gender[]).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGender(g)}
+                  className={`rounded-lg border px-3 py-2.5 text-xs capitalize transition ${
+                    gender === g
+                      ? "border-cyan-500 bg-cyan-500/15 text-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+                      : "border-slate-700 bg-black/30 text-slate-400 hover:border-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {g === "non-binary" ? "Non-Binary" : g === "unspecified" ? "Prefer not to say" : g}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
+      )}
+
       <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3 text-[11px] text-slate-300">
         <p className="uppercase tracking-[0.15em] text-slate-500">Appearance Change Policy</p>
         <p className="mt-1">

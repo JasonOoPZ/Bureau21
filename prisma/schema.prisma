@@ -33,6 +33,7 @@ model PilotState {
   userId            String          @unique
   callsign          String
   characterSlug     String          @default("base-red")
+  gender            String          @default("unspecified")
   level             Int             @default(1)
   xp                Int             @default(0)
   credits           Int             @default(300)

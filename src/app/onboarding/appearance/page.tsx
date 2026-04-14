@@ -21,15 +21,16 @@ export default async function AppearanceOnboardingPage() {
 
       <section className="mx-auto max-w-5xl space-y-4 rounded-xl border border-cyan-900/40 bg-[#0a0d11]/90 p-4 sm:p-6">
         <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">Initial Loading Sequence</p>
-        <h1 className="font-display text-3xl text-slate-100 sm:text-4xl">Select Your Alien Model</h1>
+        <h1 className="font-display text-3xl text-slate-100 sm:text-4xl">Create Your Pilot</h1>
         <p className="max-w-2xl text-sm text-slate-300">
-          Choose one model to finalize your account loadout. Your first selection is free. Future appearance updates cost 100 credits.
+          Set your pilot name, gender, and choose an alien model. Your first selection is free. Future appearance updates cost 100 credits.
         </p>
 
         <AppearanceSelector
           currentSlug={pilot.characterSlug}
           initialCredits={pilot.credits}
           initialSelections={pilot.appearanceSelections}
+          initialCallsign={pilot.callsign}
           setupMode
         />
       </section>

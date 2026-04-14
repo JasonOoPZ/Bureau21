@@ -10,6 +10,8 @@ const APPEARANCE_CHANGE_COST = 100;
 
 const schema = z.object({
   characterSlug: z.string().min(2).max(64),
+  callsign: z.string().min(2).max(24).optional(),
+  gender: z.enum(["male", "female", "non-binary", "unspecified"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -40,14 +42,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const updateData: Record<string, unknown> = {
+    characterSlug: parsed.data.characterSlug,
+    appearanceSelections: { increment: 1 },
+    appearanceNeedsSetup: false,
+    credits: { decrement: changeCost },
+  };
+  if (parsed.data.callsign) updateData.callsign = parsed.data.callsign;
+  if (parsed.data.gender) updateData.gender = parsed.data.gender;
+
   const updated = await prisma.pilotState.update({
     where: { userId: session.user.id },
-    data: {
-      characterSlug: parsed.data.characterSlug,
-      appearanceSelections: { increment: 1 },
-      appearanceNeedsSetup: false,
-      credits: { decrement: changeCost },
-    },
+    data: updateData,
     select: {
       characterSlug: true,
       credits: true,
