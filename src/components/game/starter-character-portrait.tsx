@@ -7,10 +7,10 @@ interface StarterCharacterPortraitProps {
 }
 
 const sizeMap = {
-  sm: { width: 88, height: 88 },
-  md: { width: 124, height: 124 },
-  lg: { width: 176, height: 176 },
-  xl: { width: 260, height: 260 },
+  sm: { width: 160, height: 160 },
+  md: { width: 200, height: 200 },
+  lg: { width: 280, height: 280 },
+  xl: { width: 400, height: 400 },
 } as const;
 
 export function StarterCharacterPortrait({ slug, size = "md" }: StarterCharacterPortraitProps) {
@@ -24,6 +24,7 @@ export function StarterCharacterPortrait({ slug, size = "md" }: StarterCharacter
       width={dims.width}
       height={dims.height}
       className="object-contain"
+      unoptimized
       draggable={false}
     />
   );

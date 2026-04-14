@@ -91,7 +91,7 @@ export function AppearanceSelector({
         <p className="mt-1 text-slate-400">Current credits: <span className="text-cyan-300">{credits}</span></p>
       </div>
 
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {starterCharacters.map((character) => {
           const selected = selectedSlug === character.slug;
           return (
@@ -99,17 +99,17 @@ export function AppearanceSelector({
               key={character.slug}
               type="button"
               onClick={() => setSelectedSlug(character.slug)}
-              className={`rounded-lg border p-3 text-center transition ${
+              className={`rounded-xl border-2 p-4 text-center transition ${
                 selected
-                  ? "border-cyan-400 bg-cyan-400/10"
+                  ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-500/20"
                   : "border-slate-800 bg-[#0c1118] hover:border-slate-600"
               }`}
             >
-              <div className="mb-2 flex justify-center">
+              <div className="mb-3 flex justify-center">
                 <StarterCharacterPortrait slug={character.slug} size="sm" />
               </div>
-              <p className="text-sm font-semibold text-slate-200">{character.name}</p>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">{character.title}</p>
+              <p className="text-base font-bold text-slate-200">{character.name}</p>
+              <p className="text-[11px] uppercase tracking-[0.15em] text-slate-500">{character.title}</p>
             </button>
           );
         })}
