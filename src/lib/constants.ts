@@ -9,7 +9,9 @@ export const GAME_CONSTANTS = {
   NEWBIE_PROTECTION_DAYS: 15,
   NEWBIE_PROTECTION_LEVEL: 5,
   CONFIDENCE_START: 10,
-  CONFIDENCE_CAP: 75,
+  CONFIDENCE_CAP: 50,
+  CONFIDENCE_CAP_BOOSTED: 100,
+  CONFIDENCE_BOOSTED_SLUG: "base-yellow",
   AP_PER_LEVEL: 5,
   LF_PER_AP_MULTIPLIER: 2,
   BATTLE_GAUGE_DEFAULT_MINUTES: 10,
@@ -46,6 +48,12 @@ export const GAME_CONSTANTS = {
 
 export function xpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.15, level - 1));
+}
+
+export function getConfidenceCap(characterSlug?: string | null): number {
+  return characterSlug === GAME_CONSTANTS.CONFIDENCE_BOOSTED_SLUG
+    ? GAME_CONSTANTS.CONFIDENCE_CAP_BOOSTED
+    : GAME_CONSTANTS.CONFIDENCE_CAP;
 }
 
 export function calculateATK(strength: number, atkDefSplit: number, weaponBonus: number): number {

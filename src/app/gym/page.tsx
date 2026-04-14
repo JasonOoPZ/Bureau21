@@ -2,7 +2,7 @@ import { authOptions } from "@/auth";
 import { GymConsole } from "@/components/game/gym-console";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -53,6 +53,7 @@ export default async function GymPage() {
               endurance: pilot.endurance,
               panic: pilot.panic,
               confidence: pilot.confidence,
+              confidenceCap: getConfidenceCap(pilot.characterSlug),
               trainingOptions: [
                 { key: "strength", label: "Strength", cost: 15 },
                 { key: "speed", label: "Speed", cost: 15 },

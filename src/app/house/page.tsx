@@ -3,7 +3,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
 import { HerbUseButton } from "@/components/game/herb-use-button";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS } from "@/lib/constants";
+import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -241,7 +241,7 @@ export default async function HousePage() {
                   <StatPill label="Endurance" value={pilot.endurance.toFixed(3)} />
                   <StatPill
                     label="Confidence"
-                    value={pilot.confidence}
+                    value={`${pilot.confidence} / ${getConfidenceCap(pilot.characterSlug)}`}
                   />
                   <StatPill label="Panic" value={pilot.panic.toFixed(2)} />
                   <StatPill

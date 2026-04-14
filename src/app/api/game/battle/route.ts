@@ -5,7 +5,7 @@ import type { PvpTarget } from "@/lib/battle-engine";
 import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -78,6 +78,7 @@ export async function POST(request: Request) {
       speed: pilot.speed,
       confidence: pilot.confidence,
       atkSplit: pilot.atkSplit,
+      characterSlug: pilot.characterSlug,
       inventory: pilot.inventory,
     },
     {
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
       speed: defenderPilot.speed,
       confidence: defenderPilot.confidence,
       atkSplit: defenderPilot.atkSplit,
+      characterSlug: defenderPilot.characterSlug,
       inventory: defenderPilot.inventory,
     },
     atkBonuses,
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
     pilot.xp + outcome.attackerXp,
     pilot.level
   );
-  const atkNewConf = Math.max(0, Math.min(75, pilot.confidence + outcome.attackerConfDelta));
+  const atkNewConf = Math.max(0, Math.min(getConfidenceCap(pilot.characterSlug), pilot.confidence + outcome.attackerConfDelta));
 
   await prisma.pilotState.update({
     where: { userId: session.user.id },
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
     defenderPilot.xp + outcome.defenderXp,
     defenderPilot.level
   );
-  const defNewConf = Math.max(0, Math.min(75, defenderPilot.confidence + outcome.defenderConfDelta));
+  const defNewConf = Math.max(0, Math.min(getConfidenceCap(defenderPilot.characterSlug), defenderPilot.confidence + outcome.defenderConfDelta));
 
   await prisma.pilotState.update({
     where: { userId: defenderPilot.userId },

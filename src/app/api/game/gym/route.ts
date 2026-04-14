@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -90,7 +90,8 @@ export async function POST(request: Request) {
   } else if (training === "panic_control") {
     update.panic = Math.max(0, pilot.panic + effectiveGain); // effectiveGain is negative, floor at 0
   } else if (training === "confidence") {
-    update.confidence = pilot.confidence + Math.round(effectiveGain);
+    const cap = getConfidenceCap(pilot.characterSlug);
+    update.confidence = Math.min(cap, pilot.confidence + Math.round(effectiveGain));
   }
 
   await prisma.pilotState.update({
@@ -142,6 +143,7 @@ export async function GET() {
     endurance: pilot.endurance,
     panic: pilot.panic,
     confidence: pilot.confidence,
+    confidenceCap: getConfidenceCap(pilot.characterSlug),
     trainingOptions: Object.entries(TRAINING_OPTIONS).map(([key, val]) => ({
       key,
       label: val.label,

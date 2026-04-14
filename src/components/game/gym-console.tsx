@@ -21,6 +21,7 @@ interface GymState {
   endurance: number;
   panic: number;
   confidence: number;
+  confidenceCap: number;
   trainingOptions: TrainingOption[];
 }
 
@@ -41,7 +42,7 @@ const TRAINING_DESCRIPTIONS: Record<string, string> = {
   speed: "Determines turn order; higher speed attacks first.",
   endurance: "Boosts stamina and long-fight resilience.",
   panic_control: "Reduces panic, stabilizing performance under pressure.",
-  confidence: "Increases confidence. Higher confidence = battle bonuses.",
+  confidence: `Increases confidence (cap: ${GAME_CONSTANTS.CONFIDENCE_CAP}, or ${GAME_CONSTANTS.CONFIDENCE_CAP_BOOSTED} for Signal Choir). Higher confidence = battle bonuses.`,
 };
 
 export function GymConsole({ initial }: Props) {
@@ -100,12 +101,12 @@ export function GymConsole({ initial }: Props) {
   const streakBonus = 1 + state.gymStreak * GAME_CONSTANTS.GYM_STREAK_BONUS_PER_DAY;
 
   // Helper to render stat value
-  const StatBar = ({ current, label }: { current: number; label: string }) => {
+  const StatBar = ({ current, label, cap }: { current: number; label: string; cap?: number }) => {
     return (
       <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
         <span className="font-mono text-[11px] font-semibold text-emerald-400">
-          {current < 1 ? current.toFixed(4) : current.toFixed(2)}
+          {current < 1 ? current.toFixed(4) : current.toFixed(2)}{cap != null ? ` / ${cap}` : ""}
         </span>
       </div>
     );
@@ -165,7 +166,7 @@ export function GymConsole({ initial }: Props) {
             <StatBar current={state.speed} label="Speed" />
             <StatBar current={state.endurance} label="Endurance" />
             <StatBar current={state.panic} label="Panic" />
-            <StatBar current={state.confidence} label="Confidence" />
+            <StatBar current={state.confidence} label="Confidence" cap={state.confidenceCap} />
           </div>
         </div>
       </div>

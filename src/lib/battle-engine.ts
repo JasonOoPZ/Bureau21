@@ -1,4 +1,4 @@
-import { calculateATK, calculateDEF, GAME_CONSTANTS } from "@/lib/constants";
+import { calculateATK, calculateDEF, GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
 import type { HeroBonuses } from "@/lib/hero-data";
 
 /* ═══════════════════════════════════════════════
@@ -46,6 +46,7 @@ export interface PvpPilotInput {
   speed: number;
   confidence: number;
   atkSplit: number;
+  characterSlug?: string;
   inventory: { type: string; bonusType: string; bonusAmt: number; equipped: boolean }[];
 }
 
@@ -78,8 +79,9 @@ function buildPvpFighter(
   const heroSpd = heroBonuses?.speedFlat ?? 0;
   const heroConf = heroBonuses?.confidenceFlat ?? 0;
 
-  const appliedConfidence = pilot.confidence + heroConf;
-  const critBonus = (appliedConfidence / GAME_CONSTANTS.CONFIDENCE_CAP) * 0.08;
+  const confCap = getConfidenceCap(pilot.characterSlug);
+  const appliedConfidence = Math.min(confCap, pilot.confidence + heroConf);
+  const critBonus = (appliedConfidence / confCap) * 0.08;
 
   const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
   const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, Math.floor(shieldBonus / 2)) * heroDefMult));
@@ -177,8 +179,15 @@ export function resolvePvpBattle(
   const attackerCredits = attackerWon ? winCredits : loseCredits;
   const defenderCredits = attackerWon ? loseCredits : winCredits;
 
-  const attackerConfDelta = attackerWon ? 3 : -2;
-  const defenderConfDelta = attackerWon ? -2 : 3;
+  const atkConfCap = getConfidenceCap(attackerInput.characterSlug);
+  const defConfCap = getConfidenceCap(defenderInput.characterSlug);
+
+  const attackerConfDelta = attackerWon
+    ? Math.min(3, atkConfCap - attackerInput.confidence)
+    : -2;
+  const defenderConfDelta = attackerWon
+    ? -2
+    : Math.min(3, defConfCap - defenderInput.confidence);
 
   // Build log text
   const logLines: string[] = [];
