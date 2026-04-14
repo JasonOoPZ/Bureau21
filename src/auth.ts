@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { generateWalletAddress } from "@/lib/wallet";
 
 const providers: Array<ReturnType<typeof Credentials> | ReturnType<typeof Google>> = [
   Credentials({
@@ -82,11 +83,19 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google" || account?.provider === "credentials") {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { suspended: true },
+          select: { suspended: true, walletAddress: true },
         });
 
         if (dbUser?.suspended) {
           return false;
+        }
+
+        if (!dbUser?.walletAddress) {
+          const walletAddress = await generateWalletAddress();
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { walletAddress },
+          });
         }
       }
 

@@ -1,5 +1,6 @@
 import { defaultStarterCharacter } from "@/lib/starter-characters";
 import { rateLimit } from "@/lib/rate-limit";
+import { generateWalletAddress } from "@/lib/wallet";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -42,12 +43,14 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const walletAddress = await generateWalletAddress();
 
     await prisma.user.create({
       data: {
         name: pilotName,
         email,
         hashedPassword,
+        walletAddress,
         pilotState: {
           create: {
             callsign: pilotName,

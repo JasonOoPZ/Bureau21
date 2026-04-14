@@ -14,7 +14,7 @@ export default async function AccountPage() {
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, role: true, createdAt: true, suspended: true },
+    select: { id: true, name: true, email: true, role: true, createdAt: true, suspended: true, walletAddress: true },
   });
 
   if (!user) redirect("/");
@@ -64,6 +64,12 @@ export default async function AccountPage() {
                 },
                 { label: "Character", value: pilot.characterSlug },
                 { label: "Member for", value: `${accountAgeDays} day${accountAgeDays !== 1 ? "s" : ""}` },
+                {
+                  label: "Wallet",
+                  value: user.walletAddress
+                    ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`
+                    : "—",
+                },
                 {
                   label: "Account Status",
                   value: user.suspended ? (

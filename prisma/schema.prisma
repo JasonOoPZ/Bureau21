@@ -17,6 +17,7 @@ model User {
   hashedPassword String?
   role           String    @default("player")
   suspended      Boolean   @default(false)
+  walletAddress  String?
   pilotState     PilotState?
   accounts       Account[]
   sessions       Session[]
