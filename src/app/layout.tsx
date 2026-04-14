@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk } from "next/font/google";
 import { cookies } from "next/headers";
-import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -30,7 +29,7 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme={theme === "original" ? undefined : theme}>
       <body className={`${spaceGrotesk.variable} ${orbitron.variable}`}>
-        <Providers>{children}</Providers>
+        {children}
       </body>
     </html>
   );
