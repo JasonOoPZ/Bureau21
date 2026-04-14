@@ -11,6 +11,9 @@ export async function GET() {
   checks.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ? "SET" : "MISSING";
   checks.THIRDWEB_SECRET_KEY = process.env.THIRDWEB_SECRET_KEY ? "SET" : "MISSING";
   checks.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ? "SET" : "MISSING";
+  checks.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
+    ? `SET (${process.env.GOOGLE_CLIENT_SECRET.length} chars, starts: ${process.env.GOOGLE_CLIENT_SECRET.substring(0, 7)}...)`
+    : "MISSING";
   checks.NODE_ENV = process.env.NODE_ENV ?? "MISSING";
 
   // Test DB connection
