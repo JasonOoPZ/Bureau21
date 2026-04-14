@@ -28,26 +28,29 @@ export function SettingsClient({ currentTheme, currentQuicklinks }: SettingsClie
 
   async function handleThemeChange(themeId: ThemeId) {
     setActiveTheme(themeId);
-    setSaving(true);
     setMessage("");
+
+    // Apply immediately — optimistic update
+    if (themeId === "original") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", themeId);
+    }
+    document.cookie = `bureau21-theme=${themeId};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+
+    // Persist to DB in background
+    setSaving(true);
     try {
-      const res = await fetch("/api/game/settings", {
+      await fetch("/api/game/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ theme: themeId }),
       });
-      if (res.ok) {
-        document.documentElement.setAttribute("data-theme", themeId === "original" ? "" : themeId);
-        if (themeId === "original") {
-          document.documentElement.removeAttribute("data-theme");
-        }
-        setMessage("Theme applied!");
-        router.refresh();
-      }
     } catch {
-      setMessage("Failed to save theme.");
+      /* cookie ensures theme persists even if DB save fails */
     }
     setSaving(false);
+    setMessage("Theme applied!");
   }
 
   function handleQuicklinkChange(index: number, href: string) {

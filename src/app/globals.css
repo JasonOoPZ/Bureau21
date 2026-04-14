@@ -7,14 +7,22 @@
   --foreground-rgb: 226, 232, 240;
   --background-start-rgb: 2, 10, 23;
   --background-end-rgb: 5, 15, 36;
-  --panel-bg: 11, 15, 20;
-  --panel-alt-bg: 10, 13, 17;
-  --border-rgb: 30, 41, 59;
-  --accent-rgb: 103, 232, 249;
-  --accent-dim-rgb: 22, 78, 99;
+  --panel-bg: #0b0f14;
+  --panel-alt-bg: #0a0d11;
+  --main-bg: #000000;
+  --header-bg: rgba(0, 0, 0, 0.9);
+  --border-color: rgb(30, 41, 59);
+  --border-color-alt: rgb(51, 65, 85);
+  --accent: rgb(103, 232, 249);
+  --accent-dim: rgba(22, 78, 99, 0.5);
+  --accent-border: rgba(22, 78, 99, 0.5);
+  --text-primary: rgb(226, 232, 240);
+  --text-secondary: rgb(203, 213, 225);
+  --text-muted: rgb(148, 163, 184);
+  --text-faint: rgb(100, 116, 139);
+  --status-live: rgb(110, 231, 183);
+  --sub-panel-bg: rgba(15, 23, 42, 0.3);
   --grid-color: rgba(148, 163, 184, 0.08);
-  --text-primary: 226, 232, 240;
-  --text-muted: 148, 163, 184;
 }
 
 /* ───────── Daylight Theme ───────── */
@@ -22,170 +30,140 @@
   --foreground-rgb: 30, 41, 59;
   --background-start-rgb: 241, 245, 249;
   --background-end-rgb: 226, 232, 240;
-  --panel-bg: 255, 255, 255;
-  --panel-alt-bg: 248, 250, 252;
-  --border-rgb: 203, 213, 225;
-  --accent-rgb: 99, 102, 241;
-  --accent-dim-rgb: 199, 210, 254;
+  --panel-bg: #ffffff;
+  --panel-alt-bg: #f8fafc;
+  --main-bg: #f1f5f9;
+  --header-bg: rgba(241, 245, 249, 0.95);
+  --border-color: rgb(203, 213, 225);
+  --border-color-alt: rgb(226, 232, 240);
+  --accent: rgb(79, 70, 229);
+  --accent-dim: rgba(224, 231, 255, 0.3);
+  --accent-border: rgba(99, 102, 241, 0.3);
+  --text-primary: rgb(30, 41, 59);
+  --text-secondary: rgb(51, 65, 85);
+  --text-muted: rgb(100, 116, 139);
+  --text-faint: rgb(148, 163, 184);
+  --status-live: rgb(5, 150, 105);
+  --sub-panel-bg: rgba(241, 245, 249, 0.5);
   --grid-color: rgba(100, 116, 139, 0.06);
-  --text-primary: 30, 41, 59;
-  --text-muted: 100, 116, 139;
 }
-
-[data-theme="light"] .bg-black { background-color: rgb(241, 245, 249) !important; }
-[data-theme="light"] .bg-\[rgb\(0\,0\,0\)\],
-[data-theme="light"] .bg-\[\#0b0f14\],
-[data-theme="light"] .bg-\[\#0a0d11\] { background-color: rgb(255, 255, 255) !important; }
-[data-theme="light"] .border-slate-800,
-[data-theme="light"] .border-slate-700 { border-color: rgb(203, 213, 225) !important; }
-[data-theme="light"] .text-slate-100,
-[data-theme="light"] .text-slate-200,
-[data-theme="light"] .text-slate-300 { color: rgb(30, 41, 59) !important; }
-[data-theme="light"] .text-slate-400,
-[data-theme="light"] .text-slate-500 { color: rgb(100, 116, 139) !important; }
-[data-theme="light"] .text-cyan-300,
-[data-theme="light"] .text-cyan-400,
-[data-theme="light"] .text-cyan-200 { color: rgb(79, 70, 229) !important; }
-[data-theme="light"] .bg-black\/90 { background-color: rgba(241, 245, 249, 0.95) !important; }
-[data-theme="light"] .bg-slate-900\/30 { background-color: rgba(241, 245, 249, 0.5) !important; }
-[data-theme="light"] .bg-cyan-950\/20 { background-color: rgba(224, 231, 255, 0.3) !important; }
-[data-theme="light"] .text-emerald-300 { color: rgb(5, 150, 105) !important; }
 
 /* ───────── Abyss Theme ───────── */
 [data-theme="dark"] {
   --foreground-rgb: 148, 163, 184;
   --background-start-rgb: 0, 0, 0;
   --background-end-rgb: 5, 5, 8;
-  --panel-bg: 10, 10, 10;
-  --panel-alt-bg: 8, 8, 8;
-  --border-rgb: 38, 38, 42;
-  --accent-rgb: 148, 163, 184;
-  --accent-dim-rgb: 39, 39, 42;
+  --panel-bg: #0a0a0a;
+  --panel-alt-bg: #080808;
+  --main-bg: #000000;
+  --header-bg: rgba(0, 0, 0, 0.95);
+  --border-color: rgb(38, 38, 42);
+  --border-color-alt: rgb(50, 50, 55);
+  --accent: rgb(161, 161, 170);
+  --accent-dim: rgba(39, 39, 42, 0.5);
+  --accent-border: rgba(63, 63, 70, 0.5);
+  --text-primary: rgb(161, 161, 170);
+  --text-secondary: rgb(113, 113, 122);
+  --text-muted: rgb(82, 82, 91);
+  --text-faint: rgb(63, 63, 70);
+  --status-live: rgb(110, 231, 183);
+  --sub-panel-bg: rgba(10, 10, 10, 0.5);
   --grid-color: rgba(148, 163, 184, 0.03);
-  --text-primary: 161, 161, 170;
-  --text-muted: 82, 82, 91;
 }
-
-[data-theme="dark"] .bg-black { background-color: rgb(0, 0, 0) !important; }
-[data-theme="dark"] .bg-\[\#0b0f14\],
-[data-theme="dark"] .bg-\[\#0a0d11\] { background-color: rgb(10, 10, 10) !important; }
-[data-theme="dark"] .border-slate-800,
-[data-theme="dark"] .border-slate-700 { border-color: rgb(38, 38, 42) !important; }
-[data-theme="dark"] .text-cyan-300,
-[data-theme="dark"] .text-cyan-400,
-[data-theme="dark"] .text-cyan-200 { color: rgb(161, 161, 170) !important; }
-[data-theme="dark"] .bg-black\/90 { background-color: rgba(0, 0, 0, 0.95) !important; }
 
 /* ───────── Neon Grid Theme ───────── */
 [data-theme="neon"] {
   --foreground-rgb: 220, 240, 220;
   --background-start-rgb: 10, 0, 20;
   --background-end-rgb: 5, 0, 15;
-  --panel-bg: 18, 0, 31;
-  --panel-alt-bg: 14, 0, 24;
-  --border-rgb: 50, 0, 80;
-  --accent-rgb: 57, 255, 20;
-  --accent-dim-rgb: 10, 60, 5;
+  --panel-bg: #12001f;
+  --panel-alt-bg: #0e0018;
+  --main-bg: #0a0014;
+  --header-bg: rgba(10, 0, 20, 0.95);
+  --border-color: rgb(50, 0, 80);
+  --border-color-alt: rgb(70, 0, 110);
+  --accent: rgb(57, 255, 20);
+  --accent-dim: rgba(10, 60, 5, 0.5);
+  --accent-border: rgba(57, 255, 20, 0.25);
+  --text-primary: rgb(200, 255, 200);
+  --text-secondary: rgb(160, 230, 160);
+  --text-muted: rgb(100, 180, 100);
+  --text-faint: rgb(60, 120, 60);
+  --status-live: rgb(236, 72, 153);
+  --sub-panel-bg: rgba(18, 0, 31, 0.5);
   --grid-color: rgba(57, 255, 20, 0.06);
-  --text-primary: 200, 255, 200;
-  --text-muted: 100, 180, 100;
 }
-
-[data-theme="neon"] .bg-black { background-color: rgb(10, 0, 20) !important; }
-[data-theme="neon"] .bg-\[\#0b0f14\],
-[data-theme="neon"] .bg-\[\#0a0d11\] { background-color: rgb(18, 0, 31) !important; }
-[data-theme="neon"] .border-slate-800,
-[data-theme="neon"] .border-slate-700 { border-color: rgb(50, 0, 80) !important; }
-[data-theme="neon"] .text-cyan-300,
-[data-theme="neon"] .text-cyan-400,
-[data-theme="neon"] .text-cyan-200 { color: rgb(57, 255, 20) !important; }
-[data-theme="neon"] .text-emerald-300 { color: rgb(236, 72, 153) !important; }
-[data-theme="neon"] .bg-black\/90 { background-color: rgba(10, 0, 20, 0.95) !important; }
-[data-theme="neon"]::before { --grid-color: rgba(57, 255, 20, 0.06); }
-[data-theme="neon"] .border-cyan-900\/50 { border-color: rgba(57, 255, 20, 0.25) !important; }
-[data-theme="neon"] .bg-cyan-950\/20 { background-color: rgba(57, 255, 20, 0.08) !important; }
 
 /* ───────── Hologram Theme ───────── */
 [data-theme="hologram"] {
   --foreground-rgb: 186, 230, 253;
   --background-start-rgb: 0, 10, 26;
   --background-end-rgb: 0, 20, 50;
-  --panel-bg: 0, 16, 41;
-  --panel-alt-bg: 0, 12, 32;
-  --border-rgb: 7, 89, 133;
-  --accent-rgb: 56, 189, 248;
-  --accent-dim-rgb: 7, 89, 133;
+  --panel-bg: #001029;
+  --panel-alt-bg: #000c20;
+  --main-bg: #000a1a;
+  --header-bg: rgba(0, 10, 26, 0.95);
+  --border-color: rgb(7, 89, 133);
+  --border-color-alt: rgb(14, 116, 144);
+  --accent: rgb(56, 189, 248);
+  --accent-dim: rgba(7, 89, 133, 0.5);
+  --accent-border: rgba(56, 189, 248, 0.25);
+  --text-primary: rgb(186, 230, 253);
+  --text-secondary: rgb(125, 211, 252);
+  --text-muted: rgb(56, 189, 248);
+  --text-faint: rgb(14, 116, 144);
+  --status-live: rgb(110, 231, 183);
+  --sub-panel-bg: rgba(0, 16, 41, 0.5);
   --grid-color: rgba(56, 189, 248, 0.07);
-  --text-primary: 186, 230, 253;
-  --text-muted: 56, 189, 248;
 }
-
-[data-theme="hologram"] .bg-black { background-color: rgb(0, 10, 26) !important; }
-[data-theme="hologram"] .bg-\[\#0b0f14\],
-[data-theme="hologram"] .bg-\[\#0a0d11\] { background-color: rgb(0, 16, 41) !important; }
-[data-theme="hologram"] .border-slate-800,
-[data-theme="hologram"] .border-slate-700 { border-color: rgb(7, 89, 133) !important; }
-[data-theme="hologram"] .text-cyan-300,
-[data-theme="hologram"] .text-cyan-400,
-[data-theme="hologram"] .text-cyan-200 { color: rgb(56, 189, 248) !important; }
-[data-theme="hologram"] .bg-black\/90 { background-color: rgba(0, 10, 26, 0.95) !important; }
-[data-theme="hologram"] body::before { background-image: linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px) !important; }
 
 /* ───────── Ember Theme ───────── */
 [data-theme="ember"] {
   --foreground-rgb: 253, 230, 200;
   --background-start-rgb: 26, 10, 0;
   --background-end-rgb: 20, 8, 0;
-  --panel-bg: 28, 15, 2;
-  --panel-alt-bg: 22, 12, 2;
-  --border-rgb: 120, 53, 15;
-  --accent-rgb: 245, 158, 11;
-  --accent-dim-rgb: 120, 53, 15;
+  --panel-bg: #1c0f02;
+  --panel-alt-bg: #160c02;
+  --main-bg: #1a0a00;
+  --header-bg: rgba(26, 10, 0, 0.95);
+  --border-color: rgb(120, 53, 15);
+  --border-color-alt: rgb(146, 64, 14);
+  --accent: rgb(245, 158, 11);
+  --accent-dim: rgba(120, 53, 15, 0.5);
+  --accent-border: rgba(245, 158, 11, 0.25);
+  --text-primary: rgb(253, 230, 200);
+  --text-secondary: rgb(253, 186, 116);
+  --text-muted: rgb(217, 119, 6);
+  --text-faint: rgb(146, 64, 14);
+  --status-live: rgb(251, 191, 36);
+  --sub-panel-bg: rgba(28, 15, 2, 0.5);
   --grid-color: rgba(245, 158, 11, 0.05);
-  --text-primary: 253, 230, 200;
-  --text-muted: 217, 119, 6;
 }
-
-[data-theme="ember"] .bg-black { background-color: rgb(26, 10, 0) !important; }
-[data-theme="ember"] .bg-\[\#0b0f14\],
-[data-theme="ember"] .bg-\[\#0a0d11\] { background-color: rgb(28, 15, 2) !important; }
-[data-theme="ember"] .border-slate-800,
-[data-theme="ember"] .border-slate-700 { border-color: rgb(120, 53, 15) !important; }
-[data-theme="ember"] .text-cyan-300,
-[data-theme="ember"] .text-cyan-400,
-[data-theme="ember"] .text-cyan-200 { color: rgb(245, 158, 11) !important; }
-[data-theme="ember"] .bg-black\/90 { background-color: rgba(26, 10, 0, 0.95) !important; }
-[data-theme="ember"] .border-cyan-900\/50 { border-color: rgba(245, 158, 11, 0.25) !important; }
-[data-theme="ember"] .bg-cyan-950\/20 { background-color: rgba(245, 158, 11, 0.08) !important; }
-[data-theme="ember"] .text-emerald-300 { color: rgb(251, 191, 36) !important; }
 
 /* ───────── Phantom Theme ───────── */
 [data-theme="phantom"] {
   --foreground-rgb: 221, 214, 254;
   --background-start-rgb: 10, 0, 21;
   --background-end-rgb: 15, 0, 26;
-  --panel-bg: 15, 0, 26;
-  --panel-alt-bg: 12, 0, 20;
-  --border-rgb: 76, 29, 149;
-  --accent-rgb: 167, 139, 250;
-  --accent-dim-rgb: 76, 29, 149;
+  --panel-bg: #0f001a;
+  --panel-alt-bg: #0c0014;
+  --main-bg: #0a0015;
+  --header-bg: rgba(10, 0, 21, 0.95);
+  --border-color: rgb(76, 29, 149);
+  --border-color-alt: rgb(107, 33, 168);
+  --accent: rgb(167, 139, 250);
+  --accent-dim: rgba(76, 29, 149, 0.5);
+  --accent-border: rgba(167, 139, 250, 0.25);
+  --text-primary: rgb(221, 214, 254);
+  --text-secondary: rgb(196, 181, 253);
+  --text-muted: rgb(139, 92, 246);
+  --text-faint: rgb(91, 33, 182);
+  --status-live: rgb(196, 181, 253);
+  --sub-panel-bg: rgba(15, 0, 26, 0.5);
   --grid-color: rgba(167, 139, 250, 0.05);
-  --text-primary: 221, 214, 254;
-  --text-muted: 139, 92, 246;
 }
 
-[data-theme="phantom"] .bg-black { background-color: rgb(10, 0, 21) !important; }
-[data-theme="phantom"] .bg-\[\#0b0f14\],
-[data-theme="phantom"] .bg-\[\#0a0d11\] { background-color: rgb(15, 0, 26) !important; }
-[data-theme="phantom"] .border-slate-800,
-[data-theme="phantom"] .border-slate-700 { border-color: rgb(76, 29, 149) !important; }
-[data-theme="phantom"] .text-cyan-300,
-[data-theme="phantom"] .text-cyan-400,
-[data-theme="phantom"] .text-cyan-200 { color: rgb(167, 139, 250) !important; }
-[data-theme="phantom"] .bg-black\/90 { background-color: rgba(10, 0, 21, 0.95) !important; }
-[data-theme="phantom"] .border-cyan-900\/50 { border-color: rgba(167, 139, 250, 0.25) !important; }
-[data-theme="phantom"] .bg-cyan-950\/20 { background-color: rgba(139, 92, 246, 0.08) !important; }
-
+/* ───────── Global Styles ───────── */
 body {
   font-family: var(--font-body), "Segoe UI", sans-serif;
   color: rgb(var(--foreground-rgb));
@@ -210,4 +188,86 @@ body::before {
 
 .font-display {
   font-family: var(--font-display), "Segoe UI", sans-serif;
+}
+
+/* ───  Theme-aware utility classes  ─── */
+.t-main-bg        { background-color: var(--main-bg) !important; }
+.t-panel          { background-color: var(--panel-bg) !important; }
+.t-panel-alt      { background-color: var(--panel-alt-bg) !important; }
+.t-header         { background-color: var(--header-bg) !important; backdrop-filter: blur(8px); }
+.t-border         { border-color: var(--border-color) !important; }
+.t-border-alt     { border-color: var(--border-color-alt) !important; }
+.t-accent         { color: var(--accent) !important; }
+.t-accent-dim-bg  { background-color: var(--accent-dim) !important; }
+.t-accent-border  { border-color: var(--accent-border) !important; }
+.t-text           { color: var(--text-primary) !important; }
+.t-text-secondary { color: var(--text-secondary) !important; }
+.t-text-muted     { color: var(--text-muted) !important; }
+.t-text-faint     { color: var(--text-faint) !important; }
+.t-status-live    { color: var(--status-live) !important; }
+.t-sub-panel      { background-color: var(--sub-panel-bg) !important; }
+
+/* ─── Global theme overrides for hardcoded Tailwind classes ─── */
+/* Uses attribute selectors to reliably match Tailwind's arbitrary-value classes */
+[data-theme] .bg-black {
+  background-color: var(--main-bg) !important;
+}
+[data-theme] [class*="bg-black/90"],
+[data-theme] [class*="bg-black\\/90"] {
+  background-color: var(--header-bg) !important;
+  backdrop-filter: blur(8px);
+}
+[data-theme] [class*="bg-[#0b0f14]"] {
+  background-color: var(--panel-bg) !important;
+}
+[data-theme] [class*="bg-[#0a0d11]"] {
+  background-color: var(--panel-alt-bg) !important;
+}
+[data-theme] [class*="bg-slate-900/30"],
+[data-theme] [class*="bg-slate-900\\/30"] {
+  background-color: var(--sub-panel-bg) !important;
+}
+[data-theme] [class*="bg-cyan-950/20"],
+[data-theme] [class*="bg-cyan-950\\/20"] {
+  background-color: var(--accent-dim) !important;
+}
+[data-theme] .border-slate-800 {
+  border-color: var(--border-color) !important;
+}
+[data-theme] .border-slate-700 {
+  border-color: var(--border-color-alt) !important;
+}
+[data-theme] .border-slate-900 {
+  border-color: var(--border-color) !important;
+}
+[data-theme] [class*="border-cyan-900/50"],
+[data-theme] [class*="border-cyan-900\\/50"] {
+  border-color: var(--accent-border) !important;
+}
+[data-theme] .text-slate-100,
+[data-theme] .text-slate-200 {
+  color: var(--text-primary) !important;
+}
+[data-theme] .text-slate-300 {
+  color: var(--text-secondary) !important;
+}
+[data-theme] .text-slate-400 {
+  color: var(--text-muted) !important;
+}
+[data-theme] .text-slate-500 {
+  color: var(--text-faint) !important;
+}
+[data-theme] .text-slate-700 {
+  color: var(--border-color) !important;
+}
+[data-theme] .text-cyan-200,
+[data-theme] .text-cyan-300,
+[data-theme] .text-cyan-400 {
+  color: var(--accent) !important;
+}
+[data-theme] .text-emerald-300 {
+  color: var(--status-live) !important;
+}
+[data-theme] [class*="hover:text-cyan-300"]:hover {
+  color: var(--accent) !important;
 }
