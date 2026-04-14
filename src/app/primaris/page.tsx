@@ -178,7 +178,7 @@ export default async function PrimarisPage() {
                       <Link
                         key={loc.name}
                         href={loc.href}
-                        className="text-[12px] text-cyan-400 transition hover:text-cyan-200 hover:underline"
+                        className="rounded px-2 py-0.5 text-[12px] text-cyan-400 transition-all duration-150 hover:scale-105 hover:bg-cyan-950/40 hover:text-cyan-200 hover:shadow-[0_0_8px_rgba(34,211,238,0.15)]"
                         title={loc.description}
                       >
                         {loc.name}

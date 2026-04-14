@@ -69,7 +69,9 @@ export default async function LobbyPage() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex items-center justify-between border-b border-slate-900 px-1 py-1 text-[12px] text-slate-300 transition hover:text-cyan-300 last:border-b-0"
+                  className={`flex items-center justify-between border-b border-slate-900 px-2 py-1.5 text-[12px] transition-all duration-150 hover:scale-[1.02] hover:bg-cyan-950/30 hover:text-cyan-300 hover:shadow-[0_0_6px_rgba(34,211,238,0.1)] last:border-b-0 ${
+                    item.label === "Primaris Core" ? "font-black text-cyan-300" : "text-slate-300"
+                  }`}
                 >
                   <span>{item.label}</span>
                   <span className={`text-[9px] uppercase ${item.status === "live" ? "text-emerald-300" : "text-slate-500"}`}>

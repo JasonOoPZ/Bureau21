@@ -55,9 +55,15 @@ export async function TopBar({ session }: TopBarProps) {
           <Link href="/lobby" className="font-display shrink-0 text-sm uppercase tracking-[0.22em] text-cyan-300">
             Bureau 21 Grid
           </Link>
-          <nav className="hidden items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-300 lg:flex">
+          <nav className="hidden items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-300 lg:flex">
             {topNavLinks.map((link) => (
-              <Link key={link.label} href={link.href} className="transition hover:text-cyan-300">
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`rounded px-2 py-1 transition-all duration-150 hover:scale-105 hover:bg-cyan-950/40 hover:text-cyan-300 hover:shadow-[0_0_8px_rgba(34,211,238,0.15)] ${
+                  link.label === "Primaris" ? "font-black text-cyan-300" : ""
+                }`}
+              >
                 {link.label}
               </Link>
             ))}

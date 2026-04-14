@@ -5,9 +5,9 @@ export type BureauNavLink = {
 };
 
 export const topNavLinks: BureauNavLink[] = [
-  { href: "/primaris", label: "Primaris", status: "live" },
   { href: "/house", label: "House", status: "live" },
   { href: "/gym", label: "Gym", status: "live" },
+  { href: "/primaris", label: "Primaris", status: "live" },
   { href: "/battle", label: "Battle", status: "live" },
   { href: "/heroes", label: "Heroes", status: "live" },
   { href: "/station", label: "Station", status: "live" },
@@ -17,11 +17,11 @@ export const topNavLinks: BureauNavLink[] = [
 ];
 
 export const sideRailLinks: BureauNavLink[] = [
-  { href: "/primaris", label: "Primaris Core", status: "live" },
   { href: "/house", label: "House", status: "live" },
   { href: "/inventory", label: "Inventory", status: "live" },
   { href: "/bank", label: "Bank", status: "live" },
   { href: "/gym", label: "Galaxy Gym", status: "live" },
+  { href: "/primaris", label: "Primaris Core", status: "live" },
   { href: "/battle", label: "Battle Arena", status: "live" },
   { href: "/heroes", label: "Battle Support Corps", status: "live" },
   { href: "/station", label: "Station Overview", status: "live" },
