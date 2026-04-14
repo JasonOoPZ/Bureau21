@@ -68,7 +68,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Failed to create account." }, { status: 500 });
+  } catch (err) {
+    console.error("Registration error:", err);
+    return NextResponse.json({ error: `Failed to create account: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
   }
 }
