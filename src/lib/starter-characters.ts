@@ -1,3 +1,11 @@
+export type CharacterPerk = {
+  name: string;
+  description: string;
+  stat: string;
+  value: string;
+  color: string;
+};
+
 export type StarterCharacter = {
   slug: string;
   name: string;
@@ -5,6 +13,7 @@ export type StarterCharacter = {
   summary: string;
   image: string;
   glow: string;
+  perk: CharacterPerk;
 };
 
 export const defaultStarterCharacter = "base-red";
@@ -17,6 +26,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Obsidian shell threaded with molten fractures and a live reactor core.",
     image: "/characters/Bureau21BaseRed.png",
     glow: "#ff4937",
+    perk: {
+      name: "Obsidian Plate",
+      description: "Passive defense is this unit's core function. Start with an immediate and permanent resistance to all incoming damage types.",
+      stat: "Damage Resistance",
+      value: "+15%",
+      color: "#ff4937",
+    },
   },
   {
     slug: "base-green",
@@ -25,6 +41,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Neon poison circuits and corrosive humor from the worst decks in the station.",
     image: "/characters/Bureau21BaseGreen.png",
     glow: "#39ff14",
+    perk: {
+      name: "Shattering Power",
+      description: "The core battle function of this unit is simple, direct damage. Start with an immediate and permanent increase to raw damage output — all sources, all types.",
+      stat: "Damage Output",
+      value: "+10%",
+      color: "#39ff14",
+    },
   },
   {
     slug: "base-onyx",
@@ -33,6 +56,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Polished onyx chassis laced with cyan signal lines and deep-space optics.",
     image: "/characters/Bureau21BaseOnyx.png",
     glow: "#00e5ff",
+    perk: {
+      name: "Enduring Reflexes",
+      description: "Utility and skill access is key. Start with an immediate and permanent reduction in all skill cooldown durations.",
+      stat: "Skill Cooldown",
+      value: "-10%",
+      color: "#00e5ff",
+    },
   },
   {
     slug: "base-orange",
@@ -41,6 +71,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Brass-plated drifter threaded with refinery heat and old station signal marks.",
     image: "/characters/Bureau21BaseOrange.png",
     glow: "#ff9d4d",
+    perk: {
+      name: "Psionic Swiftness",
+      description: "Swift, mobile actions are this unit's specialty. Start with an immediate and permanent boost to movement and attack/action speed.",
+      stat: "Action Speed",
+      value: "+10%",
+      color: "#ff9d4d",
+    },
   },
   {
     slug: "base-purple",
@@ -49,6 +86,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Midnight medical chassis with violet repair seams and surgical patience.",
     image: "/characters/Bureau21BasePurple.png",
     glow: "#b07dff",
+    perk: {
+      name: "Assassin's Precision",
+      description: "Precise strikes are essential. Start with an immediate and permanent bonus to critical hit chance.",
+      stat: "Crit Chance",
+      value: "+15%",
+      color: "#b07dff",
+    },
   },
   {
     slug: "base-white",
@@ -57,6 +101,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Marble-white frame with faint cryo filaments and archival precision.",
     image: "/characters/Bureau21BaseWhite.png",
     glow: "#b0e0ff",
+    perk: {
+      name: "Crushing Finality",
+      description: "High-stakes damage is this unit's focus. Start with an immediate and permanent bonus to critical hit damage.",
+      stat: "Crit Damage",
+      value: "+25%",
+      color: "#b0e0ff",
+    },
   },
   {
     slug: "base-yellow",
@@ -65,6 +116,13 @@ export const starterCharacters: StarterCharacter[] = [
     summary: "Cathedral-grade comms construct laced with gold static and halo interference.",
     image: "/characters/Bureau21BaseYellow.png",
     glow: "#ffd866",
+    perk: {
+      name: "Mastered Focus",
+      description: "A versatile starting boost — this unit enters every battle with bonus Confidence, giving an edge before the first round.",
+      stat: "Starting Confidence",
+      value: "+10 pts",
+      color: "#ffd866",
+    },
   },
 ];
 
