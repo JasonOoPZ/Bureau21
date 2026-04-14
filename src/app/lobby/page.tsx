@@ -48,20 +48,12 @@ export default async function LobbyPage() {
         <div className="mx-auto grid w-full max-w-7xl gap-3 lg:grid-cols-[220px_minmax(0,1fr)_250px]">
           <aside className="space-y-3">
             <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-3">
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 rounded-md border border-slate-800 bg-black/50 p-1">
-                  <StarterCharacterPortrait slug={pilotState.characterSlug} size="md" />
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-2 overflow-hidden rounded-md border border-slate-800 bg-black/50 p-1">
+                  <StarterCharacterPortrait slug={pilotState.characterSlug} size="sm" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-cyan-200 underline">{pilotState.callsign}</p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-slate-500">{starterCharacter.title}</p>
-                  <p className="mt-2 text-[11px] text-slate-300">Level: {pilotState.level}</p>
-                  <p className="text-[11px] text-slate-300">Credits: {pilotState.credits}</p>
-                  <p className="text-[11px] text-slate-300">Fuel: {pilotState.fuel}</p>
-                  <p className="text-[11px] text-slate-300">Hull: {pilotState.hull}%</p>
-                  <p className="text-[11px] text-slate-300">Sector: {pilotState.currentSector}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-wide text-cyan-300">Role: {session.user.role}</p>
-                </div>
+                <p className="text-[11px] font-semibold text-cyan-200 underline">{pilotState.callsign}</p>
+                <p className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-slate-500">{starterCharacter.title}</p>
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">{starterCharacter.summary}</p>
               <Link
