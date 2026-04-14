@@ -2,11 +2,189 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────── Default / Original Theme ───────── */
 :root {
   --foreground-rgb: 226, 232, 240;
   --background-start-rgb: 2, 10, 23;
   --background-end-rgb: 5, 15, 36;
+  --panel-bg: 11, 15, 20;
+  --panel-alt-bg: 10, 13, 17;
+  --border-rgb: 30, 41, 59;
+  --accent-rgb: 103, 232, 249;
+  --accent-dim-rgb: 22, 78, 99;
+  --grid-color: rgba(148, 163, 184, 0.08);
+  --text-primary: 226, 232, 240;
+  --text-muted: 148, 163, 184;
 }
+
+/* ───────── Daylight Theme ───────── */
+[data-theme="light"] {
+  --foreground-rgb: 30, 41, 59;
+  --background-start-rgb: 241, 245, 249;
+  --background-end-rgb: 226, 232, 240;
+  --panel-bg: 255, 255, 255;
+  --panel-alt-bg: 248, 250, 252;
+  --border-rgb: 203, 213, 225;
+  --accent-rgb: 99, 102, 241;
+  --accent-dim-rgb: 199, 210, 254;
+  --grid-color: rgba(100, 116, 139, 0.06);
+  --text-primary: 30, 41, 59;
+  --text-muted: 100, 116, 139;
+}
+
+[data-theme="light"] .bg-black { background-color: rgb(241, 245, 249) !important; }
+[data-theme="light"] .bg-\[rgb\(0\,0\,0\)\],
+[data-theme="light"] .bg-\[\#0b0f14\],
+[data-theme="light"] .bg-\[\#0a0d11\] { background-color: rgb(255, 255, 255) !important; }
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-700 { border-color: rgb(203, 213, 225) !important; }
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200,
+[data-theme="light"] .text-slate-300 { color: rgb(30, 41, 59) !important; }
+[data-theme="light"] .text-slate-400,
+[data-theme="light"] .text-slate-500 { color: rgb(100, 116, 139) !important; }
+[data-theme="light"] .text-cyan-300,
+[data-theme="light"] .text-cyan-400,
+[data-theme="light"] .text-cyan-200 { color: rgb(79, 70, 229) !important; }
+[data-theme="light"] .bg-black\/90 { background-color: rgba(241, 245, 249, 0.95) !important; }
+[data-theme="light"] .bg-slate-900\/30 { background-color: rgba(241, 245, 249, 0.5) !important; }
+[data-theme="light"] .bg-cyan-950\/20 { background-color: rgba(224, 231, 255, 0.3) !important; }
+[data-theme="light"] .text-emerald-300 { color: rgb(5, 150, 105) !important; }
+
+/* ───────── Abyss Theme ───────── */
+[data-theme="dark"] {
+  --foreground-rgb: 148, 163, 184;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 5, 5, 8;
+  --panel-bg: 10, 10, 10;
+  --panel-alt-bg: 8, 8, 8;
+  --border-rgb: 38, 38, 42;
+  --accent-rgb: 148, 163, 184;
+  --accent-dim-rgb: 39, 39, 42;
+  --grid-color: rgba(148, 163, 184, 0.03);
+  --text-primary: 161, 161, 170;
+  --text-muted: 82, 82, 91;
+}
+
+[data-theme="dark"] .bg-black { background-color: rgb(0, 0, 0) !important; }
+[data-theme="dark"] .bg-\[\#0b0f14\],
+[data-theme="dark"] .bg-\[\#0a0d11\] { background-color: rgb(10, 10, 10) !important; }
+[data-theme="dark"] .border-slate-800,
+[data-theme="dark"] .border-slate-700 { border-color: rgb(38, 38, 42) !important; }
+[data-theme="dark"] .text-cyan-300,
+[data-theme="dark"] .text-cyan-400,
+[data-theme="dark"] .text-cyan-200 { color: rgb(161, 161, 170) !important; }
+[data-theme="dark"] .bg-black\/90 { background-color: rgba(0, 0, 0, 0.95) !important; }
+
+/* ───────── Neon Grid Theme ───────── */
+[data-theme="neon"] {
+  --foreground-rgb: 220, 240, 220;
+  --background-start-rgb: 10, 0, 20;
+  --background-end-rgb: 5, 0, 15;
+  --panel-bg: 18, 0, 31;
+  --panel-alt-bg: 14, 0, 24;
+  --border-rgb: 50, 0, 80;
+  --accent-rgb: 57, 255, 20;
+  --accent-dim-rgb: 10, 60, 5;
+  --grid-color: rgba(57, 255, 20, 0.06);
+  --text-primary: 200, 255, 200;
+  --text-muted: 100, 180, 100;
+}
+
+[data-theme="neon"] .bg-black { background-color: rgb(10, 0, 20) !important; }
+[data-theme="neon"] .bg-\[\#0b0f14\],
+[data-theme="neon"] .bg-\[\#0a0d11\] { background-color: rgb(18, 0, 31) !important; }
+[data-theme="neon"] .border-slate-800,
+[data-theme="neon"] .border-slate-700 { border-color: rgb(50, 0, 80) !important; }
+[data-theme="neon"] .text-cyan-300,
+[data-theme="neon"] .text-cyan-400,
+[data-theme="neon"] .text-cyan-200 { color: rgb(57, 255, 20) !important; }
+[data-theme="neon"] .text-emerald-300 { color: rgb(236, 72, 153) !important; }
+[data-theme="neon"] .bg-black\/90 { background-color: rgba(10, 0, 20, 0.95) !important; }
+[data-theme="neon"]::before { --grid-color: rgba(57, 255, 20, 0.06); }
+[data-theme="neon"] .border-cyan-900\/50 { border-color: rgba(57, 255, 20, 0.25) !important; }
+[data-theme="neon"] .bg-cyan-950\/20 { background-color: rgba(57, 255, 20, 0.08) !important; }
+
+/* ───────── Hologram Theme ───────── */
+[data-theme="hologram"] {
+  --foreground-rgb: 186, 230, 253;
+  --background-start-rgb: 0, 10, 26;
+  --background-end-rgb: 0, 20, 50;
+  --panel-bg: 0, 16, 41;
+  --panel-alt-bg: 0, 12, 32;
+  --border-rgb: 7, 89, 133;
+  --accent-rgb: 56, 189, 248;
+  --accent-dim-rgb: 7, 89, 133;
+  --grid-color: rgba(56, 189, 248, 0.07);
+  --text-primary: 186, 230, 253;
+  --text-muted: 56, 189, 248;
+}
+
+[data-theme="hologram"] .bg-black { background-color: rgb(0, 10, 26) !important; }
+[data-theme="hologram"] .bg-\[\#0b0f14\],
+[data-theme="hologram"] .bg-\[\#0a0d11\] { background-color: rgb(0, 16, 41) !important; }
+[data-theme="hologram"] .border-slate-800,
+[data-theme="hologram"] .border-slate-700 { border-color: rgb(7, 89, 133) !important; }
+[data-theme="hologram"] .text-cyan-300,
+[data-theme="hologram"] .text-cyan-400,
+[data-theme="hologram"] .text-cyan-200 { color: rgb(56, 189, 248) !important; }
+[data-theme="hologram"] .bg-black\/90 { background-color: rgba(0, 10, 26, 0.95) !important; }
+[data-theme="hologram"] body::before { background-image: linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px) !important; }
+
+/* ───────── Ember Theme ───────── */
+[data-theme="ember"] {
+  --foreground-rgb: 253, 230, 200;
+  --background-start-rgb: 26, 10, 0;
+  --background-end-rgb: 20, 8, 0;
+  --panel-bg: 28, 15, 2;
+  --panel-alt-bg: 22, 12, 2;
+  --border-rgb: 120, 53, 15;
+  --accent-rgb: 245, 158, 11;
+  --accent-dim-rgb: 120, 53, 15;
+  --grid-color: rgba(245, 158, 11, 0.05);
+  --text-primary: 253, 230, 200;
+  --text-muted: 217, 119, 6;
+}
+
+[data-theme="ember"] .bg-black { background-color: rgb(26, 10, 0) !important; }
+[data-theme="ember"] .bg-\[\#0b0f14\],
+[data-theme="ember"] .bg-\[\#0a0d11\] { background-color: rgb(28, 15, 2) !important; }
+[data-theme="ember"] .border-slate-800,
+[data-theme="ember"] .border-slate-700 { border-color: rgb(120, 53, 15) !important; }
+[data-theme="ember"] .text-cyan-300,
+[data-theme="ember"] .text-cyan-400,
+[data-theme="ember"] .text-cyan-200 { color: rgb(245, 158, 11) !important; }
+[data-theme="ember"] .bg-black\/90 { background-color: rgba(26, 10, 0, 0.95) !important; }
+[data-theme="ember"] .border-cyan-900\/50 { border-color: rgba(245, 158, 11, 0.25) !important; }
+[data-theme="ember"] .bg-cyan-950\/20 { background-color: rgba(245, 158, 11, 0.08) !important; }
+[data-theme="ember"] .text-emerald-300 { color: rgb(251, 191, 36) !important; }
+
+/* ───────── Phantom Theme ───────── */
+[data-theme="phantom"] {
+  --foreground-rgb: 221, 214, 254;
+  --background-start-rgb: 10, 0, 21;
+  --background-end-rgb: 15, 0, 26;
+  --panel-bg: 15, 0, 26;
+  --panel-alt-bg: 12, 0, 20;
+  --border-rgb: 76, 29, 149;
+  --accent-rgb: 167, 139, 250;
+  --accent-dim-rgb: 76, 29, 149;
+  --grid-color: rgba(167, 139, 250, 0.05);
+  --text-primary: 221, 214, 254;
+  --text-muted: 139, 92, 246;
+}
+
+[data-theme="phantom"] .bg-black { background-color: rgb(10, 0, 21) !important; }
+[data-theme="phantom"] .bg-\[\#0b0f14\],
+[data-theme="phantom"] .bg-\[\#0a0d11\] { background-color: rgb(15, 0, 26) !important; }
+[data-theme="phantom"] .border-slate-800,
+[data-theme="phantom"] .border-slate-700 { border-color: rgb(76, 29, 149) !important; }
+[data-theme="phantom"] .text-cyan-300,
+[data-theme="phantom"] .text-cyan-400,
+[data-theme="phantom"] .text-cyan-200 { color: rgb(167, 139, 250) !important; }
+[data-theme="phantom"] .bg-black\/90 { background-color: rgba(10, 0, 21, 0.95) !important; }
+[data-theme="phantom"] .border-cyan-900\/50 { border-color: rgba(167, 139, 250, 0.25) !important; }
+[data-theme="phantom"] .bg-cyan-950\/20 { background-color: rgba(139, 92, 246, 0.08) !important; }
 
 body {
   font-family: var(--font-body), "Segoe UI", sans-serif;
@@ -24,8 +202,8 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
 }

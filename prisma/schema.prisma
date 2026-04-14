@@ -48,6 +48,8 @@ model PilotState {
   atkSplit          Int             @default(50)
   appearanceSelections Int          @default(0)
   appearanceNeedsSetup Boolean      @default(false)
+  theme             String          @default("original")
+  customQuicklinks  String          @default("[]")
   gymStreak         Int             @default(0)
   currentSector     String          @default("Fringe Expanse")
   kills             Int             @default(0)

@@ -36,5 +36,6 @@ export const sideRailLinks: BureauNavLink[] = [
   { href: "/quickposts", label: "QuickPosts", status: "live" },
   { href: "/chat", label: "Town Hall", status: "live" },
   { href: "/account", label: "My Account", status: "live" },
+  { href: "/settings", label: "Settings", status: "live" },
   { href: "/updates", label: "Updates", status: "live" },
 ];

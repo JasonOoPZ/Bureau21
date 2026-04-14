@@ -1,5 +1,6 @@
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { topNavLinks } from "@/lib/navigation";
+import { prisma } from "@/lib/prisma";
 import type { Session } from "next-auth";
 import Link from "next/link";
 
@@ -7,8 +8,26 @@ interface TopBarProps {
   session: Session;
 }
 
-export function TopBar({ session }: TopBarProps) {
+interface QuickLink {
+  href: string;
+  label: string;
+}
+
+export async function TopBar({ session }: TopBarProps) {
   const isAdmin = session.user.role === "admin";
+
+  let customQuicklinks: QuickLink[] = [];
+  try {
+    const pilot = await prisma.pilotState.findUnique({
+      where: { userId: session.user.id },
+    });
+    const raw = (pilot as Record<string, unknown> | null)?.customQuicklinks;
+    if (typeof raw === "string" && raw !== "[]") {
+      customQuicklinks = JSON.parse(raw);
+    }
+  } catch {
+    /* ignore */
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800 bg-black/90 px-4 py-2 backdrop-blur sm:px-6">
@@ -23,6 +42,20 @@ export function TopBar({ session }: TopBarProps) {
                 {link.label}
               </Link>
             ))}
+            {customQuicklinks.length > 0 && (
+              <>
+                <span className="text-slate-700">|</span>
+                {customQuicklinks.map((link, i) => (
+                  <Link
+                    key={`ql-${i}`}
+                    href={link.href}
+                    className="text-amber-400 transition hover:text-amber-200"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </>
+            )}
             {isAdmin ? (
               <Link href="/admin" className="text-amber-300 transition hover:text-amber-200">
                 Admin

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -17,13 +18,16 @@ export const metadata: Metadata = {
   description: "A browser-first sci-fi MMORPG",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("bureau21-theme")?.value ?? "original";
+
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme === "original" ? undefined : theme}>
       <body className={`${spaceGrotesk.variable} ${orbitron.variable}`}>{children}</body>
     </html>
   );
