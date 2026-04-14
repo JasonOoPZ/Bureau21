@@ -66,11 +66,14 @@ model PilotState {
   lastDockAt        DateTime        @default(now())
   lastFabAt         DateTime        @default(now())
   lastPackAt        DateTime?
+  lastOutpostClaim  DateTime?
+  fish              Int             @default(0)
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]
   syndicateMember   SyndicateMember?
   heroes            PlayerHero[]
+  studies           StudyProgress[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -230,4 +233,17 @@ model PlayerHero {
   createdAt DateTime @default(now())
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model StudyProgress {
+  id        String   @id @default(cuid())
+  pilotId   String
+  course    String
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@unique([pilotId, course])
 }

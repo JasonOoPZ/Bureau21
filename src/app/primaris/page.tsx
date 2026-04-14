@@ -43,7 +43,7 @@ const DISTRICTS: District[] = [
       { name: "Galaxy Gym", href: "/gym", description: "Train strength, speed, endurance, and confidence.", status: "live" },
       { name: "The Academy", href: "/station/academy", description: "Advanced combat training modules.", status: "live" },
       { name: "Battle Support Corps", href: "/heroes", description: "Recruit and deploy hero units for battle bonuses.", status: "live" },
-      { name: "Training Grounds", href: "/primaris", description: "Sparring matches and practice drills.", status: "planned" },
+      { name: "Training Grounds", href: "/primaris/training-grounds", description: "Sparring matches and practice drills.", status: "live" },
     ],
   },
   {
@@ -56,7 +56,7 @@ const DISTRICTS: District[] = [
       { name: "Bank", href: "/bank", description: "Deposit credits, earn interest, manage tokens.", status: "live" },
       { name: "Fabrication", href: "/station/fabrication", description: "Craft and upgrade equipment from salvage.", status: "live" },
       { name: "Inventory", href: "/inventory", description: "Manage your gear and equipment loadout.", status: "live" },
-      { name: "Pawn Shop", href: "/primaris", description: "Sell unwanted gear for quick credits.", status: "planned" },
+      { name: "Pawn Shop", href: "/primaris/pawn-shop", description: "Sell unwanted gear for quick credits.", status: "live" },
     ],
   },
   {
@@ -65,10 +65,10 @@ const DISTRICTS: District[] = [
     icon: "☠",
     locations: [
       { name: "Black Market", href: "/station/underbelly", description: "Contraband labs and high-risk deals.", status: "live" },
-      { name: "Casino", href: "/primaris", description: "High-stakes gambling. Credits in, credits out.", status: "planned" },
-      { name: "Fight Pit", href: "/primaris", description: "Underground bare-knuckle brawls. No rules.", status: "planned" },
-      { name: "Smuggler's Den", href: "/primaris", description: "Move illicit cargo for massive payouts.", status: "planned" },
-      { name: "Info Broker", href: "/primaris", description: "Buy intel on other pilots and syndicates.", status: "planned" },
+      { name: "Casino", href: "/primaris/casino", description: "High-stakes gambling. Credits in, credits out.", status: "live" },
+      { name: "Fight Pit", href: "/primaris/fight-pit", description: "Underground bare-knuckle brawls. No rules.", status: "live" },
+      { name: "Smuggler's Den", href: "/primaris/smugglers-den", description: "Move illicit cargo for massive payouts.", status: "live" },
+      { name: "Info Broker", href: "/primaris/info-broker", description: "Buy intel on other pilots and syndicates.", status: "live" },
     ],
   },
   {
@@ -78,9 +78,9 @@ const DISTRICTS: District[] = [
     locations: [
       { name: "Hydroponics Bay", href: "/station/hydroponics", description: "Grow herbs, consumables, and bio-fuel.", status: "live" },
       { name: "Docking Bay", href: "/station/docking-bay", description: "Ship upgrades, hull repair, and warp charting.", status: "live" },
-      { name: "Mining Rig", href: "/primaris", description: "Extract ore and rare minerals from asteroids.", status: "planned" },
-      { name: "Refinery", href: "/primaris", description: "Process raw ore into crafting materials.", status: "planned" },
-      { name: "Salvage Yard", href: "/primaris", description: "Scavenge derelict ships for parts.", status: "planned" },
+      { name: "Mining Rig", href: "/primaris/mining-rig", description: "Extract ore and rare minerals from asteroids.", status: "live" },
+      { name: "Refinery", href: "/primaris/refinery", description: "Process raw ore into crafting materials.", status: "live" },
+      { name: "Salvage Yard", href: "/primaris/salvage-yard", description: "Scavenge derelict ships for parts.", status: "live" },
     ],
   },
   {
@@ -89,9 +89,9 @@ const DISTRICTS: District[] = [
     icon: "🌌",
     locations: [
       { name: "Outer Ring", href: "/station/outer-ring", description: "Deep-space contracts and frontier scouting.", status: "live" },
-      { name: "Fishing Hut", href: "/primaris", description: "Cast lines into the void. Catch strange things.", status: "planned" },
-      { name: "Exploration Bay", href: "/primaris", description: "Chart unknown sectors and discover anomalies.", status: "planned" },
-      { name: "Outpost", href: "/primaris", description: "Establish forward bases in remote sectors.", status: "planned" },
+      { name: "Fishing Hut", href: "/primaris/fishing-hut", description: "Cast lines into the void. Catch strange things.", status: "live" },
+      { name: "Exploration Bay", href: "/primaris/exploration-bay", description: "Chart unknown sectors and discover anomalies.", status: "live" },
+      { name: "Outpost", href: "/primaris/outpost", description: "Establish forward bases in remote sectors.", status: "live" },
     ],
   },
   {
@@ -102,8 +102,9 @@ const DISTRICTS: District[] = [
       { name: "Syndicate Row", href: "/station/syndicate-row", description: "Form or join a syndicate. Guild operations.", status: "live" },
       { name: "Settings", href: "/settings", description: "Pilot preferences and account configuration.", status: "live" },
       { name: "Account", href: "/account", description: "Manage your Bureau 21 account.", status: "live" },
-      { name: "Lounge", href: "/primaris", description: "Hang out, show off gear, and socialize.", status: "planned" },
-      { name: "Tattoo Parlor", href: "/primaris", description: "Customize your pilot's appearance and flair.", status: "planned" },
+      { name: "Lounge", href: "/primaris/lounge", description: "Hang out, show off gear, and socialize.", status: "live" },
+      { name: "Tattoo Parlor", href: "/primaris/tattoo-parlor", description: "Customize your pilot's appearance and flair.", status: "live" },
+      { name: "University", href: "/primaris/university", description: "Study courses to unlock station-wide benefits.", status: "live" },
     ],
   },
 ];
