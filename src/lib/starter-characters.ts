@@ -43,7 +43,7 @@ export const starterCharacters: StarterCharacter[] = [
     glow: "#39ff14",
     perk: {
       name: "Shattering Power",
-      description: "The core battle function of this unit is simple, direct damage. Start with an immediate and permanent increase to raw damage output — all sources, all types.",
+      description: "The core battle function of this unit is simple, direct damage. Start with an immediate and permanent increase to raw damage output, all sources, all types.",
       stat: "Damage Output",
       value: "+10%",
       color: "#39ff14",
@@ -118,9 +118,9 @@ export const starterCharacters: StarterCharacter[] = [
     glow: "#ffd866",
     perk: {
       name: "Mastered Focus",
-      description: "A versatile starting boost — this unit enters every battle with bonus Confidence, giving an edge before the first round.",
-      stat: "Starting Confidence",
-      value: "+10 pts",
+      description: "A versatile starting boost. This unit enters every battle with bonus Confidence and a doubled max Confidence cap (100 instead of 50), giving a dominant edge before the first round.",
+      stat: "Confidence",
+      value: "+10 Start / 100 Max",
       color: "#ffd866",
     },
   },
