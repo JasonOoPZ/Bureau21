@@ -82,18 +82,15 @@ export async function POST(request: Request) {
   };
 
   if (training === "strength") {
-    update.strength = Math.min(99, pilot.strength + effectiveGain);
+    update.strength = pilot.strength + effectiveGain;
   } else if (training === "speed") {
-    update.speed = Math.min(99, pilot.speed + effectiveGain);
+    update.speed = pilot.speed + effectiveGain;
   } else if (training === "endurance") {
-    update.endurance = Math.min(5, pilot.endurance + effectiveGain);
+    update.endurance = pilot.endurance + effectiveGain;
   } else if (training === "panic_control") {
-    update.panic = Math.max(0, pilot.panic + effectiveGain); // effectiveGain is negative
+    update.panic = Math.max(0, pilot.panic + effectiveGain); // effectiveGain is negative, floor at 0
   } else if (training === "confidence") {
-    update.confidence = Math.min(
-      GAME_CONSTANTS.CONFIDENCE_CAP,
-      pilot.confidence + Math.round(effectiveGain)
-    );
+    update.confidence = pilot.confidence + Math.round(effectiveGain);
   }
 
   await prisma.pilotState.update({

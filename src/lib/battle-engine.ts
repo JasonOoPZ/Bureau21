@@ -78,7 +78,7 @@ function buildPvpFighter(
   const heroSpd = heroBonuses?.speedFlat ?? 0;
   const heroConf = heroBonuses?.confidenceFlat ?? 0;
 
-  const appliedConfidence = Math.min(GAME_CONSTANTS.CONFIDENCE_CAP, pilot.confidence + heroConf);
+  const appliedConfidence = pilot.confidence + heroConf;
   const critBonus = (appliedConfidence / GAME_CONSTANTS.CONFIDENCE_CAP) * 0.08;
 
   const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
@@ -177,12 +177,8 @@ export function resolvePvpBattle(
   const attackerCredits = attackerWon ? winCredits : loseCredits;
   const defenderCredits = attackerWon ? loseCredits : winCredits;
 
-  const attackerConfDelta = attackerWon
-    ? Math.min(3, GAME_CONSTANTS.CONFIDENCE_CAP - attackerInput.confidence)
-    : -2;
-  const defenderConfDelta = attackerWon
-    ? -2
-    : Math.min(3, GAME_CONSTANTS.CONFIDENCE_CAP - defenderInput.confidence);
+  const attackerConfDelta = attackerWon ? 3 : -2;
+  const defenderConfDelta = attackerWon ? -2 : 3;
 
   // Build log text
   const logLines: string[] = [];

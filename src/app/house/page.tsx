@@ -241,7 +241,7 @@ export default async function HousePage() {
                   <StatPill label="Endurance" value={pilot.endurance.toFixed(3)} />
                   <StatPill
                     label="Confidence"
-                    value={`${pilot.confidence} / ${GAME_CONSTANTS.CONFIDENCE_CAP}`}
+                    value={pilot.confidence}
                   />
                   <StatPill label="Panic" value={pilot.panic.toFixed(2)} />
                   <StatPill

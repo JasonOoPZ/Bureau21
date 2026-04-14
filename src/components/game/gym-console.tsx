@@ -29,11 +29,11 @@ interface Props {
 }
 
 const TRAINING_DATA = {
-  strength: { label: "Strength", description: "ATK/DEF power", icon: "💪", cost: 15, gain: 0.3, cap: 99 },
-  speed: { label: "Speed", description: "Turn order advantage", icon: "⚡", cost: 15, gain: 0.3, cap: 99 },
-  endurance: { label: "Endurance", description: "Long-fight resilience", icon: "🛡️", cost: 10, gain: 0.02, cap: 5 },
-  panic_control: { label: "Panic Control", description: "Reduce panic buildup", icon: "🧘", cost: 20, gain: -0.05, cap: 0 },
-  confidence: { label: "Confidence", description: "Battle confidence boost", icon: "⭐", cost: 25, gain: 2, cap: GAME_CONSTANTS.CONFIDENCE_CAP },
+  strength: { label: "Strength", description: "ATK/DEF power", icon: "💪", cost: 15, gain: 0.3 },
+  speed: { label: "Speed", description: "Turn order advantage", icon: "⚡", cost: 15, gain: 0.3 },
+  endurance: { label: "Endurance", description: "Long-fight resilience", icon: "🛡️", cost: 10, gain: 0.02 },
+  panic_control: { label: "Panic Control", description: "Reduce panic buildup", icon: "🧘", cost: 20, gain: -0.05 },
+  confidence: { label: "Confidence", description: "Battle confidence boost", icon: "⭐", cost: 25, gain: 2 },
 } as const;
 
 const TRAINING_DESCRIPTIONS: Record<string, string> = {
@@ -41,7 +41,7 @@ const TRAINING_DESCRIPTIONS: Record<string, string> = {
   speed: "Determines turn order; higher speed attacks first.",
   endurance: "Boosts stamina and long-fight resilience.",
   panic_control: "Reduces panic, stabilizing performance under pressure.",
-  confidence: `Increases confidence (cap: ${GAME_CONSTANTS.CONFIDENCE_CAP}). Higher confidence = battle bonuses.`,
+  confidence: "Increases confidence. Higher confidence = battle bonuses.",
 };
 
 export function GymConsole({ initial }: Props) {
@@ -99,35 +99,14 @@ export function GymConsole({ initial }: Props) {
   const motivationPct = Math.min(100, (state.motivation / state.motivationCap) * 100);
   const streakBonus = 1 + state.gymStreak * GAME_CONSTANTS.GYM_STREAK_BONUS_PER_DAY;
 
-  // Helper to get stat color based on progress to cap
-  const getStatColor = (current: number, cap: number) => {
-    const pct = current / cap;
-    if (pct < 0.25) return "text-red-400";
-    if (pct < 0.5) return "text-orange-400";
-    if (pct < 0.75) return "text-yellow-400";
-    return "text-emerald-400";
-  };
-
-  // Helper to render stat progress bar
-  const StatBar = ({ current, cap, label }: { current: number; cap: number; label: string }) => {
-    const pct = Math.min(100, (current / cap) * 100);
-    const color = getStatColor(current, cap);
+  // Helper to render stat value
+  const StatBar = ({ current, label }: { current: number; label: string }) => {
     return (
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
-          <span className={`font-mono text-[11px] font-semibold ${color}`}>
-            {current.toFixed(cap === 1 ? 2 : current < 1 ? 4 : 2)} / {cap}
-          </span>
-        </div>
-        <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-          <div
-            className={`h-1.5 transition-all ${
-              pct < 25 ? "bg-red-500" : pct < 50 ? "bg-orange-500" : pct < 75 ? "bg-yellow-500" : "bg-emerald-500"
-            }`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
+        <span className="font-mono text-[11px] font-semibold text-emerald-400">
+          {current < 1 ? current.toFixed(4) : current.toFixed(2)}
+        </span>
       </div>
     );
   };
@@ -182,11 +161,11 @@ export function GymConsole({ initial }: Props) {
             Combat Stats
           </p>
           <div className="space-y-3">
-            <StatBar current={state.strength} cap={99} label="Strength" />
-            <StatBar current={state.speed} cap={99} label="Speed" />
-            <StatBar current={state.endurance} cap={5} label="Endurance" />
-            <StatBar current={state.panic} cap={1} label="Panic" />
-            <StatBar current={state.confidence} cap={GAME_CONSTANTS.CONFIDENCE_CAP} label="Confidence" />
+            <StatBar current={state.strength} label="Strength" />
+            <StatBar current={state.speed} label="Speed" />
+            <StatBar current={state.endurance} label="Endurance" />
+            <StatBar current={state.panic} label="Panic" />
+            <StatBar current={state.confidence} label="Confidence" />
           </div>
         </div>
       </div>
