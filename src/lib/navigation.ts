@@ -5,6 +5,7 @@ export type BureauNavLink = {
 };
 
 export const topNavLinks: BureauNavLink[] = [
+  { href: "/primaris", label: "Primaris", status: "live" },
   { href: "/house", label: "House", status: "live" },
   { href: "/gym", label: "Gym", status: "live" },
   { href: "/battle", label: "Battle", status: "live" },
@@ -16,6 +17,7 @@ export const topNavLinks: BureauNavLink[] = [
 ];
 
 export const sideRailLinks: BureauNavLink[] = [
+  { href: "/primaris", label: "Primaris Core", status: "live" },
   { href: "/house", label: "House", status: "live" },
   { href: "/inventory", label: "Inventory", status: "live" },
   { href: "/bank", label: "Bank", status: "live" },
