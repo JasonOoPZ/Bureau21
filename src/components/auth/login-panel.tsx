@@ -51,20 +51,31 @@ export function LoginPanel() {
 
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email: signInEmail,
-      password: signInPassword,
-      redirect: false,
-      callbackUrl: "/lobby",
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: signInEmail,
+        password: signInPassword,
+        redirect: false,
+        callbackUrl: "/lobby",
+      });
 
-    if (result?.error) {
-      setNotice("Sign-in failed. Verify your credentials.");
+      if (result?.error) {
+        setNotice(`Sign-in failed: ${result.error}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!result?.ok) {
+        setNotice(`Sign-in returned unexpected status: ${result?.status}`);
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = result?.url ?? "/lobby";
+    } catch (err) {
+      setNotice(`Sign-in error: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
-      return;
     }
-
-    window.location.href = result?.url ?? "/lobby";
   }
 
   async function handleOnboarding(event: FormEvent<HTMLFormElement>) {
@@ -90,31 +101,41 @@ export function LoginPanel() {
       }),
     });
 
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    let payload: { error?: string } | null = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
 
     if (!response.ok) {
-      setNotice(payload?.error ?? "Unable to create your account right now.");
+      setNotice(payload?.error ?? `Registration failed (${response.status})`);
       setLoading(false);
       return;
     }
 
-    const loginResult = await signIn("credentials", {
-      email: onboardEmail,
-      password: onboardPassword,
-      redirect: false,
-      callbackUrl: "/lobby",
-    });
+    try {
+      const loginResult = await signIn("credentials", {
+        email: onboardEmail,
+        password: onboardPassword,
+        redirect: false,
+        callbackUrl: "/lobby",
+      });
 
-    if (loginResult?.error) {
-      setNotice("Account created, but auto sign-in failed. Please sign in manually.");
-      setMode("signin");
-      setSignInEmail(onboardEmail);
-      setSignInPassword("");
+      if (loginResult?.error) {
+        setNotice(`Account created, but sign-in failed: ${loginResult.error}`);
+        setMode("signin");
+        setSignInEmail(onboardEmail);
+        setSignInPassword("");
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = loginResult?.url ?? "/lobby";
+    } catch (err) {
+      setNotice(`Account created, but sign-in error: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
-      return;
     }
-
-    window.location.href = loginResult?.url ?? "/lobby";
   }
 
   return (
