@@ -97,6 +97,28 @@ export default async function HousePage() {
     take: 5,
   });
 
+  // Aggregate battle stats
+  const allBattleLogs = await prisma.battleLog.findMany({
+    where: { pilotId: pilot.id },
+    select: { result: true, xpGained: true, creditsGained: true, createdAt: true },
+  });
+
+  const totalWins = allBattleLogs.filter((l) => l.result === "win").length;
+  const totalLosses = allBattleLogs.filter((l) => l.result === "loss").length;
+  const totalStalemates = allBattleLogs.filter((l) => l.result === "stalemate").length;
+  const totalBattles = allBattleLogs.length;
+  const totalXpEarned = allBattleLogs.reduce((s, l) => s + l.xpGained, 0);
+  const totalCreditsEarned = allBattleLogs.reduce((s, l) => s + l.creditsGained, 0);
+
+  // Today's battle stats
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayLogs = allBattleLogs.filter((l) => l.createdAt >= todayStart);
+  const dailyWins = todayLogs.filter((l) => l.result === "win").length;
+  const dailyLosses = todayLogs.filter((l) => l.result === "loss").length;
+  const dailyXp = todayLogs.reduce((s, l) => s + l.xpGained, 0);
+  const dailyCredits = todayLogs.reduce((s, l) => s + l.creditsGained, 0);
+
   const currentTime = new Date();
   const accountAgeDays = Math.floor(
     (currentTime.getTime() - new Date(pilot.createdAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -184,6 +206,54 @@ export default async function HousePage() {
 
             {/* RIGHT */}
             <div className="space-y-3">
+              {/* Personal Stats */}
+              <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 underline decoration-slate-700 underline-offset-4">
+                  Personal Stats
+                </p>
+                <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-x-6 gap-y-1 text-[11px]">
+                  <span className="font-semibold text-slate-400">Level:</span>
+                  <span className="text-slate-200">{pilot.level}</span>
+                  <span className="font-semibold text-slate-400">Experience:</span>
+                  <span className="text-slate-200">{pilot.xp}/{maxXp}</span>
+
+                  <span className="font-semibold text-slate-400">Life Force:</span>
+                  <span className="text-slate-200">{pilot.lifeForce}/{maxLF}</span>
+                  <span className="font-semibold text-slate-400">Motivation:</span>
+                  <span className="text-slate-200">{pilot.motivation}/{GAME_CONSTANTS.MOTIVATION_CAP_FREE}</span>
+
+                  <span className="font-semibold text-slate-400">Credits:</span>
+                  <span className="text-amber-300">{pilot.credits.toLocaleString()}</span>
+                  <span className="font-semibold text-slate-400">Tokens:</span>
+                  <span className="text-purple-300">{pilot.tokens}</span>
+
+                  <span className="font-semibold text-slate-400">Account Age:</span>
+                  <span className="text-slate-200">{accountAgeDays} days</span>
+                  <span className="font-semibold text-slate-400">Sector:</span>
+                  <span className="text-slate-200">{pilot.currentSector}</span>
+
+                  <span className="font-semibold text-slate-400">Kills:</span>
+                  <span className="text-slate-200">{pilot.kills}</span>
+                  <span className="font-semibold text-slate-400">Bounty:</span>
+                  <span className="text-amber-300">{pilot.bounty} Cr</span>
+
+                  <span className="font-semibold text-slate-400">Fuel:</span>
+                  <span className="text-slate-200">{pilot.fuel}/10</span>
+                  <span className="font-semibold text-slate-400">Hull:</span>
+                  <span className="text-slate-200">{pilot.hull}/100</span>
+
+                  <span className="font-semibold text-slate-400">Herbs:</span>
+                  <span className="text-emerald-300">{pilot.herbs ?? 0}</span>
+                  <span className="font-semibold text-slate-400">Ore:</span>
+                  <span className="text-slate-200">{pilot.ore}</span>
+
+                  <span className="font-semibold text-slate-400">Gym Streak:</span>
+                  <span className="text-slate-200">{pilot.gymStreak}d</span>
+                  <span className="font-semibold text-slate-400">Gender:</span>
+                  <span className="capitalize text-slate-200">{pilot.gender}</span>
+                </div>
+              </section>
+
               {/* Progress bars */}
               <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
                 <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-slate-500">
@@ -208,8 +278,6 @@ export default async function HousePage() {
                     max={GAME_CONSTANTS.MOTIVATION_CAP_FREE}
                     color="amber"
                   />
-                  <StatBar label="Hull Integrity" value={pilot.hull} max={100} color="cyan" />
-                  <StatBar label="Fuel" value={pilot.fuel} max={10} color="cyan" />
                 </div>
               </section>
 
@@ -220,11 +288,11 @@ export default async function HousePage() {
                 maxLf={maxLF}
               />
 
-              {/* Combat stats */}
+              {/* Battle Stats */}
               <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                    Combat Stats
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 underline decoration-slate-700 underline-offset-4">
+                    Battle Stats
                   </p>
                   <Link
                     href="/battle"
@@ -233,22 +301,31 @@ export default async function HousePage() {
                     → Battle Arena
                   </Link>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <StatPill label="ATK" value={atk} />
-                  <StatPill label="DEF" value={def} />
-                  <StatPill label="Strength" value={pilot.strength.toFixed(1)} />
-                  <StatPill label="Speed" value={pilot.speed.toFixed(1)} />
-                  <StatPill label="Endurance" value={pilot.endurance.toFixed(3)} />
-                  <StatPill
-                    label="Confidence"
-                    value={`${pilot.confidence} / ${getConfidenceCap(pilot.characterSlug)}`}
-                  />
-                  <StatPill label="Panic" value={pilot.panic.toFixed(2)} />
-                  <StatPill
-                    label="ATK/DEF Split"
-                    value={`${pilot.atkSplit}/${100 - pilot.atkSplit}`}
-                  />
-                  <StatPill label="Gym Streak" value={`${pilot.gymStreak}d`} />
+                <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-x-6 gap-y-1 text-[11px]">
+                  <span className="font-semibold text-slate-400">ATK/DEF Split:</span>
+                  <span className="text-slate-200">{pilot.atkSplit}%</span>
+                  <span className="font-semibold text-slate-400">Battle Timer:</span>
+                  <span className="text-slate-200">{GAME_CONSTANTS.BATTLE_GAUGE_DEFAULT_MINUTES} min</span>
+
+                  <span className="font-semibold text-slate-400">ATK:</span>
+                  <span className="text-cyan-200">{atk}</span>
+                  <span className="font-semibold text-slate-400">DEF:</span>
+                  <span className="text-cyan-200">{def}</span>
+
+                  <span className="font-semibold text-slate-400">Strength:</span>
+                  <span className="text-slate-200">{pilot.strength.toFixed(2)}</span>
+                  <span className="font-semibold text-slate-400">Speed:</span>
+                  <span className="text-slate-200">{pilot.speed.toFixed(2)}</span>
+
+                  <span className="font-semibold text-slate-400">Endurance:</span>
+                  <span className="text-slate-200">{pilot.endurance.toFixed(4)}</span>
+                  <span className="font-semibold text-slate-400">Panic:</span>
+                  <span className="text-slate-200">{pilot.panic.toFixed(4)}</span>
+
+                  <span className="font-semibold text-slate-400">Confidence:</span>
+                  <span className="text-slate-200">{pilot.confidence}/{getConfidenceCap(pilot.characterSlug)}</span>
+                  <span className="font-semibold text-slate-400">Battles:</span>
+                  <span className="text-slate-200">{totalWins}/{totalLosses}/{totalStalemates}/{totalBattles}</span>
                 </div>
                 <div className="mt-2 border-t border-slate-800 pt-2">
                   <Link
@@ -257,6 +334,29 @@ export default async function HousePage() {
                   >
                     → Train at Gym
                   </Link>
+                </div>
+              </section>
+
+              {/* Daily Battle Stats */}
+              <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 underline decoration-slate-700 underline-offset-4">
+                  Daily Battle Stats
+                </p>
+                <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-x-6 gap-y-1 text-[11px]">
+                  <span className="font-semibold text-slate-400">Wins:</span>
+                  <span className="text-emerald-300">{dailyWins}</span>
+                  <span className="font-semibold text-slate-400">Losses:</span>
+                  <span className="text-red-400">{dailyLosses}</span>
+
+                  <span className="font-semibold text-slate-400">Total Today:</span>
+                  <span className="text-slate-200">{todayLogs.length}</span>
+                  <span className="font-semibold text-slate-400">Success Rate:</span>
+                  <span className="text-slate-200">{todayLogs.length > 0 ? Math.round((dailyWins / todayLogs.length) * 100) : 0}%</span>
+
+                  <span className="font-semibold text-slate-400">EXP Earned:</span>
+                  <span className="text-cyan-200">{dailyXp}</span>
+                  <span className="font-semibold text-slate-400">Credits Earned:</span>
+                  <span className="text-amber-300">{dailyCredits}</span>
                 </div>
               </section>
 
@@ -284,6 +384,12 @@ export default async function HousePage() {
                     <p className="text-[10px] uppercase tracking-wide text-purple-500">Tokens</p>
                     <p className="mt-1 text-2xl font-bold text-purple-300">{pilot.tokens}</p>
                   </div>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+                  <span className="font-semibold text-slate-400">Total XP Earned:</span>
+                  <span className="text-cyan-200">{totalXpEarned.toLocaleString()}</span>
+                  <span className="font-semibold text-slate-400">Total Credits Earned:</span>
+                  <span className="text-amber-300">{totalCreditsEarned.toLocaleString()}</span>
                 </div>
               </section>
 
