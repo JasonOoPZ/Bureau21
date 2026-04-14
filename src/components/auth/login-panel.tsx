@@ -13,6 +13,9 @@ async function getCsrfToken(): Promise<string> {
 
 async function credentialsSignIn(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   const csrfToken = await getCsrfToken();
+
+  // POST with redirect: "manual" so the browser sets the session cookie
+  // from the 302 response without following the redirect itself
   const res = await fetch("/api/auth/callback/credentials", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -21,15 +24,32 @@ async function credentialsSignIn(email: string, password: string): Promise<{ ok:
       email,
       password,
       callbackUrl: "/lobby",
-      json: "true",
     }),
-    redirect: "follow",
+    redirect: "manual",
   });
-  const url = new URL(res.url);
-  if (url.searchParams.has("error")) {
-    return { ok: false, error: url.searchParams.get("error") ?? "Unknown error" };
+
+  // Verify the session was actually established
+  const sessionRes = await fetch("/api/auth/session");
+  const session = await sessionRes.json();
+
+  if (session?.user) {
+    return { ok: true };
   }
-  return { ok: true };
+
+  // If we got a normal (non-redirect) response, try to read error from body
+  if (res.status === 200) {
+    try {
+      const data = await res.json();
+      if (data?.url) {
+        const u = new URL(data.url, window.location.origin);
+        if (u.searchParams.has("error")) {
+          return { ok: false, error: u.searchParams.get("error") ?? "Invalid credentials" };
+        }
+      }
+    } catch { /* response wasn't JSON */ }
+  }
+
+  return { ok: false, error: "Session not established. Check your credentials." };
 }
 
 export function LoginPanel() {
