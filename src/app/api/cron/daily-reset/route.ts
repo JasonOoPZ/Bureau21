@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { GAME } from '@/lib/constants';
 
+/**
+ * Midnight reset — fires at 00:00 UTC every day.
+ *
+ * Handles economy progression:
+ *   - Revives dead characters
+ *   - Increments age_days
+ *   - Adds daily motivation (+ guild bonus if applicable)
+ *   - Decrements welfare days
+ *   - Grants daily tokens
+ *   - Expires newbie protection when due
+ *
+ * Confidence + gym energy are restocked by the noon reset (midday-reset at 04:00 UTC / 12:00 HKT).
+ */
 export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized access
   const authHeader = request.headers.get('authorization');
@@ -20,12 +33,7 @@ export async function GET(request: Request) {
       .update({ is_dead: false, life_force: 1 })
       .eq('is_dead', true);
 
-    // 2. Restore confidence to starting value, reset daily gym energy
-    await supabase
-      .from('characters')
-      .update({ confidence: GAME.CONFIDENCE_START, gym_energy_used: 0 });
-
-    // 3. Increment age_days, add motivation, grant tokens
+    // 2. Increment age_days, add motivation, grant tokens
     const { data: allChars } = await supabase
       .from('characters')
       .select('id, age_days, motivation, max_motivation, welfare_days_remaining, tokens, is_newbie, newbie_until, syndicate_id');
