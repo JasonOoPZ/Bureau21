@@ -145,7 +145,13 @@ ALTER TABLE syndicate_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can read members" ON syndicate_members FOR SELECT USING (true);
 
 -- Messages (Boards)
-CREATE TYPE board_type AS ENUM ('game_help', 'trading', 'announcements', 'general');
+CREATE TYPE board_type AS ENUM (
+  'general', 'operator_journals', 'rookie_bay',
+  'announcements', 'tactics', 'job_board',
+  'trading', 'market_intel', 'black_market',
+  'game_help',
+  'credit_exchange', 'token_vault', 'syndicate_finance'
+);
 CREATE TABLE messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   board board_type NOT NULL,

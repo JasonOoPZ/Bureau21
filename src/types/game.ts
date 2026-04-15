@@ -1,7 +1,20 @@
 export type ItemType = 'weapon' | 'armor' | 'herb' | 'substance' | 'consumable' | 'misc';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export type SyndicateRole = 'leader' | 'officer' | 'member';
-export type BoardType = 'game_help' | 'trading' | 'announcements' | 'general';
+export type BoardType =
+  | 'general'
+  | 'operator_journals'
+  | 'rookie_bay'
+  | 'announcements'
+  | 'tactics'
+  | 'job_board'
+  | 'trading'
+  | 'market_intel'
+  | 'black_market'
+  | 'game_help'
+  | 'credit_exchange'
+  | 'token_vault'
+  | 'syndicate_finance';
 export type KillFeedType = 'kill' | 'discovery' | 'achievement' | 'syndicate';
 export type LeaderboardCategory = 'kingpin' | 'warlord' | 'chemist' | 'miner' | 'rookie';
 export type WorkoutType = 'strength' | 'speed' | 'endurance' | 'panic';
