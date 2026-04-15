@@ -251,8 +251,13 @@ ALTER TABLE characters ADD COLUMN bond_created_at TIMESTAMPTZ;
 ALTER TABLE characters ADD COLUMN bond_matures_at TIMESTAMPTZ;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- ADMIN COMMANDS — run manually in Supabase SQL Editor
+-- ADMIN COMMANDS — run manually in Supabase SQL Editor (authorized by game admin only)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Give Violent Pawn 3,000,000 credits (all to hand):
--- UPDATE characters SET credits_hand = credits_hand + 3000000 WHERE username = 'Violent Pawn';
+-- Give Violent Pawn 3,000,000 credits (all to hand).
+-- Verify exactly 1 row is affected before committing.
+-- Authorized by: @JasonOoPZ | Reason: admin credit grant
+-- UPDATE characters
+-- SET credits_hand = credits_hand + 3000000
+-- WHERE username = 'Violent Pawn'
+-- RETURNING id, username, credits_hand;
