@@ -249,3 +249,10 @@ ALTER TABLE characters ADD COLUMN bond_amount INTEGER DEFAULT 0 NOT NULL;
 ALTER TABLE characters ADD COLUMN bond_rate REAL DEFAULT 0 NOT NULL;
 ALTER TABLE characters ADD COLUMN bond_created_at TIMESTAMPTZ;
 ALTER TABLE characters ADD COLUMN bond_matures_at TIMESTAMPTZ;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ADMIN COMMANDS — run manually in Supabase SQL Editor
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Give Violent Pawn 3,000,000 credits (all to hand):
+-- UPDATE characters SET credits_hand = credits_hand + 3000000 WHERE username = 'Violent Pawn';
