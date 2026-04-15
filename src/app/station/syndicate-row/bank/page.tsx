@@ -135,7 +135,8 @@ export default function BankPage() {
   }
 
   const maxLoan = Math.floor(character.credits_bank * 0.05);
-  const totalRepay = character.loan_amount > 0 ? Math.ceil(character.loan_amount * 1.069) : 0;
+  // loan_amount already includes the 6.9% surcharge applied at creation
+  const totalRepay = character.loan_amount;
   const hasBond = character.bond_amount > 0;
   const bondMatured = hasBond && character.bond_matures_at ? new Date(character.bond_matures_at) <= new Date() : false;
   const bondReturn = hasBond ? Math.floor(character.bond_amount * (1 + character.bond_rate)) : 0;
@@ -299,7 +300,7 @@ export default function BankPage() {
                 You owe <span className="text-amber-400 font-bold">{character.loan_amount.toLocaleString()} ₡</span> to the Bureau.
               </p>
               <p className="text-slate-400 text-xs">
-                Total repayment (6.9% surcharge): <span className="text-red-300 font-semibold">{totalRepay.toLocaleString()} ₡</span>
+                Total owed (surcharge already included): <span className="text-red-300 font-semibold">{totalRepay.toLocaleString()} ₡</span>
               </p>
               <button
                 onClick={handleRepayLoan} disabled={loading}

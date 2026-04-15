@@ -136,7 +136,8 @@ export async function POST(request: Request) {
       if (char.loan_amount <= 0)
         return NextResponse.json({ error: 'You have no outstanding loan.' }, { status: 400 });
 
-      const repayAmount = Math.ceil(char.loan_amount * 1.069);
+      // loan_amount already includes the 6.9% surcharge applied at loan creation
+      const repayAmount = char.loan_amount;
       if (char.credits_hand < repayAmount)
         return NextResponse.json({
           error: `You need ${repayAmount.toLocaleString()} ₡ on hand to repay your loan.`,
@@ -167,19 +168,19 @@ export async function POST(request: Request) {
       if (rate === undefined)
         return NextResponse.json({ error: 'Invalid bond duration.' }, { status: 400 });
 
-      const maturatesAt = new Date();
-      maturatesAt.setDate(maturatesAt.getDate() + days);
+      const maturesAt = new Date();
+      maturesAt.setDate(maturesAt.getDate() + days);
 
       await supabase.from('characters').update({
         credits_bank: char.credits_bank - amount,
         bond_amount: amount,
         bond_rate: rate,
         bond_created_at: new Date().toISOString(),
-        bond_matures_at: maturatesAt.toISOString(),
+        bond_matures_at: maturesAt.toISOString(),
       }).eq('id', char.id);
 
       return NextResponse.json({
-        message: `Bond of ${amount.toLocaleString()} ₡ placed at ${(rate * 100).toFixed(2)}% for ${days} days. Matures on ${maturatesAt.toLocaleDateString()}.`,
+        message: `Bond of ${amount.toLocaleString()} ₡ placed at ${(rate * 100).toFixed(2)}% for ${days} days. Matures on ${maturesAt.toLocaleDateString()}.`,
       });
     }
 

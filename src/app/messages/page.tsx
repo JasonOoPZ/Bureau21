@@ -70,13 +70,15 @@ export default function MessagesPage() {
     if (!resp.ok) {
       setSendError(data.error ?? 'Failed to send.');
     } else {
+      // Save ID before clearing state to avoid stale reference
+      const destId = selectedRecipient.id;
       setComposeOpen(false);
       setSelectedRecipient(null);
       setMsgBody('');
       setSearchQuery('');
       setSearchResults([]);
       await loadConversations();
-      router.push(`/messages/${selectedRecipient.id}`);
+      router.push(`/messages/${destId}`);
     }
     setSending(false);
   }

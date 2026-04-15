@@ -19,7 +19,13 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const withCharacterId = url.searchParams.get('with');
 
+    // Validate UUID format to prevent injection via string interpolation in .or()
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     if (withCharacterId) {
+      if (!UUID_RE.test(withCharacterId)) {
+        return NextResponse.json({ error: 'Invalid character ID.' }, { status: 400 });
+      }
       // Fetch conversation thread
       const { data } = await supabase
         .from('direct_messages')
