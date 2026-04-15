@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/station', label: '🚉 Station' },
   { href: '/gym', label: '💪 Gym' },
   { href: '/battle', label: '⚔️ Battle' },
+  { href: '/messages', label: '✉️ Messages' },
   { href: '/boards', label: '📋 Boards' },
   { href: '/chat', label: '💬 Chat' },
   { href: '/leaderboard', label: '🏆 Leaderboard' },

@@ -41,6 +41,9 @@ export default async function HousePage() {
       <div className="border-b border-slate-700 pb-4">
         <h1 className="text-2xl font-bold text-amber-500">🏠 Operator Quarters</h1>
         <p className="text-slate-400 text-sm mt-1">Your personal hub on Bureau 21</p>
+        <p className="text-slate-500 text-xs mt-1 font-mono">
+          Player ID: <span className="text-slate-400 select-all">{char.id}</span>
+        </p>
       </div>
 
       {char.onboarding_step < 6 && (

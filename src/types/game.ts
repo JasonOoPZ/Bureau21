@@ -1,6 +1,7 @@
 export type ItemType = 'weapon' | 'armor' | 'herb' | 'substance' | 'consumable' | 'misc';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export type SyndicateRole = 'leader' | 'officer' | 'member';
+export type AwardCategory = 'battle_wins' | 'total_stats' | 'wealthiest' | 'knowledge' | 'total_score';
 export type BoardType =
   | 'general'
   | 'operator_journals'
@@ -56,6 +57,12 @@ export interface Character {
   last_motivation_regen: string;
   onboarding_step: number;
   syndicate_id: string | null;
+  loan_amount: number;
+  loan_created_at: string | null;
+  bond_amount: number;
+  bond_rate: number;
+  bond_created_at: string | null;
+  bond_matures_at: string | null;
   created_at: string;
   last_login: string;
 }
@@ -193,4 +200,22 @@ export interface CharacterStats {
   is_dead: boolean;
   is_newbie: boolean;
   newbie_until: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+  sender?: { id: string; username: string };
+  recipient?: { id: string; username: string };
+}
+
+export interface AwardEntry {
+  character_id: string;
+  username: string;
+  level: number;
+  value: number;
 }

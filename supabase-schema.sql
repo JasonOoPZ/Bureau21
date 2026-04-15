@@ -220,3 +220,32 @@ INSERT INTO items (name, type, description, buy_price, rarity) VALUES
   ('Hot Bun', 'consumable', 'Restores 50 motivation. Freshly baked.', 200, 'common'),
   ('Coffee', 'consumable', 'Restores 25 fishing endurance.', 7500, 'common'),
   ('Gym Membership', 'misc', 'Lifetime access to the Galaxy Gym.', 500, 'common');
+
+-- Direct Messages
+CREATE TABLE direct_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sender_id UUID REFERENCES characters(id) NOT NULL,
+  recipient_id UUID REFERENCES characters(id) NOT NULL,
+  body TEXT NOT NULL CHECK (char_length(body) <= 1000),
+  is_read BOOLEAN DEFAULT FALSE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own DMs" ON direct_messages FOR SELECT USING (
+  sender_id IN (SELECT id FROM characters WHERE user_id = auth.uid()) OR
+  recipient_id IN (SELECT id FROM characters WHERE user_id = auth.uid())
+);
+CREATE POLICY "Users can send DMs" ON direct_messages FOR INSERT WITH CHECK (
+  sender_id IN (SELECT id FROM characters WHERE user_id = auth.uid())
+);
+CREATE POLICY "Recipients can mark DMs as read" ON direct_messages FOR UPDATE USING (
+  recipient_id IN (SELECT id FROM characters WHERE user_id = auth.uid())
+);
+
+-- Bank Loan and Bond columns
+ALTER TABLE characters ADD COLUMN loan_amount INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE characters ADD COLUMN loan_created_at TIMESTAMPTZ;
+ALTER TABLE characters ADD COLUMN bond_amount INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE characters ADD COLUMN bond_rate REAL DEFAULT 0 NOT NULL;
+ALTER TABLE characters ADD COLUMN bond_created_at TIMESTAMPTZ;
+ALTER TABLE characters ADD COLUMN bond_matures_at TIMESTAMPTZ;
