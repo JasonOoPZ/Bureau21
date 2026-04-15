@@ -6,6 +6,12 @@ import { createClient } from '@/lib/supabase/server';
 export const metadata: Metadata = {
   title: 'Bureau 21 — Free Port · Deep Space',
   description: 'A browser-first sci-fi MMORPG on a lawless space station.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+  },
 };
 
 export default async function RootLayout({
