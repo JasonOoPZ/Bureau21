@@ -4,20 +4,22 @@ import { GAME } from '@/lib/constants';
 /**
  * Computes the maximum gym energy (reps) available today for a character.
  *
- * The pool is split 50/50:
- *   - Streak portion  : base reps + streak-day bonus (encourages daily visits)
- *   - Endurance portion: log2-scaled to reward the stat without runaway abuse
+ * The pool has three components:
+ *   - Base (25%)      : 10 reps — everyone starts with this
+ *   - Level (25%)     : floor(level / GYM_LEVEL_RATIO) — 1 rep per 10 levels
+ *   - Endurance (50%) : floor(endurance / GYM_END_RATIO) — 1 rep per 5 endurance
  *
- * Examples (streak=0, end=0.2) → ~12 reps/day  (new player)
- *          (streak=7, end=4)   → ~44 reps/day
- *          (streak=30, end=100)→ ~136 reps/day  (veteran)
- *          (streak=30, end=1000)→ ~169 reps/day (max practical)
+ * Examples (level=1, end=0.2)  → 10 reps   (new operator)
+ *          (level=10, end=5)   → 12 reps
+ *          (level=50, end=25)  → 20 reps
+ *          (level=100, end=50) → 30 reps
+ *          (level=200, end=100)→ 50 reps
  */
-export function calcMaxGymEnergy(gymStreak: number, endurance: number): number {
-  const streak = Math.min(gymStreak, GAME.GYM_STREAK_CAP);
-  const streakReps = GAME.GYM_BASE_REPS + streak * GAME.GYM_STREAK_REPS;
-  const endReps = Math.floor(Math.log2(1 + endurance) * GAME.GYM_END_SCALE);
-  return streakReps + endReps;
+export function calcMaxGymEnergy(level: number, endurance: number): number {
+  const base = GAME.GYM_BASE_REPS;
+  const levelReps = Math.floor(level / GAME.GYM_LEVEL_RATIO);
+  const endReps = Math.floor(endurance / GAME.GYM_END_RATIO);
+  return base + levelReps + endReps;
 }
 
 export function runGymWorkout(
@@ -33,7 +35,7 @@ export function runGymWorkout(
   const energyDate = character.gym_energy_date;
   const energyUsed = energyDate === today ? character.gym_energy_used : 0;
 
-  const maxEnergy = calcMaxGymEnergy(character.gym_streak, character.endurance);
+  const maxEnergy = calcMaxGymEnergy(character.level, character.endurance);
   const cost = difficulty;
 
   if (energyUsed + cost > maxEnergy) {

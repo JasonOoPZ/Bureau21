@@ -80,14 +80,14 @@ export default function GymPage() {
 
   const today = new Date().toISOString().split('T')[0];
   const energyUsed = character.gym_energy_date === today ? character.gym_energy_used : 0;
-  const maxEnergy = calcMaxGymEnergy(character.gym_streak, character.endurance);
+  const maxEnergy = calcMaxGymEnergy(character.level, character.endurance);
   const energyRemaining = maxEnergy - energyUsed;
   const energyPct = Math.round((energyRemaining / maxEnergy) * 100);
 
-  // Breakdown shown in tooltip/detail
-  const streakDays = Math.min(character.gym_streak, GAME.GYM_STREAK_CAP);
-  const streakReps = GAME.GYM_BASE_REPS + streakDays * GAME.GYM_STREAK_REPS;
-  const endReps = Math.floor(Math.log2(1 + character.endurance) * GAME.GYM_END_SCALE);
+  // Breakdown for display
+  const baseReps = GAME.GYM_BASE_REPS;
+  const levelReps = Math.floor(character.level / GAME.GYM_LEVEL_RATIO);
+  const endReps = Math.floor(character.endurance / GAME.GYM_END_RATIO);
 
   const canTrain = energyRemaining >= difficulty && !character.is_dead;
 
@@ -112,17 +112,21 @@ export default function GymPage() {
             style={{ width: `${energyPct}%` }}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+        <div className="grid grid-cols-3 gap-2 text-xs text-slate-400">
           <div>
-            <span className="text-orange-400">🔥 Streak bonus</span>{' '}
-            <span className="text-slate-300">{streakReps} reps</span>
+            <span className="text-slate-300">⚡ Base</span>{' '}
+            <span className="text-slate-400">{baseReps} reps</span>
+          </div>
+          <div>
+            <span className="text-cyan-400">🎖 Level bonus</span>{' '}
+            <span className="text-slate-300">{levelReps} reps</span>
           </div>
           <div>
             <span className="text-emerald-400">🛡 Endurance bonus</span>{' '}
             <span className="text-slate-300">{endReps} reps</span>
           </div>
         </div>
-        <p className="text-xs text-slate-500">Energy resets daily. Each workout costs reps equal to difficulty.</p>
+        <p className="text-xs text-slate-500">Energy resets daily at 12:00 HKT. Each workout costs reps equal to difficulty.</p>
       </div>
 
       {/* Streak Info */}

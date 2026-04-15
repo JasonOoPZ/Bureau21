@@ -30,10 +30,9 @@ export const GAME = {
   TOKEN_SELL: 2,
   STREAK_BONUS: 0.02,
   GYM_MAX_DRINKS: 4,
-  GYM_BASE_REPS: 10,
-  GYM_STREAK_REPS: 2,
-  GYM_STREAK_CAP: 30,
-  GYM_END_SCALE: 10,
+  GYM_BASE_REPS: 10,       // base energy everyone gets (25%)
+  GYM_LEVEL_RATIO: 10,     // 1 energy per N levels (25%)
+  GYM_END_RATIO: 5,        // 1 energy per N endurance (50%)
   BLUE_HERB_LF: 200,
   UNLOCK_BAZAAR: 4,
   UNLOCK_SYNDICATE: 4,
