@@ -28,17 +28,18 @@ export default async function LobbyPage() {
   }
 
   const isAdmin = session.user.role === "admin";
-  const pilotState = await getOrCreatePilotState(session.user.id, session.user.name);
+  const [pilotState, recentChats] = await Promise.all([
+    getOrCreatePilotState(session.user.id, session.user.name),
+    prisma.chatMessage.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      include: { author: { select: { id: true, name: true } } },
+    }),
+  ]);
   if (pilotState.appearanceNeedsSetup) {
     redirect("/onboarding/appearance");
   }
   const starterCharacter = getStarterCharacter(pilotState.characterSlug);
-
-  const recentChats = await prisma.chatMessage.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 4,
-    include: { author: { select: { id: true, name: true } } },
-  });
 
   const now = new Date();
   const gameTime = now.toLocaleString("en-GB", {

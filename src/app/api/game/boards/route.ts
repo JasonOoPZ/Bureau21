@@ -50,5 +50,8 @@ export async function GET(request: Request) {
     include: { author: { select: { id: true, name: true } } },
   });
 
-  return NextResponse.json({ posts });
+  return NextResponse.json(
+    { posts },
+    { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30" } }
+  );
 }

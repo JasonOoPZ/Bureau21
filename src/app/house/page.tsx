@@ -91,33 +91,49 @@ export default async function HousePage() {
   const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
 
   const missions = await prisma.mission.findMany({ where: { pilotId: pilot.id } });
-  const battleLogs = await prisma.battleLog.findMany({
-    where: { pilotId: pilot.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
 
-  // Aggregate battle stats
-  const allBattleLogs = await prisma.battleLog.findMany({
-    where: { pilotId: pilot.id },
-    select: { result: true, xpGained: true, creditsGained: true, createdAt: true },
-  });
-
-  const totalWins = allBattleLogs.filter((l) => l.result === "win").length;
-  const totalLosses = allBattleLogs.filter((l) => l.result === "loss").length;
-  const totalStalemates = allBattleLogs.filter((l) => l.result === "stalemate").length;
-  const totalBattles = allBattleLogs.length;
-  const totalXpEarned = allBattleLogs.reduce((s, l) => s + l.xpGained, 0);
-  const totalCreditsEarned = allBattleLogs.reduce((s, l) => s + l.creditsGained, 0);
-
-  // Today's battle stats
+  // Parallel: recent logs, aggregate stats, and daily stats all at once
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const todayLogs = allBattleLogs.filter((l) => l.createdAt >= todayStart);
-  const dailyWins = todayLogs.filter((l) => l.result === "win").length;
-  const dailyLosses = todayLogs.filter((l) => l.result === "loss").length;
-  const dailyXp = todayLogs.reduce((s, l) => s + l.xpGained, 0);
-  const dailyCredits = todayLogs.reduce((s, l) => s + l.creditsGained, 0);
+
+  const [battleLogs, battleAgg, totalXpAgg, totalCreditsAgg, dailyLogs] = await Promise.all([
+    prisma.battleLog.findMany({
+      where: { pilotId: pilot.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.battleLog.groupBy({
+      by: ["result"],
+      where: { pilotId: pilot.id },
+      _count: { result: true },
+    }),
+    prisma.battleLog.aggregate({
+      where: { pilotId: pilot.id },
+      _sum: { xpGained: true },
+    }),
+    prisma.battleLog.aggregate({
+      where: { pilotId: pilot.id },
+      _sum: { creditsGained: true },
+    }),
+    prisma.battleLog.findMany({
+      where: { pilotId: pilot.id, createdAt: { gte: todayStart } },
+      select: { result: true, xpGained: true, creditsGained: true },
+    }),
+  ]);
+
+  // Extract aggregated battle stats
+  const totalWins = battleAgg.find((g) => g.result === "win")?._count.result ?? 0;
+  const totalLosses = battleAgg.find((g) => g.result === "loss")?._count.result ?? 0;
+  const totalStalemates = battleAgg.find((g) => g.result === "stalemate")?._count.result ?? 0;
+  const totalBattles = battleAgg.reduce((s, g) => s + g._count.result, 0);
+  const totalXpEarned = totalXpAgg._sum.xpGained ?? 0;
+  const totalCreditsEarned = totalCreditsAgg._sum.creditsGained ?? 0;
+
+  // Today's battle stats
+  const dailyWins = dailyLogs.filter((l) => l.result === "win").length;
+  const dailyLosses = dailyLogs.filter((l) => l.result === "loss").length;
+  const dailyXp = dailyLogs.reduce((s, l) => s + l.xpGained, 0);
+  const dailyCredits = dailyLogs.reduce((s, l) => s + l.creditsGained, 0);
 
   const currentTime = new Date();
   const accountAgeDays = Math.floor(
@@ -349,9 +365,9 @@ export default async function HousePage() {
                   <span className="text-red-400">{dailyLosses}</span>
 
                   <span className="font-semibold text-slate-400">Total Today:</span>
-                  <span className="text-slate-200">{todayLogs.length}</span>
+                  <span className="text-slate-200">{dailyLogs.length}</span>
                   <span className="font-semibold text-slate-400">Success Rate:</span>
-                  <span className="text-slate-200">{todayLogs.length > 0 ? Math.round((dailyWins / todayLogs.length) * 100) : 0}%</span>
+                  <span className="text-slate-200">{dailyLogs.length > 0 ? Math.round((dailyWins / dailyLogs.length) * 100) : 0}%</span>
 
                   <span className="font-semibold text-slate-400">EXP Earned:</span>
                   <span className="text-cyan-200">{dailyXp}</span>

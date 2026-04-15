@@ -14,37 +14,38 @@ export default async function BattlePage() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  // Fetch PVP targets: other players who are past newbie protection
-  const targets = await prisma.pilotState.findMany({
-    where: {
-      userId: { not: session.user.id },
-      level: { gte: GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL },
-    },
-    select: {
-      id: true,
-      userId: true,
-      callsign: true,
-      level: true,
-      characterSlug: true,
-    },
-    orderBy: { level: "asc" },
-    take: 50,
-  });
-
-  const recentLogs = await prisma.battleLog.findMany({
-    where: { pilotId: pilot.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    select: {
-      id: true,
-      opponentName: true,
-      result: true,
-      xpGained: true,
-      creditsGained: true,
-      roundsCount: true,
-      createdAt: true,
-    },
-  });
+  // Fetch targets and logs in parallel
+  const [targets, recentLogs] = await Promise.all([
+    prisma.pilotState.findMany({
+      where: {
+        userId: { not: session.user.id },
+        level: { gte: GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL },
+      },
+      select: {
+        id: true,
+        userId: true,
+        callsign: true,
+        level: true,
+        characterSlug: true,
+      },
+      orderBy: { level: "asc" },
+      take: 50,
+    }),
+    prisma.battleLog.findMany({
+      where: { pilotId: pilot.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        opponentName: true,
+        result: true,
+        xpGained: true,
+        creditsGained: true,
+        roundsCount: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
   return (
     <>

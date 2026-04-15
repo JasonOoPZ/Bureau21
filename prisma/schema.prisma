@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -92,6 +93,9 @@ model BattleLog {
   createdAt     DateTime   @default(now())
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
+  @@index([pilotId, createdAt])
 }
 
 model InventoryItem {
@@ -106,6 +110,8 @@ model InventoryItem {
   createdAt DateTime @default(now())
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
 }
 
 model Mission {
@@ -122,6 +128,8 @@ model Mission {
   updatedAt    DateTime @updatedAt
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
 }
 
 model PasswordResetToken {
@@ -142,6 +150,10 @@ model BoardPost {
   createdAt DateTime @default(now())
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
 }
 
 model ChatMessage {
@@ -151,6 +163,9 @@ model ChatMessage {
   createdAt DateTime @default(now())
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model Syndicate {
@@ -186,6 +201,9 @@ model QuickPost {
 
   from User @relation("QuickPostFrom", fields: [fromId], references: [id], onDelete: Cascade)
   to   User @relation("QuickPostTo",   fields: [toId],   references: [id], onDelete: Cascade)
+
+  @@index([toId])
+  @@index([fromId])
 }
 
 model Account {
@@ -233,6 +251,8 @@ model PlayerHero {
   createdAt DateTime @default(now())
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
 }
 
 model StudyProgress {
@@ -245,5 +265,6 @@ model StudyProgress {
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 
+  @@index([pilotId])
   @@unique([pilotId, course])
 }

@@ -51,5 +51,8 @@ export async function GET(request: Request) {
     isYou: p.userId === session.user!.id,
   }));
 
-  return NextResponse.json({ leaderboard, category });
+  return NextResponse.json(
+    { leaderboard, category },
+    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } }
+  );
 }
