@@ -13,7 +13,7 @@ export default async function BoardsPage() {
   const posts = await prisma.boardPost.findMany({
     orderBy: { createdAt: "desc" },
     take: 30,
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   return (
@@ -41,6 +41,7 @@ export default async function BoardsPage() {
               body: p.body,
               category: p.category,
               karma: p.karma,
+              authorId: p.author.id,
               authorName: p.author.name ?? "Unknown Pilot",
               createdAt: p.createdAt.toISOString(),
             }))}

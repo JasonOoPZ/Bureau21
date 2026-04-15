@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 interface ChatMsg {
   id: string;
   body: string;
+  authorId: string;
   authorName: string;
   createdAt: string;
 }
@@ -48,9 +50,10 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
       if (res.ok) {
         const data = await res.json();
         const fetched: ChatMsg[] = data.messages.map(
-          (m: { id: string; body: string; author: { name: string }; createdAt: string }) => ({
+          (m: { id: string; body: string; author: { id: string; name: string }; createdAt: string }) => ({
             id: m.id,
             body: m.body,
+            authorId: m.author?.id ?? "",
             authorName: m.author?.name ?? "Unknown",
             createdAt: m.createdAt,
           })
@@ -95,6 +98,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
         {
           id: data.message.id,
           body: data.message.body,
+          authorId: data.message.author?.id ?? "",
           authorName: currentUser,
           createdAt: new Date().toISOString(),
         },
@@ -156,9 +160,12 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
                 }`}
               >
                 {!isMe && (
-                  <span className="block text-[10px] text-cyan-500 font-medium mb-0.5">
+                  <Link
+                    href={`/pilot/${msg.authorId}`}
+                    className="block text-[10px] text-cyan-500 font-medium mb-0.5 hover:text-cyan-300 hover:underline"
+                  >
                     {msg.authorName}
-                  </span>
+                  </Link>
                 )}
                 <span>{msg.body}</span>
               </div>

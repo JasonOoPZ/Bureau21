@@ -13,7 +13,7 @@ export default async function ChatPage() {
   const messages = await prisma.chatMessage.findMany({
     orderBy: { createdAt: "asc" },
     take: 60,
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   return (
@@ -38,6 +38,7 @@ export default async function ChatPage() {
             initialMessages={messages.map((m) => ({
               id: m.id,
               body: m.body,
+              authorId: m.author.id,
               authorName: m.author.name ?? "Unknown",
               createdAt: m.createdAt.toISOString(),
             }))}

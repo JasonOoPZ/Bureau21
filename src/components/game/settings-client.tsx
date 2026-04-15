@@ -13,9 +13,10 @@ interface QuickLink {
 interface SettingsClientProps {
   currentTheme: string;
   currentQuicklinks: QuickLink[];
+  walletAddress: string | null;
 }
 
-export function SettingsClient({ currentTheme, currentQuicklinks }: SettingsClientProps) {
+export function SettingsClient({ currentTheme, currentQuicklinks, walletAddress }: SettingsClientProps) {
   const router = useRouter();
   const [activeTheme, setActiveTheme] = useState<string>(currentTheme);
   const [quicklinks, setQuicklinks] = useState<(QuickLink | null)[]>(() => {
@@ -170,6 +171,29 @@ export function SettingsClient({ currentTheme, currentQuicklinks }: SettingsClie
       {message && (
         <p className="text-center text-[11px] font-semibold text-emerald-400">{message}</p>
       )}
+
+      {/* Wallet Info */}
+      <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
+        <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-slate-500">Thirdweb Wallet</p>
+        {walletAddress ? (
+          <div className="flex items-center gap-3">
+            <code className="flex-1 rounded border border-slate-700 bg-slate-900/50 px-3 py-2 text-[12px] text-cyan-200 select-all">
+              {walletAddress}
+            </code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(walletAddress);
+                setMessage("Wallet address copied!");
+              }}
+              className="shrink-0 rounded border border-slate-700 bg-slate-900/50 px-3 py-2 text-[11px] text-slate-300 transition hover:border-cyan-600 hover:text-cyan-300"
+            >
+              Copy
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-500">No wallet assigned yet.</p>
+        )}
+      </div>
     </div>
   );
 }

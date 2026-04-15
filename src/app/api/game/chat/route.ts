@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       authorId: session.user.id,
       body: parsed.data.body.trim(),
     },
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json({ message });
@@ -48,7 +48,7 @@ export async function GET() {
   const messages = await prisma.chatMessage.findMany({
     orderBy: { createdAt: "asc" },
     take: 60,
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   // Count pilots active in the last 5 minutes

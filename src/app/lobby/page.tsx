@@ -5,6 +5,7 @@ import { StarterCharacterPortrait } from "@/components/game/starter-character-po
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { sideRailLinks } from "@/lib/navigation";
+import { prisma } from "@/lib/prisma";
 import { getStarterCharacter } from "@/lib/starter-characters";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
@@ -32,6 +33,13 @@ export default async function LobbyPage() {
     redirect("/onboarding/appearance");
   }
   const starterCharacter = getStarterCharacter(pilotState.characterSlug);
+
+  const recentChats = await prisma.chatMessage.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 4,
+    include: { author: { select: { id: true, name: true } } },
+  });
+
   const now = new Date();
   const gameTime = now.toLocaleString("en-GB", {
     day: "2-digit",
@@ -142,18 +150,23 @@ export default async function LobbyPage() {
               <p className="mt-1 text-sm text-cyan-300">{gameTime}</p>
             </section>
 
-            <section className="rounded-md border border-slate-800 bg-[#0a0d11] p-3">
+            <Link href="/chat" className="block rounded-md border border-slate-800 bg-[#0a0d11] p-3 transition hover:border-cyan-900/50 hover:bg-[#0b1015]">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Town Hall</p>
-                <span className="text-[11px] text-slate-400">[full chat]</span>
+                <span className="text-xs uppercase tracking-[0.15em] text-slate-500">Town Hall</span>
+                <span className="text-[11px] text-cyan-600">[open chat →]</span>
               </div>
               <div className="space-y-1 text-[12px] text-slate-300">
-                <p><span className="text-cyan-300">Q7</span>: Sectors are alive again.</p>
-                <p><span className="text-cyan-300">RiftEcho</span>: Patrol XP feels great.</p>
-                <p><span className="text-cyan-300">Miner01</span>: Rare engine drop confirmed.</p>
-                <p><span className="text-cyan-300">Gatekeeper</span>: Admin systems online.</p>
+                {recentChats.length === 0 ? (
+                  <p className="text-[11px] text-slate-600">No messages yet. Be the first to speak.</p>
+                ) : (
+                  recentChats.reverse().map((m) => (
+                    <p key={m.id} className="truncate">
+                      <span className="text-cyan-300">{m.author.name ?? "Unknown"}</span>: {m.body}
+                    </p>
+                  ))
+                )}
               </div>
-            </section>
+            </Link>
 
             <Leaderboard compact />
           </aside>

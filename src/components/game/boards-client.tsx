@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface BoardPost {
   id: string;
@@ -8,6 +9,7 @@ interface BoardPost {
   body: string;
   category: string;
   karma: number;
+  authorId: string;
   authorName: string;
   createdAt: string;
 }
@@ -61,6 +63,7 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
           body: data.post.body,
           category: data.post.category,
           karma: 0,
+          authorId: data.post.author?.id ?? "",
           authorName: currentUser,
           createdAt: new Date().toISOString(),
         },
@@ -165,7 +168,15 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
                     <span className="text-[12px] font-medium text-slate-200 truncate">{post.title}</span>
                   </div>
                   <p className="mt-0.5 text-[10px] text-slate-600">
-                    by {post.authorName} · {new Date(post.createdAt).toLocaleDateString()}
+                    by{" "}
+                    <Link
+                      href={`/pilot/${post.authorId}`}
+                      className="text-cyan-500 hover:text-cyan-300 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {post.authorName}
+                    </Link>
+                    {" "}· {new Date(post.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <span className="shrink-0 text-[11px] text-slate-600">{expanded === post.id ? "▲" : "▼"}</span>

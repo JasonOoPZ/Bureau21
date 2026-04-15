@@ -15,16 +15,14 @@ interface Location {
 
 interface District {
   name: string;
-  accent: string;
-  icon: string;
+  color: string;
   locations: Location[];
 }
 
 const DISTRICTS: District[] = [
   {
-    name: "Command District",
-    accent: "border-cyan-900/60",
-    icon: "🏛",
+    name: "Command District:",
+    color: "text-cyan-400",
     locations: [
       { name: "Lobby Hub", href: "/lobby", description: "Central pilot dashboard and network relay.", status: "live" },
       { name: "Character Sheet", href: "/house", description: "Your pilot profile, stats, and battle history.", status: "live" },
@@ -35,9 +33,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "Combat Quarter",
-    accent: "border-red-900/60",
-    icon: "⚔",
+    name: "Combat Quarter:",
+    color: "text-red-400",
     locations: [
       { name: "Battle Arena", href: "/battle", description: "PVP combat against other pilots.", status: "live" },
       { name: "Galaxy Gym", href: "/gym", description: "Train strength, speed, endurance, and confidence.", status: "live" },
@@ -47,9 +44,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "Commerce Row",
-    accent: "border-amber-900/60",
-    icon: "🏪",
+    name: "Commerce Row:",
+    color: "text-amber-400",
     locations: [
       { name: "Armory", href: "/station/armory", description: "Weapons, shields, and engines for sale.", status: "live" },
       { name: "Bazaar", href: "/station/bazaar", description: "Player-driven marketplace and loot exchange.", status: "live" },
@@ -60,9 +56,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "The Underbelly",
-    accent: "border-purple-900/60",
-    icon: "☠",
+    name: "The Underbelly:",
+    color: "text-purple-400",
     locations: [
       { name: "Black Market", href: "/station/underbelly", description: "Contraband labs and high-risk deals.", status: "live" },
       { name: "Casino", href: "/primaris/casino", description: "High-stakes gambling. Credits in, credits out.", status: "live" },
@@ -72,9 +67,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "Industrial Sector",
-    accent: "border-slate-600",
-    icon: "🔧",
+    name: "Industrial Sector:",
+    color: "text-slate-400",
     locations: [
       { name: "Hydroponics Bay", href: "/station/hydroponics", description: "Grow herbs, consumables, and bio-fuel.", status: "live" },
       { name: "Docking Bay", href: "/station/docking-bay", description: "Ship upgrades, hull repair, and warp charting.", status: "live" },
@@ -84,9 +78,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "Frontier",
-    accent: "border-emerald-900/60",
-    icon: "🌌",
+    name: "Frontier:",
+    color: "text-emerald-400",
     locations: [
       { name: "Outer Ring", href: "/station/outer-ring", description: "Deep-space contracts and frontier scouting.", status: "live" },
       { name: "Fishing Hut", href: "/primaris/fishing-hut", description: "Cast lines into the void. Catch strange things.", status: "live" },
@@ -95,9 +88,8 @@ const DISTRICTS: District[] = [
     ],
   },
   {
-    name: "Social District",
-    accent: "border-pink-900/60",
-    icon: "🎭",
+    name: "Social District:",
+    color: "text-pink-400",
     locations: [
       { name: "Syndicate Row", href: "/station/syndicate-row", description: "Form or join a syndicate. Guild operations.", status: "live" },
       { name: "Settings", href: "/settings", description: "Pilot preferences and account configuration.", status: "live" },
@@ -129,56 +121,86 @@ export default async function PrimarisPage() {
     <>
       <TopBar session={session} />
       <main className="min-h-screen bg-black px-3 py-4">
-        <div className="mx-auto max-w-6xl space-y-3">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">← Hub</Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-cyan-400">Primaris</span>
-          </div>
-
-          {/* Header */}
-          <div className="rounded-md border border-cyan-900/30 bg-[#0b0f14] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold uppercase tracking-[0.2em] text-cyan-200">
-                  Primaris Core
-                </h1>
-                <p className="mt-1 text-[12px] text-slate-400">
-                  The central hub of Bureau 21. Every district, outpost, and facility accessible from one location.
-                  Hover or tap a destination to see what awaits.
-                </p>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  It is currently: <span className="text-cyan-300">{timeOfDay}</span>
-                </p>
-              </div>
-              <div className="shrink-0 text-right text-[11px]">
-                <p className="text-slate-500">Locations active</p>
-                <p className="font-bold text-emerald-300">{totalLive}</p>
-                <p className="mt-1 text-slate-500">Under construction</p>
-                <p className="font-bold text-amber-400">{totalPlanned}</p>
+        <div className="mx-auto max-w-6xl">
+          {/* Banner */}
+          <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md border border-slate-800 bg-[#060a0f] sm:h-56">
+            {/* CSS sci-fi station scene */}
+            <div className="absolute inset-0">
+              {/* Sky / stars */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[#050810] via-[#0a1020] to-[#0d1418]" />
+              {/* Distant nebula glow */}
+              <div className="absolute left-1/4 top-4 h-20 w-40 rounded-full bg-purple-900/20 blur-3xl" />
+              <div className="absolute right-1/3 top-8 h-16 w-32 rounded-full bg-cyan-900/15 blur-3xl" />
+              {/* Stars */}
+              <div className="absolute left-[10%] top-[15%] h-[2px] w-[2px] rounded-full bg-white/70" />
+              <div className="absolute left-[25%] top-[8%] h-[1px] w-[1px] rounded-full bg-white/50" />
+              <div className="absolute left-[40%] top-[20%] h-[2px] w-[2px] rounded-full bg-cyan-300/60" />
+              <div className="absolute left-[55%] top-[5%] h-[1px] w-[1px] rounded-full bg-white/40" />
+              <div className="absolute left-[70%] top-[12%] h-[2px] w-[2px] rounded-full bg-white/60" />
+              <div className="absolute left-[85%] top-[18%] h-[1px] w-[1px] rounded-full bg-purple-300/50" />
+              <div className="absolute left-[15%] top-[25%] h-[1px] w-[1px] rounded-full bg-white/30" />
+              <div className="absolute left-[60%] top-[22%] h-[1px] w-[1px] rounded-full bg-white/50" />
+              <div className="absolute left-[92%] top-[7%] h-[2px] w-[2px] rounded-full bg-cyan-200/40" />
+              {/* Station structures */}
+              <div className="absolute bottom-0 left-[5%] h-32 w-16 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
+              <div className="absolute bottom-0 left-[5%] h-36 w-3 bg-gradient-to-t from-slate-700 to-slate-900 opacity-60" />
+              <div className="absolute bottom-0 left-[12%] h-24 w-20 bg-gradient-to-t from-slate-800 to-slate-900/80 opacity-70" />
+              <div className="absolute bottom-0 left-[22%] h-28 w-12 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
+              <div className="absolute bottom-0 left-[30%] h-20 w-40 bg-gradient-to-t from-slate-800 to-[#0d1418] opacity-60" />
+              <div className="absolute bottom-0 right-[5%] h-36 w-14 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
+              <div className="absolute bottom-0 right-[15%] h-28 w-18 bg-gradient-to-t from-slate-800 to-slate-900/80 opacity-70" />
+              <div className="absolute bottom-0 right-[25%] h-22 w-24 bg-gradient-to-t from-slate-800 to-[#0d1418] opacity-60" />
+              {/* Central dome */}
+              <div className="absolute bottom-0 left-1/2 h-40 w-48 -translate-x-1/2 rounded-t-full bg-gradient-to-t from-slate-700/50 to-slate-900/30 opacity-80" />
+              <div className="absolute bottom-0 left-1/2 h-20 w-60 -translate-x-1/2 bg-gradient-to-t from-slate-700 to-slate-800/50 opacity-60" />
+              {/* Glowing windows */}
+              <div className="absolute bottom-10 left-[8%] h-1 w-3 bg-cyan-400/60" />
+              <div className="absolute bottom-14 left-[9%] h-1 w-2 bg-cyan-500/40" />
+              <div className="absolute bottom-6 left-[24%] h-1 w-4 bg-amber-400/50" />
+              <div className="absolute bottom-8 right-[8%] h-1 w-3 bg-cyan-400/50" />
+              <div className="absolute bottom-16 right-[10%] h-1 w-2 bg-purple-400/40" />
+              <div className="absolute bottom-4 left-1/2 h-1 w-6 -translate-x-1/2 bg-cyan-300/40" />
+              <div className="absolute bottom-8 left-[46%] h-1 w-3 bg-amber-300/30" />
+              <div className="absolute bottom-12 left-[52%] h-1 w-2 bg-cyan-400/30" />
+              {/* Ground line */}
+              <div className="absolute bottom-0 left-0 h-[1px] w-full bg-gradient-to-r from-transparent via-cyan-800/30 to-transparent" />
+              {/* Station name overlay */}
+              <div className="absolute bottom-3 left-0 right-0 text-center">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-500/40">Primaris Core · Bureau 21</p>
               </div>
             </div>
           </div>
 
-          {/* District grid */}
-          <div className="space-y-4">
+          {/* Intro text */}
+          <div className="mb-4 text-[12px] leading-relaxed text-slate-400">
+            <p>
+              Here it is — Primaris Core in all its questionable glory. Clicking on a link will take you
+              to that location (obviously). Hovering your cursor over a link will pop up a description
+              of what&apos;s there.
+            </p>
+          </div>
+
+          {/* Time of day */}
+          <p className="mb-5 text-[12px] text-slate-500">
+            <span className="font-bold italic text-slate-300">It is currently:</span>{" "}
+            <span className="text-slate-300">{timeOfDay}</span>
+          </p>
+
+          {/* Districts — multi-column flowing layout */}
+          <div className="columns-2 gap-x-8 sm:columns-3 lg:columns-4" style={{ columnFill: "balance" }}>
             {DISTRICTS.map((district) => (
-              <section key={district.name} className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="text-lg">{district.icon}</span>
-                  <h2 className="text-[13px] font-bold uppercase tracking-[0.15em] text-slate-300 underline decoration-slate-700 underline-offset-4">
-                    {district.name}:
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-1">
+              <div key={district.name} className="mb-4 break-inside-avoid">
+                <p className={`text-[13px] font-bold italic ${district.color}`}>
+                  {district.name}
+                </p>
+                <div className="mt-0.5 flex flex-col">
                   {district.locations.map((loc) => {
                     const isLive = loc.status === "live";
                     return isLive ? (
                       <Link
                         key={loc.name}
                         href={loc.href}
-                        className="rounded px-2 py-0.5 text-[12px] text-cyan-400 transition-all duration-150 hover:scale-105 hover:bg-cyan-950/40 hover:text-cyan-200 hover:shadow-[0_0_8px_rgba(34,211,238,0.15)]"
+                        className="text-[12px] leading-relaxed text-cyan-300 transition-colors hover:text-white"
                         title={loc.description}
                       >
                         {loc.name}
@@ -186,7 +208,7 @@ export default async function PrimarisPage() {
                     ) : (
                       <span
                         key={loc.name}
-                        className="cursor-default text-[12px] text-slate-600"
+                        className="text-[12px] leading-relaxed text-slate-600"
                         title={loc.description}
                       >
                         {loc.name}
@@ -194,7 +216,7 @@ export default async function PrimarisPage() {
                     );
                   })}
                 </div>
-              </section>
+              </div>
             ))}
           </div>
         </div>

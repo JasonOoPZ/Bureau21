@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       body: parsed.data.body.trim(),
       category: parsed.data.category,
     },
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json({ post });
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       : undefined,
     orderBy: { createdAt: "desc" },
     take: 30,
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json({ posts });

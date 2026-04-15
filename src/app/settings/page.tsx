@@ -2,6 +2,7 @@ import { authOptions } from "@/auth";
 import { SettingsClient } from "@/components/game/settings-client";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,6 +12,11 @@ export default async function SettingsPage() {
   if (!session?.user) redirect("/");
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { walletAddress: true },
+  });
 
   const pilotAny = pilot as Record<string, unknown>;
   let customQuicklinks: { href: string; label: string }[] = [];
@@ -43,6 +49,7 @@ export default async function SettingsPage() {
           <SettingsClient
             currentTheme={(pilotAny.theme as string) ?? "original"}
             currentQuicklinks={customQuicklinks}
+            walletAddress={user?.walletAddress ?? null}
           />
         </div>
       </main>
