@@ -20,10 +20,10 @@ export async function GET(request: Request) {
       .update({ is_dead: false, life_force: 1 })
       .eq('is_dead', true);
 
-    // 2. Restore confidence to starting value
+    // 2. Restore confidence to starting value, reset daily gym energy
     await supabase
       .from('characters')
-      .update({ confidence: GAME.CONFIDENCE_START });
+      .update({ confidence: GAME.CONFIDENCE_START, gym_energy_used: 0 });
 
     // 3. Increment age_days, add motivation, grant tokens
     const { data: allChars } = await supabase

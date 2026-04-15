@@ -30,6 +30,8 @@ CREATE TABLE characters (
   ap_available INTEGER DEFAULT 0 NOT NULL,
   gym_streak INTEGER DEFAULT 0 NOT NULL,
   last_gym_date DATE,
+  gym_energy_used INTEGER DEFAULT 0 NOT NULL,
+  gym_energy_date DATE,
   is_newbie BOOLEAN DEFAULT TRUE NOT NULL,
   newbie_until TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '15 days') NOT NULL,
   welfare_days_remaining INTEGER DEFAULT 30 NOT NULL,

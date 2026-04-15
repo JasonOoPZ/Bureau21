@@ -52,9 +52,10 @@ export async function POST(request: Request) {
       .from('characters')
       .update({
         [workout_type]: result.new_value,
-        motivation: result.motivation_remaining,
         gym_streak: result.streak,
         last_gym_date: today,
+        gym_energy_used: result.energy_used,
+        gym_energy_date: today,
       })
       .eq('id', char.id);
 

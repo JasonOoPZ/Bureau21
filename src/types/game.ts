@@ -34,6 +34,8 @@ export interface Character {
   ap_available: number;
   gym_streak: number;
   last_gym_date: string | null;
+  gym_energy_used: number;
+  gym_energy_date: string | null;
   is_newbie: boolean;
   newbie_until: string;
   welfare_days_remaining: number;
@@ -155,7 +157,9 @@ export interface GymResult {
   stat_name: WorkoutType;
   gain_amount: number;
   new_value: number;
-  motivation_remaining: number;
+  energy_used: number;
+  energy_remaining: number;
+  max_energy: number;
   streak: number;
 }
 
