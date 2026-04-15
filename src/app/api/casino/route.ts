@@ -1,0 +1,145 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+
+// ─── Slot Machine ───────────────────────────────────────────────────────────
+
+const SLOT_SYMBOLS = ['🎰', '💎', '⚡', '🔥', '💀', '🪙'];
+const SLOT_WEIGHTS = [1, 3, 5, 8, 10, 15]; // total = 42
+const SLOT_JACKPOTS: Record<string, number> = {
+  '🎰': 50,
+  '💎': 20,
+  '⚡': 10,
+  '🔥': 5,
+  '💀': 3,
+  '🪙': 2,
+};
+
+function weightedPick(symbols: string[], weights: number[]): string {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < symbols.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return symbols[i];
+  }
+  return symbols[symbols.length - 1];
+}
+
+function playSlots(bet: number): { reels: string[]; payout: number; label: string } {
+  const reels = [0, 1, 2].map(() => weightedPick(SLOT_SYMBOLS, SLOT_WEIGHTS));
+  const [a, b, c] = reels;
+
+  if (a === b && b === c) {
+    const mult = SLOT_JACKPOTS[a];
+    return { reels, payout: Math.floor(bet * mult), label: `JACKPOT! ${a}${b}${c} — ${mult}x` };
+  }
+  if (a === b || b === c || a === c) {
+    return { reels, payout: Math.floor(bet * 1.2), label: `Partial match — 1.2x` };
+  }
+  return { reels, payout: 0, label: 'No match' };
+}
+
+// ─── Dice ────────────────────────────────────────────────────────────────────
+
+function playDice(
+  bet: number,
+  choice: 'over' | 'under' | 'seven',
+): { dice: [number, number]; total: number; payout: number; label: string } {
+  const d1 = Math.ceil(Math.random() * 6);
+  const d2 = Math.ceil(Math.random() * 6);
+  const total = d1 + d2;
+
+  if (choice === 'seven') {
+    const won = total === 7;
+    return { dice: [d1, d2], total, payout: won ? Math.floor(bet * 4) : 0, label: won ? `Exactly 7! — 4x` : `Rolled ${total} — lose` };
+  }
+  if (choice === 'over') {
+    const won = total > 7;
+    return { dice: [d1, d2], total, payout: won ? Math.floor(bet * 1.9) : 0, label: won ? `Over 7 (${total}) — 1.9x` : `Rolled ${total} — lose` };
+  }
+  // under
+  const won = total < 7;
+  return { dice: [d1, d2], total, payout: won ? Math.floor(bet * 1.9) : 0, label: won ? `Under 7 (${total}) — 1.9x` : `Rolled ${total} — lose` };
+}
+
+// ─── Coin Flip ───────────────────────────────────────────────────────────────
+
+function playCoinFlip(
+  bet: number,
+  choice: 'heads' | 'tails',
+): { result: 'heads' | 'tails'; payout: number; label: string } {
+  const result = Math.random() < 0.5 ? 'heads' : 'tails';
+  const won = result === choice;
+  return { result, payout: won ? Math.floor(bet * 1.95) : 0, label: won ? `${result.toUpperCase()} — 1.95x` : `${result.toUpperCase()} — lose` };
+}
+
+// ─── Route Handler ────────────────────────────────────────────────────────────
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await request.json();
+    const { game, bet, choice } = body as {
+      game: 'slots' | 'dice' | 'coinflip';
+      bet: number;
+      choice?: string;
+    };
+
+    if (!Number.isInteger(bet) || bet <= 0 || bet > 1_000_000) {
+      return NextResponse.json({ error: 'Invalid bet amount.' }, { status: 400 });
+    }
+
+    const { data: character } = await supabase
+      .from('characters')
+      .select('id, credits_hand, is_dead, level')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!character) return NextResponse.json({ error: 'Character not found.' }, { status: 404 });
+    if (character.is_dead) return NextResponse.json({ error: 'Dead operators cannot gamble.' }, { status: 403 });
+    if (character.level < 8) return NextResponse.json({ error: 'Underbelly requires level 8.' }, { status: 403 });
+    if (character.credits_hand < bet) return NextResponse.json({ error: 'Not enough credits on hand.' }, { status: 400 });
+
+    let result: { payout: number; label: string; [key: string]: unknown };
+
+    if (game === 'slots') {
+      const r = playSlots(bet);
+      result = r;
+    } else if (game === 'dice') {
+      if (!['over', 'under', 'seven'].includes(choice ?? '')) {
+        return NextResponse.json({ error: 'Invalid choice. Use over, under, or seven.' }, { status: 400 });
+      }
+      result = playDice(bet, choice as 'over' | 'under' | 'seven');
+    } else if (game === 'coinflip') {
+      if (!['heads', 'tails'].includes(choice ?? '')) {
+        return NextResponse.json({ error: 'Invalid choice. Use heads or tails.' }, { status: 400 });
+      }
+      result = playCoinFlip(bet, choice as 'heads' | 'tails');
+    } else {
+      return NextResponse.json({ error: 'Unknown game.' }, { status: 400 });
+    }
+
+    const netChange = result.payout - bet;
+    const newCredits = character.credits_hand + netChange;
+
+    await supabase
+      .from('characters')
+      .update({ credits_hand: newCredits })
+      .eq('id', character.id);
+
+    return NextResponse.json({
+      ...result,
+      bet,
+      net_change: netChange,
+      new_credits: newCredits,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
