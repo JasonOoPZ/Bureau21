@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Message, BoardType } from '@/types/game';
 import Link from 'next/link';
 import { timeAgo } from '@/lib/utils';
+import NewPostForm from '@/components/NewPostForm';
 
 type BoardDef = {
   type: BoardType;
@@ -189,6 +190,7 @@ export default async function BoardsPage({
       {/* Board view — board selected */}
       {activeBoard && activeDef && (
         <>
+          {/* Breadcrumb */}
           <div className="flex items-center gap-3">
             <Link
               href="/boards"
@@ -202,14 +204,19 @@ export default async function BoardsPage({
             </span>
           </div>
 
+          {/* Board description */}
           <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-slate-400">
             {activeDef.description}
           </div>
 
+          {/* New Post form */}
+          <NewPostForm board={activeBoard} />
+
+          {/* Posts list */}
           <div className="space-y-3">
             {!messages || messages.length === 0 ? (
-              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center text-slate-400">
-                No messages yet. Be the first to post.
+              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center text-slate-400 text-sm">
+                No posts yet — be the first to broadcast.
               </div>
             ) : (
               messages.map((m) => {
