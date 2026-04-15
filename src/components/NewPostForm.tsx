@@ -90,6 +90,8 @@ export default function NewPostForm({ board }: { board: BoardType }) {
           onClick={() => {
             setOpen(false);
             setError('');
+            setTitle('');
+            setBody('');
           }}
           className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors text-sm min-h-[48px]"
         >

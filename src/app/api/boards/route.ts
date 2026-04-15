@@ -24,11 +24,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body must be 5–5000 characters' }, { status: 400 });
   }
 
-  const { data: character } = await supabase
+  const { data: character, error: charError } = await supabase
     .from('characters')
     .select('id')
     .eq('user_id', user.id)
     .single();
+
+  if (charError) {
+    return NextResponse.json({ error: 'Failed to retrieve character' }, { status: 500 });
+  }
 
   if (!character) {
     return NextResponse.json({ error: 'Character not found' }, { status: 404 });
