@@ -183,7 +183,7 @@ function PackReveal({ result, onDismiss }: { result: PackResult; onDismiss: () =
         className={`rounded-2xl border-2 ${rd.border} bg-[#0a0d11] p-6 max-w-xs w-full text-center animate-fade-in shadow-2xl`}
       >
         <p className="text-xs uppercase tracking-widest text-slate-500 mb-4">
-          {result.isNew ? "New Hero Acquired!" : "Duplicate — Bonus XP Awarded"}
+          {result.isNew ? "New Mecha Acquired!" : "Duplicate — Bonus XP Awarded"}
         </p>
         <span className="text-6xl block mb-3">{result.template.icon}</span>
         <h2 className={`text-xl font-bold mb-1 ${rd.color}`}>{result.template.name}</h2>
@@ -194,7 +194,7 @@ function PackReveal({ result, onDismiss }: { result: PackResult; onDismiss: () =
           {bonusStr} per level
         </p>
         {!result.isNew && (
-          <p className="text-amber-400 text-xs mb-4">+{result.xpGain} XP added to existing hero</p>
+          <p className="text-amber-400 text-xs mb-4">+{result.xpGain} XP added to existing mecha</p>
         )}
         <button
           onClick={onDismiss}
@@ -412,7 +412,7 @@ export default function HeroesClient({
 
       {heroes.length === 0 && (
         <p className="text-slate-500 text-sm text-center py-8">
-          No heroes yet — rip your first pack to recruit support!
+          No mechas yet — rip your first pack to recruit support!
         </p>
       )}
 

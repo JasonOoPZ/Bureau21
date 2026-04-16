@@ -39,7 +39,7 @@ const DISTRICTS: District[] = [
       { name: "Battle Arena", href: "/battle", description: "PVP combat against other pilots.", status: "live" },
       { name: "Galaxy Gym", href: "/gym", description: "Train strength, speed, endurance, and confidence.", status: "live" },
       { name: "The Academy", href: "/station/academy", description: "Advanced combat training modules.", status: "live" },
-      { name: "Battle Support Corps", href: "/heroes", description: "Recruit and deploy hero units for battle bonuses.", status: "live" },
+      { name: "Battle Support Corps", href: "/heroes", description: "Recruit and deploy mecha units for battle bonuses.", status: "live" },
       { name: "Training Grounds", href: "/primaris/training-grounds", description: "Sparring matches and practice drills.", status: "live" },
     ],
   },

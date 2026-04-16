@@ -9,7 +9,7 @@ export const topNavLinks: BureauNavLink[] = [
   { href: "/gym", label: "Gym", status: "live" },
   { href: "/primaris", label: "Primaris", status: "live" },
   { href: "/battle", label: "Battle", status: "live" },
-  { href: "/heroes", label: "Heroes", status: "live" },
+  { href: "/heroes", label: "Mechas", status: "live" },
   { href: "/station", label: "Station", status: "live" },
   { href: "/boards", label: "Boards", status: "live" },
   { href: "/chat", label: "Chat", status: "live" },

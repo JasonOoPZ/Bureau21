@@ -43,7 +43,7 @@ export default async function HeroesPage() {
           <p className="text-xs text-slate-500 uppercase tracking-widest">Bureau 21</p>
           <h1 className="text-2xl font-bold text-slate-100">Battle Support Corps</h1>
         <p className="text-sm text-slate-400 pb-4">
-          AI souls bonded to combat hulls. Active heroes boost your stats every time you fight.
+          AI souls bonded to combat hulls. Active mechas boost your stats every time you fight.
         </p>
 
         <HeroesClient
