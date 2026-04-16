@@ -14,31 +14,48 @@ interface BoardPost {
   createdAt: string;
 }
 
-const CATEGORIES = ["all", "general", "trading", "help", "events"] as const;
+const CATEGORIES = [
+  "announcements", "bugfix", "game-discussion", "game-help", "suggestions", "trading",
+  "non-game", "for-fun", "video-games", "entertainment", "tech", "foodies", "sports", "book-club",
+] as const;
+const CAT_LABELS: Record<string, string> = {
+  announcements: "Announcements", bugfix: "Bugfix", "game-discussion": "Game Discussion",
+  "game-help": "Game Help", suggestions: "Suggestions", trading: "Trading",
+  "non-game": "Non-Game", "for-fun": "For Fun", "video-games": "Video Games",
+  entertainment: "Entertainment", tech: "Tech", foodies: "Foodies", sports: "Sports", "book-club": "Book Club",
+};
 const CAT_COLORS: Record<string, string> = {
-  general: "text-slate-400 border-slate-700",
+  announcements: "text-red-400 border-red-900",
+  bugfix: "text-orange-400 border-orange-900",
+  "game-discussion": "text-slate-400 border-slate-700",
+  "game-help": "text-emerald-400 border-emerald-900",
+  suggestions: "text-yellow-400 border-yellow-900",
   trading: "text-amber-400 border-amber-900",
-  help: "text-emerald-400 border-emerald-900",
-  events: "text-cyan-400 border-cyan-900",
+  "non-game": "text-blue-400 border-blue-900",
+  "for-fun": "text-pink-400 border-pink-900",
+  "video-games": "text-purple-400 border-purple-900",
+  entertainment: "text-cyan-400 border-cyan-900",
+  tech: "text-indigo-400 border-indigo-900",
+  foodies: "text-lime-400 border-lime-900",
+  sports: "text-teal-400 border-teal-900",
+  "book-club": "text-rose-400 border-rose-900",
 };
 
 interface Props {
   initialPosts: BoardPost[];
   currentUser: string;
+  boardCategory?: string;
 }
 
-export function BoardsClient({ initialPosts, currentUser }: Props) {
+export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props) {
   const [posts, setPosts] = useState<BoardPost[]>(initialPosts);
-  const [filter, setFilter] = useState<string>("all");
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState<string>("general");
+  const [category, setCategory] = useState<string>(boardCategory ?? "game-discussion");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-
-  const filtered = filter === "all" ? posts : posts.filter((p) => p.category === filter);
 
   async function vote(postId: string, direction: 1 | -1) {
     try {
@@ -95,24 +112,11 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Category filter + new post button */}
-      <div className="flex flex-wrap items-center gap-2">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            className={`rounded border px-3 py-1 text-[11px] capitalize transition ${
-              filter === cat
-                ? "border-cyan-700 bg-cyan-950/40 text-cyan-300"
-                : "border-slate-800 bg-slate-900/40 text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* New post button */}
+      <div className="flex justify-end">
         <button
           onClick={() => setComposing(!composing)}
-          className="ml-auto rounded border border-emerald-800 bg-emerald-950/30 px-3 py-1 text-[11px] text-emerald-300 hover:bg-emerald-950/60"
+          className="rounded border border-emerald-800 bg-emerald-950/30 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-950/60 transition"
         >
           {composing ? "Cancel" : "+ New Post"}
         </button>
@@ -126,15 +130,17 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
             <p className="mb-2 text-[11px] text-red-400">{error}</p>
           )}
           <div className="space-y-2">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none"
-            >
-              {CATEGORIES.filter((c) => c !== "all").map((c) => (
-                <option key={c} value={c} className="capitalize">{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
+            {!boardCategory && (
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{CAT_LABELS[c] ?? c}</option>
+                ))}
+              </select>
+            )}
             <input
               placeholder="Post title..."
               value={title}
@@ -162,12 +168,12 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
       )}
 
       {/* Post list */}
-      {filtered.length === 0 ? (
+      {posts.length === 0 ? (
         <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-8 text-center">
           <p className="text-[11px] text-slate-600">No posts yet in this channel. Be the first to post.</p>
         </div>
       ) : (
-        filtered.map((post) => (
+        posts.map((post) => (
           <div key={post.id} className="rounded-md border border-slate-800 bg-[#0a0d11]">
             <button
               onClick={() => setExpanded(expanded === post.id ? null : post.id)}

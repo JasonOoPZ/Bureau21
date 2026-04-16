@@ -4,12 +4,15 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const VALID_CATEGORIES = ["general", "trading", "help", "events"] as const;
+const VALID_CATEGORIES = [
+  "announcements", "bugfix", "game-discussion", "game-help", "suggestions", "trading",
+  "non-game", "for-fun", "video-games", "entertainment", "tech", "foodies", "sports", "book-club",
+] as const;
 
 const postSchema = z.object({
   title: z.string().min(3).max(120),
   body: z.string().min(1).max(2000),
-  category: z.enum(VALID_CATEGORIES).default("general"),
+  category: z.enum(VALID_CATEGORIES).default("game-discussion"),
 });
 
 export async function POST(request: Request) {
