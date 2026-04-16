@@ -1,7 +1,7 @@
 import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
-import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
+import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap, getCombatBonuses } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -27,11 +27,11 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
   const weaponItem = equipped.find((i) => i.type === "weapon");
   const shieldItem = equipped.find((i) => i.type === "shield");
   const engineItem = equipped.find((i) => i.type === "engine");
+  const armorItem = equipped.find((i) => i.type === "armor");
 
-  const weaponBonus = weaponItem ? Math.floor(weaponItem.bonusAmt / 10) : 0;
-  const shieldBonus = shieldItem ? Math.floor(shieldItem.bonusAmt / 2) : 0;
+  const { weaponBonus, armorBonus } = getCombatBonuses(pilot.inventory);
   const atk = calculateATK(pilot.strength, pilot.atkSplit, weaponBonus);
-  const def = calculateDEF(pilot.strength, pilot.atkSplit, shieldBonus);
+  const def = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const maxXp = xpForLevel(pilot.level);
   const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
 

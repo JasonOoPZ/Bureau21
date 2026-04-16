@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { getCombatBonuses } from "@/lib/constants";
 import { AcademyClient } from "@/components/game/academy-client";
 import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
@@ -12,13 +13,7 @@ export default async function AcademyPage() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  const weaponBonus = pilot.inventory
-    .filter((i) => i.equipped && i.type === "weapon")
-    .reduce((sum, i) => sum + (i.bonusAmt ?? 0), 0);
-
-  const armorBonus = pilot.inventory
-    .filter((i) => i.equipped && i.type === "shield")
-    .reduce((sum, i) => sum + (i.bonusAmt ?? 0), 0);
+  const { weaponBonus, armorBonus } = getCombatBonuses(pilot.inventory);
 
   return (
     <div className="min-h-screen bg-[#0a0d11] text-slate-100">

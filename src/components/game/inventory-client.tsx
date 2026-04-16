@@ -30,6 +30,7 @@ const TYPE_ICONS: Record<string, string> = {
   weapon: "⚔",
   shield: "🛡",
   engine: "⚙",
+  armor: "🛡",
   special: "🃏",
 };
 
@@ -39,6 +40,8 @@ function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: numb
     xp: `+${bonusAmt}% XP`,
     hull: `+${bonusAmt} hull`,
     fuel: `+${bonusAmt}% fuel eff.`,
+    atk: `+${bonusAmt} ATK`,
+    def: `+${bonusAmt} DEF`,
     access: "Exclusive Access",
   };
   return <span className="text-emerald-400 text-[10px]">{labels[bonusType] ?? bonusType}</span>;
@@ -56,7 +59,7 @@ export function InventoryClient({
   pilotId?: string;
 }) {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
-  const [filter, setFilter] = useState<"all" | "weapon" | "shield" | "engine" | "special">("all");
+  const [filter, setFilter] = useState<"all" | "weapon" | "armor" | "shield" | "engine" | "special">("all");
   const [loading, setLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [inspecting, setInspecting] = useState<InventoryItem | null>(null);
@@ -122,7 +125,7 @@ export function InventoryClient({
 
       {/* Filters */}
       <div className="flex gap-1">
-        {(["all", "weapon", "shield", "engine", "special"] as const).map((f) => (
+        {(["all", "weapon", "armor", "shield", "engine", "special"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}

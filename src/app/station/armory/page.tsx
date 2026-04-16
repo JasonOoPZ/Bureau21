@@ -1,8 +1,10 @@
 import { authOptions } from "@/auth";
 import { ArmoryClient } from "@/components/game/armory-client";
+import { EquipmentVendor } from "@/components/game/equipment-vendor";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { ITEM_TEMPLATES } from "@/lib/item-data";
+import { getVendorCatalog } from "@/lib/equipment-data";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -24,6 +26,9 @@ export default async function ArmoryPage() {
     price: ITEM_PRICES[t.tier] ?? 999,
   }));
 
+  const vendorWeapons = getVendorCatalog("weapon");
+  const vendorArmor = getVendorCatalog("armor");
+
   return (
     <>
       <TopBar session={session} />
@@ -40,10 +45,32 @@ export default async function ArmoryPage() {
           <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
             <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Armory</h1>
             <p className="mt-1 text-[11px] text-slate-400">
-              Purchase weapons, shields, and engines. Equipped items boost your field performance.
+              Purchase weapons, armor, shields, and engines. Equipped items boost your combat and field performance.
             </p>
           </div>
 
+          {/* ── Equipment Vendor (Weapons & Armor) ── */}
+          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-200">Equipment Vendor</h2>
+            <p className="mt-0.5 text-[10px] text-slate-500">
+              Clearance-rated weapons and armor. Gray through Blue clearance available for purchase. Hover <span className="text-cyan-400">?</span> or click Inspect for details.
+            </p>
+          </div>
+          <EquipmentVendor
+            weapons={vendorWeapons}
+            armor={vendorArmor}
+            pilotLevel={pilot.level}
+            initialCredits={pilot.credits}
+            inventoryCount={pilot.inventory.length}
+          />
+
+          {/* ── Field Gadgets (Legacy items) ── */}
+          <div className="mt-6 rounded-md border border-slate-700 bg-[#0b0f14] p-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-200">Field Gadgets</h2>
+            <p className="mt-0.5 text-[10px] text-slate-500">
+              Utility items that boost credit gains, XP, hull protection, and fuel efficiency during field operations.
+            </p>
+          </div>
           <ArmoryClient
             catalog={catalog}
             initialCredits={pilot.credits}

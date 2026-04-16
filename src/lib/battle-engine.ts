@@ -1,4 +1,4 @@
-import { calculateATK, calculateDEF, GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
+import { calculateATK, calculateDEF, GAME_CONSTANTS, getCombatBonuses, getConfidenceCap } from "@/lib/constants";
 import type { HeroBonuses } from "@/lib/hero-data";
 
 /* ═══════════════════════════════════════════════
@@ -67,12 +67,7 @@ function buildPvpFighter(
   pilot: PvpPilotInput,
   heroBonuses?: HeroBonuses
 ): { fighter: BattleFighter; critBonus: number } {
-  const weaponBonus = pilot.inventory
-    .filter((i) => i.equipped && i.type === "weapon")
-    .reduce((sum, i) => sum + (i.bonusType === "credits" ? Math.floor(i.bonusAmt / 10) : 0), 0);
-  const shieldBonus = pilot.inventory
-    .filter((i) => i.equipped && i.type === "shield")
-    .reduce((sum, i) => sum + i.bonusAmt, 0);
+  const { weaponBonus, armorBonus: defBonus } = getCombatBonuses(pilot.inventory);
 
   const heroAtkMult = 1 + ((heroBonuses?.atkPct ?? 0) / 100);
   const heroDefMult = 1 + ((heroBonuses?.defPct ?? 0) / 100);
@@ -85,7 +80,7 @@ function buildPvpFighter(
   const critBonus = (appliedConfidence / confCap) * 0.08;
 
   const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
-  const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, Math.floor(shieldBonus / 2)) * heroDefMult));
+  const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, defBonus) * heroDefMult));
   const playerMaxLf = Math.floor(maxLF(pilot.level) * heroLfMult);
 
   return {

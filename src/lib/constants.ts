@@ -71,6 +71,24 @@ export function calculateDEF(strength: number, atkDefSplit: number, armorBonus: 
   return Math.floor((strength * (100 - atkDefSplit)) / 100) + armorBonus;
 }
 
+/** Compute combat ATK/DEF bonuses from equipped inventory items */
+export function getCombatBonuses(
+  inventory: { type: string; bonusType: string; bonusAmt: number; equipped: boolean }[]
+): { weaponBonus: number; armorBonus: number } {
+  let weaponBonus = 0;
+  let armorBonus = 0;
+  for (const item of inventory) {
+    if (!item.equipped) continue;
+    if (item.bonusType === "atk") weaponBonus += item.bonusAmt;
+    else if (item.bonusType === "def") armorBonus += item.bonusAmt;
+    else if (item.type === "weapon" && item.bonusType === "credits")
+      weaponBonus += Math.floor(item.bonusAmt / 10);
+    else if (item.type === "shield")
+      armorBonus += Math.floor(item.bonusAmt / 2);
+  }
+  return { weaponBonus, armorBonus };
+}
+
 export function lfFromAP(level: number): number {
   return GAME_CONSTANTS.LF_PER_AP_MULTIPLIER * level;
 }

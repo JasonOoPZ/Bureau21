@@ -1,5 +1,5 @@
-export type ItemType = "weapon" | "shield" | "engine" | "special";
-export type BonusType = "credits" | "hull" | "fuel" | "xp" | "access";
+export type ItemType = "weapon" | "shield" | "engine" | "armor" | "special";
+export type BonusType = "credits" | "hull" | "fuel" | "xp" | "access" | "atk" | "def";
 
 export interface ItemTemplate {
   name: string;
@@ -74,6 +74,7 @@ export const TYPE_LABELS: Record<ItemType, string> = {
   weapon: "Weapon",
   shield: "Shield",
   engine: "Engine",
+  armor: "Armor",
   special: "Special",
 };
 

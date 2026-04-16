@@ -1,6 +1,6 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS, calculateATK, calculateDEF } from "@/lib/constants";
+import { GAME_CONSTANTS, calculateATK, calculateDEF, getCombatBonuses } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -46,8 +46,9 @@ export async function POST() {
   const opponent = eligible.length > 0 ? eligible[Math.floor(Math.random() * eligible.length)] : PIT_FIGHTERS[0];
 
   // Simple combat simulation
-  const pilotAtk = calculateATK(pilot.strength, pilot.atkSplit, 0);
-  const pilotDef = calculateDEF(pilot.strength, pilot.atkSplit, 0);
+  const { weaponBonus, armorBonus } = getCombatBonuses(pilot.inventory);
+  const pilotAtk = calculateATK(pilot.strength, pilot.atkSplit, weaponBonus);
+  const pilotDef = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const oppAtk = calculateATK(opponent.str, opponent.split, 0);
   const oppDef = calculateDEF(opponent.str, opponent.split, 0);
 

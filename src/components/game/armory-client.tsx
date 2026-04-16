@@ -11,7 +11,7 @@ interface CatalogItem {
   price: number;
 }
 
-const TYPE_ICONS: Record<string, string> = { weapon: "⚔", shield: "🛡", engine: "⚡" };
+const TYPE_ICONS: Record<string, string> = { weapon: "⚔", shield: "🛡", engine: "⚡", armor: "🛡" };
 const TIER_LABELS: Record<number, string> = { 1: "Common", 2: "Rare", 3: "Legendary" };
 const TIER_COLORS: Record<number, string> = {
   1: "text-slate-300 border-slate-700",
