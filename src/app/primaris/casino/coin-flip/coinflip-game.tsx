@@ -1,23 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 const QUICK_BETS = [50, 100, 250, 500, 1000];
 
-function CoinFace({ side, size = "lg" }: { side: "heads" | "tails"; size?: "lg" | "sm" }) {
+function CoinFace({ side }: { side: "heads" | "tails" }) {
   const isHeads = side === "heads";
-  const dim = size === "lg" ? "w-32 h-32 sm:w-36 sm:h-36" : "w-24 h-24";
   return (
-    <div className={`${dim} rounded-full flex flex-col items-center justify-center ${
+    <div className={`w-32 h-32 sm:w-36 sm:h-36 rounded-full flex flex-col items-center justify-center select-none ${
       isHeads
         ? "bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.4)]"
         : "bg-gradient-to-br from-slate-400 via-zinc-300 to-slate-500 shadow-[0_0_30px_rgba(148,163,184,0.3)]"
     }`}>
-      <span className={size === "lg" ? "text-5xl" : "text-3xl"}>{isHeads ? "👑" : "💀"}</span>
-      <span className={`font-black uppercase tracking-wider ${
-        size === "lg" ? "text-[10px] mt-1" : "text-[8px] mt-0.5"
-      } ${isHeads ? "text-amber-900" : "text-slate-700"}`}>
+      <span className="text-5xl">{isHeads ? "👑" : "💀"}</span>
+      <span className={`font-black uppercase tracking-wider text-[10px] mt-1 ${
+        isHeads ? "text-amber-900" : "text-slate-700"
+      }`}>
         {side}
       </span>
     </div>
@@ -28,11 +27,12 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
   const [credits, setCredits] = useState(initialCredits);
   const [bet, setBet] = useState(100);
   const [flipping, setFlipping] = useState(false);
+  const [visibleFace, setVisibleFace] = useState<"heads" | "tails">("heads");
   const [coin, setCoin] = useState<"heads" | "tails" | null>(null);
   const [landed, setLanded] = useState(false);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
   const [creditsBump, setCreditsBump] = useState(false);
-  const [spinKey, setSpinKey] = useState(0);
+  const flipInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (creditsBump) {
@@ -41,12 +41,23 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
     }
   }, [creditsBump]);
 
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => { if (flipInterval.current) clearInterval(flipInterval.current); };
+  }, []);
+
   const flip = async (choice: "heads" | "tails") => {
     setFlipping(true);
     setLanded(false);
     setResult(null);
     setCoin(null);
-    setSpinKey((k) => k + 1);
+
+    // Start toggling the visible face rapidly — heads/tails alternate
+    let faceToggle = false;
+    flipInterval.current = setInterval(() => {
+      faceToggle = !faceToggle;
+      setVisibleFace(faceToggle ? "tails" : "heads");
+    }, 150);
 
     const res = await fetch("/api/game/casino", {
       method: "POST",
@@ -56,25 +67,32 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
     const data = await res.json();
     const winner: "heads" | "tails" = data.result ?? choice;
 
-    // Coin spin is 1.6s — after it finishes, show landed state
+    // After 1.6s of spinning, slow down then stop on winning face
     setTimeout(() => {
-      setFlipping(false);
-      setCoin(winner);
-      setLanded(true);
-      setTimeout(() => {
-        setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
-        if (data.new_credits != null) {
-          setCredits(data.new_credits);
-          setCreditsBump(true);
+      // Slow down the flipping
+      if (flipInterval.current) clearInterval(flipInterval.current);
+      let slowCount = 0;
+      const slowFlip = setInterval(() => {
+        slowCount++;
+        setVisibleFace((prev) => (prev === "heads" ? "tails" : "heads"));
+        if (slowCount >= 4) {
+          clearInterval(slowFlip);
+          // Land on winning face
+          setVisibleFace(winner);
+          setFlipping(false);
+          setCoin(winner);
+          setLanded(true);
+          setTimeout(() => {
+            setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
+            if (data.new_credits != null) {
+              setCredits(data.new_credits);
+              setCreditsBump(true);
+            }
+          }, 400);
         }
-      }, 400);
-    }, 1650);
+      }, 250);
+    }, 1200);
   };
-
-  // The spin animation ends at rotateY(3600deg) = 0deg (heads showing)
-  // or rotateY(3780deg) = 180deg (tails showing)
-  // So: heads result → coin-spin-3d (lands on 0/360), tails → coin-spin-3d-half (lands on 180)
-  const spinClass = coin === "tails" ? "animate-coin-spin-half" : "animate-coin-spin";
 
   return (
     <div className="min-h-screen bg-black text-slate-100 px-3 py-4">
@@ -89,40 +107,17 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
           <h1 className="text-xl font-bold text-slate-200 mb-1">🪙 Coin Flip</h1>
           <p className="text-slate-500 text-xs mb-6">Double or nothing. Pick a side.</p>
 
-          <div className="my-8 flex justify-center" style={{ perspective: "800px" }}>
-            {/* Idle state */}
-            {!flipping && !coin && (
-              <div className="relative" style={{ transformStyle: "preserve-3d" }}>
-                <CoinFace side="heads" />
-              </div>
-            )}
-
-            {/* Spinning state — 3D coin with two faces */}
-            {flipping && (
-              <div
-                key={spinKey}
-                className={spinClass}
-                style={{ transformStyle: "preserve-3d" }}
-              >
-                <div className="relative w-32 h-32 sm:w-36 sm:h-36" style={{ transformStyle: "preserve-3d" }}>
-                  {/* Front face (heads) */}
-                  <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-                    <CoinFace side="heads" />
-                  </div>
-                  {/* Back face (tails) */}
-                  <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                    <CoinFace side="tails" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Landed state — show winning side */}
-            {!flipping && coin && (
-              <div className={landed ? "animate-coin-land" : ""}>
-                <CoinFace side={coin} />
-              </div>
-            )}
+          <div className="my-8 flex justify-center">
+            <div className={`transition-transform ${
+              flipping ? "animate-coin-spin" : landed ? "animate-coin-land" : ""
+            }`}>
+              {/* During spin: show whichever face the JS interval says */}
+              {flipping && <CoinFace side={visibleFace} />}
+              {/* Landed: show winning face */}
+              {!flipping && coin && <CoinFace side={coin} />}
+              {/* Idle: show heads */}
+              {!flipping && !coin && <CoinFace side="heads" />}
+            </div>
           </div>
 
           {/* Result label below coin */}
