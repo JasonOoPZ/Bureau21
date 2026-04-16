@@ -15,7 +15,7 @@ const BOND_OPTIONS = [
   { days: 365, rate: 25,    label: "365 Days", tag: "Legendary" },
 ];
 
-const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000];
+const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 25000, 50000, 100000];
 
 interface Props {
   initialCredits: number;
@@ -28,13 +28,14 @@ interface Props {
   initialBondMaturesAt: string | null;
   buyRate: number;
   sellRate: number;
+  initialBankTreasury: number;
 }
 
 export function BankClient({
   initialCredits, initialCreditsBank, initialTokens,
   initialLoanAmount, initialLoanCreatedAt,
   initialBondAmount, initialBondRate, initialBondMaturesAt,
-  buyRate, sellRate,
+  buyRate, sellRate, initialBankTreasury,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
   const [credits, setCredits] = useState(initialCredits);
@@ -49,6 +50,7 @@ export function BankClient({
   const [bondDays, setBondDays] = useState(30);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [bankTreasury, setBankTreasury] = useState(initialBankTreasury);
 
   const api = async (action: string, extra: Record<string, unknown> = {}) => {
     setLoading(true);
@@ -69,6 +71,7 @@ export function BankClient({
       if (data.bondAmount != null) setBondAmount(data.bondAmount);
       if (data.bondRate != null) setBondRateState(data.bondRate);
       if (data.bondMaturesAt !== undefined) setBondMaturesAt(data.bondMaturesAt);
+      if (data.fee != null) setBankTreasury((prev) => prev + data.fee);
       return data;
     } catch {
       setMsg({ text: "Connection error.", ok: false });
@@ -187,38 +190,100 @@ export function BankClient({
         {/* ── Vault ─────────────────────────────────────────────────── */}
         {tab === "vault" && (
           <>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">🔒</span>
               <div>
                 <h2 className="text-sm font-bold text-cyan-300 uppercase tracking-wide">Secure Vault</h2>
                 <p className="text-[11px] text-slate-400">Credits in the vault are safe from theft and death.</p>
               </div>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              {QUICK_AMOUNTS.map((q) => (
-                <button key={q} onClick={() => setAmount(q)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    amount === q ? "bg-cyan-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
-                  }`}>
-                  {q.toLocaleString()}
-                </button>
-              ))}
-              <button onClick={() => setAmount(credits)}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800/60 text-amber-400 hover:bg-slate-700 transition">
-                MAX
+
+            {/* Deposit section */}
+            <div className="rounded-lg bg-cyan-950/20 border border-cyan-900/30 p-3 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">⬇️</span>
+                <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold">Deposit to Vault</span>
+                <span className="text-[10px] text-emerald-500 ml-auto">No fees</span>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {QUICK_AMOUNTS.map((q) => (
+                  <button key={q} onClick={() => setAmount(q)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                      amount === q ? "bg-cyan-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                    }`}>
+                    {q.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {[10, 25, 50, 75, 100].map((pct) => (
+                  <button key={pct} onClick={() => setAmount(Math.max(1, Math.floor(credits * pct / 100)))}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-900/30 text-cyan-400 hover:bg-cyan-800/40 transition">
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2 text-sm text-center font-mono text-slate-200" />
+              <button onClick={() => api("deposit")} disabled={loading || amount > credits || amount < 1}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
+                ⬇️ Deposit {amount.toLocaleString()} ₡
               </button>
             </div>
-            <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-              min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => api("deposit")} disabled={loading || amount > credits}
-                className="relative overflow-hidden group py-3 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
-                <span className="relative z-10">⬇️ Deposit</span>
+
+            {/* Withdraw section */}
+            <div className="rounded-lg bg-amber-950/20 border border-amber-900/30 p-3 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">⬆️</span>
+                <span className="text-[10px] uppercase tracking-widest text-amber-500 font-bold">Withdraw to Pocket</span>
+                <span className="text-[10px] text-red-400 ml-auto">2.5% fee</span>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {QUICK_AMOUNTS.map((q) => (
+                  <button key={q} onClick={() => setAmount(q)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                      amount === q ? "bg-amber-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                    }`}>
+                    {q.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {[10, 25, 50, 75, 100].map((pct) => (
+                  <button key={pct} onClick={() => setAmount(Math.max(1, Math.floor(bank * pct / 100)))}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 transition">
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2 text-sm text-center font-mono text-slate-200" />
+              {amount > 0 && (
+                <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-xs">
+                  <div>
+                    <span className="text-slate-500">Fee: </span>
+                    <span className="text-red-400 font-mono font-bold">{Math.ceil(amount * 0.025).toLocaleString()} ₡</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">You receive: </span>
+                    <span className="text-amber-300 font-mono font-bold">{(amount - Math.ceil(amount * 0.025)).toLocaleString()} ₡</span>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => api("withdraw")} disabled={loading || amount > bank || amount < 1}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
+                ⬆️ Withdraw {amount.toLocaleString()} ₡
               </button>
-              <button onClick={() => api("withdraw")} disabled={loading || amount > bank}
-                className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
-                ⬆️ Withdraw
-              </button>
+            </div>
+
+            {/* Bank treasury */}
+            <div className="rounded-lg bg-slate-900/30 border border-slate-800/30 p-3 flex items-center gap-3">
+              <span className="text-xl">🏛️</span>
+              <div className="flex-1">
+                <div className="text-[9px] uppercase tracking-[0.15em] text-slate-500 font-semibold">Bureau Bank Treasury</div>
+                <div className="text-[10px] text-slate-400">Accumulated from all pilot withdrawal fees</div>
+              </div>
+              <div className="text-lg font-black text-amber-400 font-mono">{bankTreasury.toLocaleString()} ₡</div>
             </div>
           </>
         )}

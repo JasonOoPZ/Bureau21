@@ -3,6 +3,7 @@ import { BankClient } from "@/components/game/bank-client";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { GAME_CONSTANTS } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,7 +12,10 @@ export default async function BankPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const [pilot, global] = await Promise.all([
+    getOrCreatePilotState(session.user.id, session.user.name),
+    prisma.gameGlobal.findUnique({ where: { id: "singleton" } }),
+  ]);
 
   return (
     <>
@@ -48,6 +52,7 @@ export default async function BankPage() {
             initialBondMaturesAt={pilot.bondMaturesAt?.toISOString() ?? null}
             buyRate={GAME_CONSTANTS.TOKEN_BUY_RATE}
             sellRate={GAME_CONSTANTS.TOKEN_SELL_RATE}
+            initialBankTreasury={global?.bankTreasury ?? 0}
           />
         </div>
       </main>

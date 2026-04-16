@@ -45,11 +45,22 @@ export async function POST(request: Request) {
   // ── Withdraw ────────────────────────────────────────────────────────────
   if (action === "withdraw") {
     if (amt < 1 || amt > pilot.creditsBank) return json({ error: "Insufficient bank balance." }, 400);
+    const fee = Math.ceil(amt * 0.025);
+    const received = amt - fee;
+    // Deduct full amount from bank, credit pilot with (amount - fee), fee goes to treasury
     const updated = await prisma.pilotState.update({
       where: { userId: session.user.id },
-      data: { credits: { increment: amt }, creditsBank: { decrement: amt } },
+      data: { credits: { increment: received }, creditsBank: { decrement: amt } },
     });
-    return json({ message: `Withdrew ${amt.toLocaleString()} ₡ from bank.`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondMaturesAt: updated.bondMaturesAt?.toISOString() ?? null });
+    // Add fee to bank treasury
+    if (fee > 0) {
+      await prisma.gameGlobal.upsert({
+        where: { id: "singleton" },
+        update: { bankTreasury: { increment: fee } },
+        create: { id: "singleton", bankTreasury: fee },
+      });
+    }
+    return json({ message: `Withdrew ${amt.toLocaleString()} ₡ (fee: ${fee.toLocaleString()} ₡). Received ${received.toLocaleString()} ₡.`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondMaturesAt: updated.bondMaturesAt?.toISOString() ?? null, fee });
   }
 
   // ── Transfer ────────────────────────────────────────────────────────────
@@ -153,6 +164,8 @@ export async function GET() {
   const pilot = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
   if (!pilot) return json({ error: "Pilot not found." }, 404);
 
+  const global = await prisma.gameGlobal.findUnique({ where: { id: "singleton" } });
+
   return json({
     credits: pilot.credits,
     creditsBank: pilot.creditsBank,
@@ -161,5 +174,6 @@ export async function GET() {
     bondAmount: pilot.bondAmount,
     bondRate: pilot.bondRate,
     bondMaturesAt: pilot.bondMaturesAt?.toISOString() ?? null,
+    bankTreasury: global?.bankTreasury ?? 0,
   });
 }

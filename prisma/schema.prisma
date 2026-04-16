@@ -248,6 +248,11 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+model GameGlobal {
+  id            String @id @default("singleton")
+  bankTreasury  Int    @default(0)
+}
+
 model PlayerHero {
   id        String   @id @default(cuid())
   pilotId   String
