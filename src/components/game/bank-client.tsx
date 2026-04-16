@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Tab = "vault" | "transfer" | "loan" | "bond" | "tokens";
+type Tab = "vault" | "transfer" | "loan" | "bond" | "wealth";
 
 const BOND_OPTIONS = [
   { days: 7,   rate: 1,     label: "7 Days",   tag: "Starter" },
@@ -32,6 +32,7 @@ interface Props {
   buyRate: number;
   sellRate: number;
   initialBankTreasury: number;
+  hasVentureCard: boolean;
 }
 
 export function BankClient({
@@ -39,7 +40,7 @@ export function BankClient({
   initialLoanAmount, initialLoanCreatedAt,
   initialBondAmount, initialBondRate, initialBondDays,
   initialBondMaturesAt, initialBondCreatedAt, initialBondLastClaimedAt,
-  buyRate, sellRate, initialBankTreasury,
+  buyRate, sellRate, initialBankTreasury, hasVentureCard,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
   const [credits, setCredits] = useState(initialCredits);
@@ -96,7 +97,7 @@ export function BankClient({
     { key: "transfer", label: "Transfer", icon: "⚡", color: "from-purple-500/20 to-purple-900/10 border-purple-800/40" },
     { key: "loan",     label: "Loans",    icon: "💳", color: "from-orange-500/20 to-orange-900/10 border-orange-800/40" },
     { key: "bond",     label: "Bonds",    icon: "📊", color: "from-emerald-500/20 to-emerald-900/10 border-emerald-800/40" },
-    { key: "tokens",   label: "Tokens",   icon: "💎", color: "from-violet-500/20 to-violet-900/10 border-violet-800/40" },
+    ...(hasVentureCard ? [{ key: "wealth" as Tab, label: "Wealth", icon: "👑", color: "from-yellow-500/20 to-yellow-900/10 border-yellow-800/40" }] : []),
   ];
 
   const bondMatures = bondMaturesAt ? new Date(bondMaturesAt) : null;
@@ -590,23 +591,32 @@ export function BankClient({
           </>
         )}
 
-        {/* ── Tokens ────────────────────────────────────────────────── */}
-        {tab === "tokens" && (
+        {/* ── Wealth Management ─────────────────────────────────────── */}
+        {tab === "wealth" && (
           <>
             <div className="flex items-center gap-3 mb-1">
-              <span className="text-3xl">💎</span>
+              <span className="text-3xl">👑</span>
               <div>
-                <h2 className="text-sm font-bold text-violet-300 uppercase tracking-wide">Token Exchange</h2>
-                <p className="text-[11px] text-slate-400">Trade B21 tokens for credits and back.</p>
+                <h2 className="text-sm font-bold text-yellow-300 uppercase tracking-wide">Wealth Management</h2>
+                <p className="text-[11px] text-slate-400">Private B21 token exchange · Centurion members only.</p>
               </div>
             </div>
+
+            <div className="rounded-lg bg-yellow-950/10 border border-yellow-800/20 p-3 mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm">💳</span>
+                <span className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Centurion Venture Card Holder</span>
+              </div>
+              <p className="text-[10px] text-slate-500">You have exclusive access to the Bureau Bank&apos;s private trading floor.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 text-center">
+              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
                 <div className="text-[10px] text-slate-500 uppercase">Buy Rate</div>
-                <div className="text-lg font-bold text-violet-300 font-mono">{buyRate} ₡</div>
+                <div className="text-lg font-bold text-yellow-300 font-mono">{buyRate} ₡</div>
                 <div className="text-[10px] text-slate-600">per token</div>
               </div>
-              <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 text-center">
+              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
                 <div className="text-[10px] text-slate-500 uppercase">Sell Rate</div>
                 <div className="text-lg font-bold text-amber-300 font-mono">{sellRate} ₡</div>
                 <div className="text-[10px] text-slate-600">per token</div>
@@ -616,7 +626,7 @@ export function BankClient({
               {[1, 5, 10, 25, 50].map((q) => (
                 <button key={q} onClick={() => setAmount(q)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    amount === q ? "bg-violet-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                    amount === q ? "bg-yellow-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                   }`}>
                   {q}
                 </button>
@@ -626,7 +636,7 @@ export function BankClient({
               min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
-                className="py-3 rounded-xl bg-gradient-to-r from-violet-700 to-violet-600 hover:from-violet-600 hover:to-violet-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-violet-900/20">
+                className="py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
                 💎 Buy {amount}
                 <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
               </button>

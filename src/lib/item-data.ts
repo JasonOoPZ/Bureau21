@@ -1,5 +1,5 @@
-export type ItemType = "weapon" | "shield" | "engine";
-export type BonusType = "credits" | "hull" | "fuel" | "xp";
+export type ItemType = "weapon" | "shield" | "engine" | "special";
+export type BonusType = "credits" | "hull" | "fuel" | "xp" | "access";
 
 export interface ItemTemplate {
   name: string;
@@ -67,10 +67,24 @@ export const TIER_LABELS: Record<number, string> = {
   1: "Common",
   2: "Rare",
   3: "Legendary",
+  4: "Exclusive",
 };
 
 export const TYPE_LABELS: Record<ItemType, string> = {
   weapon: "Weapon",
   shield: "Shield",
   engine: "Engine",
+  special: "Special",
+};
+
+// ── Special Items (non-droppable, granted by game events) ─────────────────
+export const SPECIAL_ITEMS = {
+  CENTURION_VENTURE_CARD: {
+    name: "Centurion Venture Card",
+    type: "special" as ItemType,
+    tier: 4,
+    bonusType: "access" as BonusType,
+    bonusAmt: 0,
+    description: "An exclusive black-and-gold membership card granting access to the Bureau Bank's private Wealth Management suite. Issued to select pilots of distinguished financial standing.",
+  },
 };

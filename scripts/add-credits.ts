@@ -13,17 +13,32 @@ async function main() {
   });
   if (!pilot) {
     console.log("Pilot not found");
-    const all = await prisma.pilotState.findMany({ select: { callsign: true, userId: true } });
-    console.log("All pilots:", all);
     return;
   }
-  console.log(`Found: ${pilot.callsign} (userId: ${pilot.userId}) — current credits: ${pilot.credits}`);
+  console.log(`Found: ${pilot.callsign} (id: ${pilot.id})`);
 
-  const updated = await prisma.pilotState.update({
-    where: { userId: pilot.userId },
-    data: { credits: { increment: 100000000 } },
+  // Check if already has the card
+  const existing = await prisma.inventoryItem.findFirst({
+    where: { pilotId: pilot.id, name: "Centurion Venture Card", type: "special" },
   });
-  console.log(`Updated credits: ${updated.credits}`);
+  if (existing) {
+    console.log("Already has Centurion Venture Card.");
+    return;
+  }
+
+  // Give the card
+  const card = await prisma.inventoryItem.create({
+    data: {
+      pilotId: pilot.id,
+      name: "Centurion Venture Card",
+      type: "special",
+      tier: 4,
+      bonusType: "access",
+      bonusAmt: 0,
+      equipped: false,
+    },
+  });
+  console.log(`Created Centurion Venture Card (id: ${card.id}) for ${pilot.callsign}`);
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

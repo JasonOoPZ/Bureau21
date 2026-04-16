@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface InventoryItem {
   id: string;
@@ -16,18 +16,21 @@ const TIER_COLORS: Record<number, string> = {
   1: "border-slate-600 text-slate-300",
   2: "border-cyan-800 text-cyan-300",
   3: "border-amber-700 text-amber-300",
+  4: "border-yellow-500 text-yellow-200",
 };
 
 const TIER_LABELS: Record<number, string> = {
   1: "MK I",
   2: "MK II",
   3: "MK III",
+  4: "Exclusive",
 };
 
 const TYPE_ICONS: Record<string, string> = {
   weapon: "⚔",
   shield: "🛡",
   engine: "⚙",
+  special: "🃏",
 };
 
 function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: number }) {
@@ -36,6 +39,7 @@ function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: numb
     xp: `+${bonusAmt}% XP`,
     hull: `+${bonusAmt} hull`,
     fuel: `+${bonusAmt}% fuel eff.`,
+    access: "Exclusive Access",
   };
   return <span className="text-emerald-400 text-[10px]">{labels[bonusType] ?? bonusType}</span>;
 }
@@ -43,14 +47,19 @@ function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: numb
 export function InventoryClient({
   initialItems,
   slotMax,
+  pilotCallsign,
+  pilotId,
 }: {
   initialItems: InventoryItem[];
   slotMax: number;
+  pilotCallsign?: string;
+  pilotId?: string;
 }) {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
-  const [filter, setFilter] = useState<"all" | "weapon" | "shield" | "engine">("all");
+  const [filter, setFilter] = useState<"all" | "weapon" | "shield" | "engine" | "special">("all");
   const [loading, setLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [inspecting, setInspecting] = useState<InventoryItem | null>(null);
 
   const flash = (m: string) => {
     setMsg(m);
@@ -113,7 +122,7 @@ export function InventoryClient({
 
       {/* Filters */}
       <div className="flex gap-1">
-        {(["all", "weapon", "shield", "engine"] as const).map((f) => (
+        {(["all", "weapon", "shield", "engine", "special"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -175,6 +184,16 @@ export function InventoryClient({
                   </span>
                 )}
 
+                {item.type === "special" && !item.equipped && (
+                  <button
+                    onClick={() => setInspecting(item)}
+                    className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-yellow-600/50 bg-yellow-900/30 text-[10px] font-bold text-yellow-400 transition hover:border-yellow-400 hover:bg-yellow-800/40"
+                    title="View details"
+                  >
+                    ?
+                  </button>
+                )}
+
                 <div className="flex items-start gap-2 pr-12">
                   <span className="mt-0.5 text-lg">{TYPE_ICONS[item.type] ?? "?"}</span>
                   <div className="min-w-0">
@@ -187,7 +206,14 @@ export function InventoryClient({
                 </div>
 
                 <div className="mt-3 flex gap-1.5">
-                  {item.equipped ? (
+                  {item.type === "special" ? (
+                    <button
+                      onClick={() => setInspecting(item)}
+                      className="flex-1 rounded border border-yellow-700/50 bg-yellow-900/20 py-1 text-[10px] text-yellow-400 hover:border-yellow-500 transition"
+                    >
+                      🔍 Inspect
+                    </button>
+                  ) : item.equipped ? (
                     <button
                       onClick={() => handleEquip(item, false)}
                       disabled={busy}
@@ -204,14 +230,16 @@ export function InventoryClient({
                       {busy ? "…" : "Equip"}
                     </button>
                   )}
-                  <button
-                    onClick={() => handleDiscard(item)}
-                    disabled={busy || item.equipped}
-                    title={item.equipped ? "Unequip before discarding" : "Discard item"}
-                    className="rounded border border-red-900/40 bg-red-950/20 px-2 py-1 text-[10px] text-red-500 hover:border-red-700 disabled:cursor-not-allowed disabled:opacity-30 transition"
-                  >
-                    ✕
-                  </button>
+                  {item.type !== "special" && (
+                    <button
+                      onClick={() => handleDiscard(item)}
+                      disabled={busy || item.equipped}
+                      title={item.equipped ? "Unequip before discarding" : "Discard item"}
+                      className="rounded border border-red-900/40 bg-red-950/20 px-2 py-1 text-[10px] text-red-500 hover:border-red-700 disabled:cursor-not-allowed disabled:opacity-30 transition"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -224,6 +252,150 @@ export function InventoryClient({
           Inventory full ({slotMax}/{slotMax}). Discard items to make room.
         </p>
       )}
+
+      {/* Special Item Detail Overlay */}
+      {inspecting && (
+        <SpecialItemOverlay
+          item={inspecting}
+          pilotCallsign={pilotCallsign}
+          pilotId={pilotId}
+          onClose={() => setInspecting(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Special Item Detail Overlay ─────────────────────────────────────── */
+
+const SPECIAL_ITEM_INFO: Record<string, { description: string; icon: string }> = {
+  "Centurion Venture Card": {
+    description: "An exclusive black-and-gold membership card granting access to the Bureau Bank's private Wealth Management suite. Issued to select pilots of distinguished financial standing. This card is non-transferable and bound to the holder's identity.",
+    icon: "💳",
+  },
+};
+
+function SpecialItemOverlay({
+  item,
+  pilotCallsign,
+  pilotId,
+  onClose,
+}: {
+  item: InventoryItem;
+  pilotCallsign?: string;
+  pilotId?: string;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const info = SPECIAL_ITEM_INFO[item.name];
+  const maskedId = pilotId ? pilotId.slice(0, 6) + "••••" + pilotId.slice(-4) : "——";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={(e) => {
+        if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-yellow-700/40 bg-[#0a0e14] shadow-2xl"
+        style={{ boxShadow: "0 0 80px rgba(234,179,8,0.08), 0 0 30px rgba(234,179,8,0.04)" }}
+      >
+        {/* Top glow strip */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-slate-700 bg-slate-900/80 text-sm text-slate-400 transition hover:border-red-500 hover:text-red-300"
+        >
+          ✕
+        </button>
+
+        <div className="p-6">
+          {/* Card visual */}
+          <div className="mb-5 flex justify-center">
+            <div className="relative w-72 h-44 rounded-2xl overflow-hidden border-2 border-yellow-600/50 shadow-xl" style={{ background: "linear-gradient(135deg, #0c0c0c 0%, #1a1508 30%, #0c0c0c 60%, #1a1508 100%)" }}>
+              {/* Gold foil accent lines */}
+              <div className="absolute inset-0 opacity-20" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(234,179,8,0.1) 20px, rgba(234,179,8,0.1) 21px)" }} />
+              {/* Top bar */}
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-yellow-700/30 via-yellow-500/20 to-yellow-700/30 flex items-center px-4">
+                <span className="text-[8px] uppercase tracking-[0.3em] text-yellow-500/80 font-bold">Bureau 21 · Private Banking</span>
+              </div>
+              {/* Card content */}
+              <div className="absolute inset-0 flex flex-col justify-center items-center pt-4">
+                <span className="text-4xl mb-1">💳</span>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-yellow-500 font-bold">Centurion Venture Card</div>
+              </div>
+              {/* Bottom details */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-2.5 pt-1 bg-gradient-to-t from-black/60">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <div className="text-[8px] uppercase tracking-wider text-yellow-600/60">Cardholder</div>
+                    <div className="text-[11px] font-bold text-yellow-300 font-mono">{pilotCallsign ?? "——"}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[8px] uppercase tracking-wider text-yellow-600/60">Pilot ID</div>
+                    <div className="text-[9px] font-mono text-yellow-400/80">{maskedId}</div>
+                  </div>
+                </div>
+              </div>
+              {/* Holographic sheen */}
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-yellow-500/5 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Item info */}
+          <div className="mb-4 text-center">
+            <h3 className="text-lg font-black uppercase tracking-wide text-yellow-300">
+              {item.name}
+            </h3>
+            <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-yellow-600">
+              {TIER_LABELS[item.tier] ?? "Special"} · {item.type}
+            </p>
+          </div>
+
+          <p className="text-sm leading-relaxed text-slate-400 text-center mb-4">
+            {info?.description ?? "A unique item."}
+          </p>
+
+          {/* Cardholder details */}
+          <div className="rounded-xl border border-yellow-800/30 bg-yellow-950/10 p-4 space-y-2">
+            <div className="text-[9px] uppercase tracking-[0.15em] text-yellow-600 font-semibold text-center mb-2">Cardholder Information</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Callsign</div>
+                <div className="text-sm font-bold text-yellow-300">{pilotCallsign ?? "——"}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Pilot ID</div>
+                <div className="text-xs font-mono text-slate-400">{maskedId}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-800/30 bg-emerald-950/20 px-3 py-1.5">
+              <span className="text-xs">✅</span>
+              <span className="text-[10px] text-emerald-400 font-semibold">Wealth Management Access Granted</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom glow strip */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+      </div>
     </div>
   );
 }

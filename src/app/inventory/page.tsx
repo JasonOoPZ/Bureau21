@@ -57,7 +57,7 @@ export default async function InventoryPage() {
             </div>
           </div>
 
-          <InventoryClient initialItems={serialized} slotMax={20} />
+          <InventoryClient initialItems={serialized} slotMax={20} pilotCallsign={pilot.callsign} pilotId={pilot.id} />
         </div>
       </main>
     </>

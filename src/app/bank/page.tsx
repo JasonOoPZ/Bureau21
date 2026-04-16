@@ -12,9 +12,16 @@ export default async function BankPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const [pilot, global] = await Promise.all([
+  const [pilot, global, ventureCard] = await Promise.all([
     getOrCreatePilotState(session.user.id, session.user.name),
     prisma.gameGlobal.findUnique({ where: { id: "singleton" } }),
+    prisma.inventoryItem.findFirst({
+      where: {
+        pilot: { userId: session.user.id },
+        name: "Centurion Venture Card",
+        type: "special",
+      },
+    }),
   ]);
 
   return (
@@ -56,6 +63,7 @@ export default async function BankPage() {
             buyRate={GAME_CONSTANTS.TOKEN_BUY_RATE}
             sellRate={GAME_CONSTANTS.TOKEN_SELL_RATE}
             initialBankTreasury={global?.bankTreasury ?? 0}
+            hasVentureCard={!!ventureCard}
           />
         </div>
       </main>
