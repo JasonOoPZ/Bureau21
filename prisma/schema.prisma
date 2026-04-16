@@ -69,6 +69,13 @@ model PilotState {
   lastPackAt        DateTime?
   lastOutpostClaim  DateTime?
   fish              Int             @default(0)
+  creditsBank       Int             @default(0)
+  loanAmount        Int             @default(0)
+  loanCreatedAt     DateTime?
+  bondAmount        Int             @default(0)
+  bondRate          Float           @default(0)
+  bondCreatedAt     DateTime?
+  bondMaturesAt     DateTime?
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]

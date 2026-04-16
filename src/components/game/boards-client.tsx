@@ -40,6 +40,20 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
 
   const filtered = filter === "all" ? posts : posts.filter((p) => p.category === filter);
 
+  async function vote(postId: string, direction: 1 | -1) {
+    try {
+      const res = await fetch("/api/game/boards", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, direction }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, karma: data.karma } : p));
+      }
+    } catch { /* ignore */ }
+  }
+
   async function submit() {
     if (!title.trim() || !body.trim() || loading) return;
     setLoading(true);
@@ -185,6 +199,19 @@ export function BoardsClient({ initialPosts, currentUser }: Props) {
             {expanded === post.id && (
               <div className="border-t border-slate-800/60 px-4 py-3">
                 <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-slate-300">{post.body}</p>
+                <div className="mt-3 flex items-center gap-3 border-t border-slate-800/40 pt-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); vote(post.id, 1); }}
+                    className="text-[11px] text-slate-500 hover:text-emerald-400 transition"
+                  >▲</button>
+                  <span className={`text-[11px] font-bold ${post.karma > 0 ? "text-emerald-400" : post.karma < 0 ? "text-red-400" : "text-slate-600"}`}>
+                    {post.karma}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); vote(post.id, -1); }}
+                    className="text-[11px] text-slate-500 hover:text-red-400 transition"
+                  >▼</button>
+                </div>
               </div>
             )}
           </div>

@@ -55,3 +55,24 @@ export async function GET(request: Request) {
     { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30" } }
   );
 }
+
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const { postId, direction } = body ?? {};
+  if (!postId || ![1, -1].includes(direction)) {
+    return NextResponse.json({ error: "Invalid vote." }, { status: 400 });
+  }
+
+  const updated = await prisma.boardPost.update({
+    where: { id: postId },
+    data: { karma: { increment: direction } },
+    select: { karma: true },
+  });
+
+  return NextResponse.json({ karma: updated.karma });
+}
