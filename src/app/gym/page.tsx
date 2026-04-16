@@ -74,7 +74,6 @@ export default async function GymPage() {
                 { key: "speed", label: "Speed", cost: 8 },
                 { key: "endurance", label: "Endurance", cost: 5 },
                 { key: "panic_control", label: "Panic Control", cost: 10 },
-                { key: "confidence", label: "Confidence", cost: 12 },
               ],
               gymLogs: gymLogs.map((l) => ({
                 ...l,

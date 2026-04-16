@@ -3,6 +3,7 @@ import type { HeroBonuses } from "@/lib/hero-data";
 
 /* ═══════════════════════════════════════════════
    PVP Battle Engine — Bureau 21
+   Confidence: +0.05 per win, -0.0125 per loss (only above floor of 5)
    ═════════════════════════════════════════════ */
 
 export interface BattleFighter {
@@ -182,12 +183,17 @@ export function resolvePvpBattle(
   const atkConfCap = getConfidenceCap(attackerInput.characterSlug);
   const defConfCap = getConfidenceCap(defenderInput.characterSlug);
 
+  // Win: +0.05, Loss: -0.0125 (only deducted if above floor of 5)
   const attackerConfDelta = attackerWon
-    ? Math.min(3, atkConfCap - attackerInput.confidence)
-    : -2;
+    ? GAME_CONSTANTS.CONFIDENCE_WIN_GAIN
+    : attackerInput.confidence > GAME_CONSTANTS.CONFIDENCE_FLOOR
+      ? -GAME_CONSTANTS.CONFIDENCE_LOSS_PENALTY
+      : 0;
   const defenderConfDelta = attackerWon
-    ? -2
-    : Math.min(3, defConfCap - defenderInput.confidence);
+    ? defenderInput.confidence > GAME_CONSTANTS.CONFIDENCE_FLOOR
+      ? -GAME_CONSTANTS.CONFIDENCE_LOSS_PENALTY
+      : 0
+    : GAME_CONSTANTS.CONFIDENCE_WIN_GAIN;
 
   // Build log text
   const logLines: string[] = [];

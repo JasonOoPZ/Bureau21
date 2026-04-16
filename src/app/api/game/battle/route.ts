@@ -12,6 +12,21 @@ import { z } from "zod";
 
 const schema = z.object({ targetUserId: z.string().min(1) });
 
+/** Check if midnight HKT (UTC+8) has passed since last reset, return reset confidence if so */
+function resolveConfidenceReset(confidence: number, lastResetAt: Date): { confidence: number; didReset: boolean } {
+  const now = new Date();
+  // Midnight HKT = 16:00 UTC previous day
+  const hktNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const hktReset = new Date(lastResetAt.getTime() + 8 * 60 * 60 * 1000);
+  // Compare HKT dates (year-month-day)
+  const nowDay = `${hktNow.getUTCFullYear()}-${hktNow.getUTCMonth()}-${hktNow.getUTCDate()}`;
+  const resetDay = `${hktReset.getUTCFullYear()}-${hktReset.getUTCMonth()}-${hktReset.getUTCDate()}`;
+  if (nowDay !== resetDay) {
+    return { confidence: GAME_CONSTANTS.CONFIDENCE_FLOOR, didReset: true };
+  }
+  return { confidence, didReset: false };
+}
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -38,6 +53,18 @@ export async function POST(request: Request) {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
+  // Daily confidence reset at midnight HKT for attacker
+  const { confidence: atkConfidence, didReset: atkConfReset } = resolveConfidenceReset(
+    pilot.confidence, pilot.lastConfidenceResetAt
+  );
+  if (atkConfReset) {
+    pilot.confidence = atkConfidence;
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { confidence: atkConfidence, lastConfidenceResetAt: new Date() },
+    });
+  }
+
   // Fetch defender
   const defenderPilot = await prisma.pilotState.findUnique({
     where: { userId: parsed.data.targetUserId },
@@ -45,6 +72,18 @@ export async function POST(request: Request) {
   });
   if (!defenderPilot) {
     return NextResponse.json({ error: "Opponent not found." }, { status: 404 });
+  }
+
+  // Daily confidence reset at midnight HKT for defender
+  const { confidence: defConfidence, didReset: defConfReset } = resolveConfidenceReset(
+    defenderPilot.confidence, defenderPilot.lastConfidenceResetAt
+  );
+  if (defConfReset) {
+    defenderPilot.confidence = defConfidence;
+    await prisma.pilotState.update({
+      where: { userId: defenderPilot.userId },
+      data: { confidence: defConfidence, lastConfidenceResetAt: new Date() },
+    });
   }
 
   // Newbie protection check
@@ -101,7 +140,7 @@ export async function POST(request: Request) {
     pilot.xp + outcome.attackerXp,
     pilot.level
   );
-  const atkNewConf = Math.max(0, Math.min(getConfidenceCap(pilot.characterSlug), pilot.confidence + outcome.attackerConfDelta));
+  const atkNewConf = Math.max(GAME_CONSTANTS.CONFIDENCE_FLOOR, Math.min(getConfidenceCap(pilot.characterSlug), pilot.confidence + outcome.attackerConfDelta));
 
   await prisma.pilotState.update({
     where: { userId: session.user.id },
@@ -121,7 +160,7 @@ export async function POST(request: Request) {
     defenderPilot.xp + outcome.defenderXp,
     defenderPilot.level
   );
-  const defNewConf = Math.max(0, Math.min(getConfidenceCap(defenderPilot.characterSlug), defenderPilot.confidence + outcome.defenderConfDelta));
+  const defNewConf = Math.max(GAME_CONSTANTS.CONFIDENCE_FLOOR, Math.min(getConfidenceCap(defenderPilot.characterSlug), defenderPilot.confidence + outcome.defenderConfDelta));
 
   await prisma.pilotState.update({
     where: { userId: defenderPilot.userId },

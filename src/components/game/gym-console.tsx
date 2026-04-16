@@ -48,7 +48,6 @@ const TRAINING_DATA = {
   speed: { label: "Speed", description: "Turn order advantage", icon: "⚡", cost: 8, gain: 0.3 },
   endurance: { label: "Endurance", description: "Long-fight resilience + energy pool", icon: "🛡️", cost: 5, gain: 0.02 },
   panic_control: { label: "Panic Control", description: "Reduce panic buildup", icon: "🧘", cost: 10, gain: -0.05 },
-  confidence: { label: "Confidence", description: "Battle confidence boost", icon: "⭐", cost: 12, gain: 2 },
 } as const;
 
 /* ─── Helpers ─────────────────────────────────────────────────────────── */
@@ -84,7 +83,6 @@ const STAT_COLORS: Record<string, string> = {
   speed: "bg-cyan-500",
   endurance: "bg-amber-500",
   panic_control: "bg-purple-500",
-  confidence: "bg-emerald-500",
 };
 
 const STAT_TEXT_COLORS: Record<string, string> = {
@@ -92,7 +90,6 @@ const STAT_TEXT_COLORS: Record<string, string> = {
   speed: "text-cyan-400",
   endurance: "text-amber-400",
   panic_control: "text-purple-400",
-  confidence: "text-emerald-400",
 };
 
 export function GymConsole({ initial }: Props) {
@@ -288,10 +285,12 @@ export function GymConsole({ initial }: Props) {
                 { label: "Speed", value: state.speed, color: "text-cyan-400" },
                 { label: "Endurance", value: state.endurance, color: "text-amber-400" },
                 { label: "Panic", value: state.panic, color: "text-purple-400" },
-                { label: "Confidence", value: state.confidence, cap: state.confidenceCap, color: "text-emerald-400" },
-              ].map(({ label, value, cap, color }) => (
+                { label: "Confidence", value: state.confidence, cap: state.confidenceCap, color: "text-emerald-400", note: "Battle only" },
+              ].map(({ label, value, cap, color, note }) => (
                 <div key={label} className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
+                  <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                    {label}{note ? <span className="ml-1 text-[8px] text-slate-600">({note})</span> : null}
+                  </span>
                   <span className={`font-mono text-[11px] font-semibold ${color}`}>
                     {value < 1 ? value.toFixed(4) : value.toFixed(2)}{cap != null ? ` / ${cap}` : ""}
                   </span>

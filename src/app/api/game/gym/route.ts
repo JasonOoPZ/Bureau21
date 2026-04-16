@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { GAME_CONSTANTS, getConfidenceCap, computeGymEnergy } from "@/lib/constants";
+import { GAME_CONSTANTS, computeGymEnergy, getConfidenceCap } from "@/lib/constants";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -11,13 +11,12 @@ const TRAINING_OPTIONS = {
   speed:         { cost: 8,  field: "speed",     gain: 0.3,   label: "Speed" },
   endurance:     { cost: 5,  field: "endurance",  gain: 0.02,  label: "Endurance" },
   panic_control: { cost: 10, field: "panic",      gain: -0.05, label: "Panic Control" },
-  confidence:    { cost: 12, field: "confidence",  gain: 2,     label: "Confidence" },
 } as const;
 
 type TrainingType = keyof typeof TRAINING_OPTIONS;
 
 const schema = z.object({
-  training: z.enum(["strength", "speed", "endurance", "panic_control", "confidence"]),
+  training: z.enum(["strength", "speed", "endurance", "panic_control"]),
 });
 
 /** Reset gym energy to max if 24h have passed since last reset. */
@@ -103,9 +102,6 @@ export async function POST(request: Request) {
     update.endurance = pilot.endurance + effectiveGain;
   } else if (training === "panic_control") {
     update.panic = Math.max(0, pilot.panic + effectiveGain);
-  } else if (training === "confidence") {
-    const cap = getConfidenceCap(pilot.characterSlug);
-    update.confidence = Math.min(cap, pilot.confidence + Math.round(effectiveGain));
   }
 
   await prisma.$transaction([
@@ -126,7 +122,7 @@ export async function POST(request: Request) {
   const gainLabel =
     training === "panic_control"
       ? `Panic reduced by ${Math.abs(effectiveGain).toFixed(3)}`
-      : `${option.label} +${effectiveGain.toFixed(training === "confidence" ? 0 : 3)}`;
+      : `${option.label} +${effectiveGain.toFixed(3)}`;
 
   const streakLabel = newStreak > 0 ? ` (${newStreak}-day streak, ×${streakBonus.toFixed(2)} bonus)` : "";
 
