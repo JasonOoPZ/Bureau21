@@ -15,7 +15,7 @@ const BOND_OPTIONS = [
   { days: 365, rate: 25,    label: "365 Days", tag: "Legendary" },
 ];
 
-const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 25000, 50000, 100000];
+const QUICK_AMOUNTS = [5000, 25000, 50000, 250000, 500000];
 
 interface Props {
   initialCredits: number;
