@@ -1,90 +1,51 @@
-import { authOptions } from "@/auth";
-import { TopBar } from "@/components/layout/top-bar";
-import { SyndicateClient } from "@/components/game/syndicate-client";
-import { getOrCreatePilotState } from "@/lib/game-state";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export default async function SyndicateRowPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
-
-  const fullPilot = await prisma.pilotState.findUnique({
-    where: { id: pilot.id },
-    include: {
-      syndicateMember: {
-        include: {
-          syndicate: { include: { members: true } },
-        },
-      },
-    },
-  });
-
-  const syndicates = await prisma.syndicate.findMany({
-    include: { members: true },
-    orderBy: { members: { _count: "desc" } },
-    take: 20,
-  });
-
-  const currentSyndicate = fullPilot?.syndicateMember?.syndicate ?? null;
-  const currentRole = fullPilot?.syndicateMember?.role ?? null;
-
-  const serializedCurrent = currentSyndicate
-    ? {
-        id: currentSyndicate.id,
-        name: currentSyndicate.name,
-        tag: currentSyndicate.tag,
-        description: currentSyndicate.description,
-        treasury: currentSyndicate.treasury,
-        leaderId: currentSyndicate.leaderId,
-        memberCount: currentSyndicate.members.length,
-      }
-    : null;
-
-  const serializedList = syndicates.map((s) => ({
-    id: s.id,
-    name: s.name,
-    tag: s.tag,
-    description: s.description,
-    treasury: s.treasury,
-    leaderId: s.leaderId,
-    memberCount: s.members.length,
-  }));
+  if (!user) redirect('/login');
 
   return (
-    <>
-      <TopBar session={session} />
-      <main className="min-h-screen bg-black px-3 py-4">
-        <div className="mx-auto max-w-3xl space-y-3">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">← Hub</Link>
-            <span className="text-slate-700">/</span>
-            <Link href="/station" className="text-[11px] text-slate-500 hover:text-cyan-300">← Station</Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-purple-400">Syndicate Row</span>
-          </div>
+    <div className="p-4 md:p-6 max-w-3xl space-y-6">
+      <div className="border-b border-slate-700 pb-4">
+        <h1 className="text-2xl font-bold text-purple-400">🤝 Syndicate Row</h1>
+        <p className="text-slate-400 text-sm mt-1">
+          Power, loyalty, and underground banking on Bureau 21.
+        </p>
+      </div>
 
-          {/* Header */}
-          <div className="rounded-md border border-purple-900/50 bg-[#0e0a14] px-4 py-3">
-            <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">⬡ Syndicate Row</h1>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              Form alliances, pool treasury, and earn collective bonuses. Found a syndicate or join with a tag.
-            </p>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link
+          href="/station/syndicate-row/bank"
+          className="block bg-slate-800 border-2 border-emerald-700 hover:border-emerald-500 rounded-lg p-6 transition-colors group"
+        >
+          <div className="text-3xl mb-2">🏦</div>
+          <h2 className="text-slate-200 font-bold text-lg group-hover:text-white">
+            Bureau Bank
+          </h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Deposit and withdraw credits. Keep your funds safe from raiders.
+          </p>
+        </Link>
 
-          <SyndicateClient
-            pilotId={pilot.id}
-            initialCurrent={serializedCurrent}
-            initialRole={currentRole}
-            initialList={serializedList}
-          />
-        </div>
-      </main>
-    </>
+        <Link
+          href="/station/syndicate-row/guilds"
+          className="block bg-slate-800 border-2 border-purple-700 hover:border-purple-500 rounded-lg p-6 transition-colors group"
+        >
+          <div className="text-3xl mb-2">⚡</div>
+          <h2 className="text-slate-200 font-bold text-lg group-hover:text-white">
+            Syndicates
+          </h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Join a syndicate for bonuses, backup, and prestige.
+          </p>
+        </Link>
+      </div>
+    </div>
   );
 }

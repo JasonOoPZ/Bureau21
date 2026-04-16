@@ -138,8 +138,5 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# SQLite database
-prisma/*.db
-prisma/*.db-journal
-prisma/*.db-wal
-prisma/*.db-shm
+# Supabase local dev
+.env.local

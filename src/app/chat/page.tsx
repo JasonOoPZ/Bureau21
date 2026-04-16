@@ -1,51 +1,34 @@
-import { authOptions } from "@/auth";
-import { ChatClient } from "@/components/game/chat-client";
-import { TopBar } from "@/components/layout/top-bar";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import ChatBox from '@/components/ChatBox';
+import { Character } from '@/types/game';
 
 export default async function ChatPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const messages = await prisma.chatMessage.findMany({
-    orderBy: { createdAt: "asc" },
-    take: 60,
-    include: { author: { select: { id: true, name: true } } },
-  });
+  if (!user) redirect('/login');
+
+  const { data: character } = await supabase
+    .from('characters')
+    .select('id, username')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!character) redirect('/signup');
+
+  const char = character as Pick<Character, 'id' | 'username'>;
 
   return (
-    <>
-      <TopBar session={session} />
-      <main className="min-h-screen bg-black px-3 py-4">
-        <div className="mx-auto max-w-3xl space-y-3">
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">← Hub</Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-cyan-400">Town Hall</span>
-          </div>
+    <div className="p-4 md:p-6 max-w-2xl space-y-6">
+      <div className="border-b border-slate-700 pb-4">
+        <h1 className="text-2xl font-bold text-amber-500">💬 Station Chat</h1>
+        <p className="text-slate-400 text-sm mt-1">Talk to other operators on the station.</p>
+      </div>
 
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Town Hall</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Open comms channel. Refreshes every 10 seconds.
-            </p>
-          </div>
-
-          <ChatClient
-            initialMessages={messages.map((m) => ({
-              id: m.id,
-              body: m.body,
-              authorId: m.author.id,
-              authorName: m.author.name ?? "Unknown",
-              createdAt: m.createdAt.toISOString(),
-            }))}
-            currentUser={session.user.name ?? "Pilot"}
-          />
-        </div>
-      </main>
-    </>
+      <ChatBox authorId={char.id} authorName={char.username} room="town_square" />
+    </div>
   );
 }

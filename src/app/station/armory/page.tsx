@@ -1,56 +1,74 @@
-import { authOptions } from "@/auth";
-import { ArmoryClient } from "@/components/game/armory-client";
-import { TopBar } from "@/components/layout/top-bar";
-import { getOrCreatePilotState } from "@/lib/game-state";
-import { ITEM_TEMPLATES } from "@/lib/item-data";
-import { getServerSession } from "next-auth";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-
-const ITEM_PRICES: Record<number, number> = { 1: 120, 2: 300, 3: 750 };
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { Item } from '@/types/game';
 
 export default async function ArmoryPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  if (!user) redirect('/login');
 
-  const catalog = ITEM_TEMPLATES.map((t) => ({
-    name: t.name,
-    type: t.type,
-    tier: t.tier,
-    bonusType: t.bonusType,
-    bonusAmt: t.bonusAmt,
-    price: ITEM_PRICES[t.tier] ?? 999,
-  }));
+  const { data: items } = await supabase
+    .from('items')
+    .select('*')
+    .in('type', ['weapon', 'armor'])
+    .gte('level_req', 8)
+    .order('level_req', { ascending: true });
+
+  const rarityColor: Record<string, string> = {
+    common: 'text-slate-400',
+    uncommon: 'text-emerald-400',
+    rare: 'text-blue-400',
+    epic: 'text-purple-400',
+    legendary: 'text-amber-400',
+  };
 
   return (
-    <>
-      <TopBar session={session} />
-      <main className="min-h-screen bg-black px-3 py-4">
-        <div className="mx-auto max-w-5xl space-y-3">
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">← Hub</Link>
-            <span className="text-slate-700">/</span>
-            <Link href="/station" className="text-[11px] text-slate-500 hover:text-cyan-300">← Station</Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-cyan-400">Armory</span>
-          </div>
+    <div className="p-4 md:p-6 max-w-4xl space-y-6">
+      <div className="border-b border-slate-700 pb-4">
+        <h1 className="text-2xl font-bold text-red-400">🔫 Armory</h1>
+        <p className="text-slate-400 text-sm mt-1">
+          Heavy weapons and armor. Serious operators only.
+        </p>
+      </div>
 
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Armory</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Purchase weapons, shields, and engines. Equipped items boost your field performance.
-            </p>
-          </div>
-
-          <ArmoryClient
-            catalog={catalog}
-            initialCredits={pilot.credits}
-            inventoryCount={pilot.inventory.length}
-          />
-        </div>
-      </main>
-    </>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {!items || items.length === 0 ? (
+          <p className="text-slate-400">No items available.</p>
+        ) : (
+          items.map((item) => {
+            const i = item as Item;
+            return (
+              <div
+                key={i.id}
+                className="bg-slate-800 rounded-lg border border-slate-700 p-4 hover:border-red-800 transition-colors"
+              >
+                <div className="flex justify-between items-start">
+                  <h3 className="text-slate-200 font-semibold">
+                    {i.type === 'weapon' ? '⚔️' : '🛡'} {i.name}
+                  </h3>
+                  <span className={`text-xs capitalize ${rarityColor[i.rarity] ?? 'text-slate-400'}`}>
+                    {i.rarity}
+                  </span>
+                </div>
+                <p className="text-slate-400 text-xs mt-1">{i.description}</p>
+                <div className="flex gap-3 mt-2 text-xs">
+                  {i.atk_bonus > 0 && <span className="text-red-400">+{i.atk_bonus} ATK</span>}
+                  {i.def_bonus > 0 && <span className="text-blue-400">+{i.def_bonus} DEF</span>}
+                  <span className="text-slate-500">Lv {i.level_req}+</span>
+                </div>
+                <div className="mt-3">
+                  <span className="text-amber-400 font-bold text-sm">
+                    💰 {i.buy_price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }

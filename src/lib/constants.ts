@@ -1,87 +1,62 @@
-export const GAME_CONSTANTS = {
+export const GAME = {
   MOTIVATION_REGEN_MINUTES: 15,
-  MOTIVATION_DAILY_GAIN: 96,
-  MOTIVATION_SUBSCRIBER_GAIN: 144,
+  MOTIVATION_DAILY_BASE: 96,
+  MOTIVATION_SUBSCRIBER: 144,
   MOTIVATION_GUILD_BONUS: 24,
   MOTIVATION_CAP_FREE: 500,
-  MOTIVATION_CAP_SUBSCRIBER: 1500,
-  MOTIVATION_PER_HOTBUN: 50,
-  NEWBIE_PROTECTION_DAYS: 15,
-  NEWBIE_PROTECTION_LEVEL: 5,
+  MOTIVATION_CAP_SUB: 1500,
+  MOTIVATION_PER_BUN: 50,
+  NEWBIE_DAYS: 15,
+  NEWBIE_LEVEL: 5,
   CONFIDENCE_START: 10,
-  CONFIDENCE_CAP: 50,
-  CONFIDENCE_CAP_BOOSTED: 100,
-  CONFIDENCE_BOOSTED_SLUG: "base-yellow",
+  CONFIDENCE_CAP: 75,
   AP_PER_LEVEL: 5,
-  LF_PER_AP_MULTIPLIER: 2,
-  BATTLE_GAUGE_DEFAULT_MINUTES: 10,
-  BATTLE_GAUGE_MIN_MINUTES: 1,
-  BATTLE_GAUGE_MAX_MINUTES: 30,
-  BATTLE_GAUGE_OTHERS_MINUTES: 3,
-  BATTLE_VILLAGE_TRAINS_PER_DAY: 15,
-  BATTLE_VILLAGE_MAX_TRAINS: 25,
-  ATK_DEF_SPLIT_DEFAULT: 50,
-  BOT_XP_MULTIPLIER: 1.5,
-  BOT_BATTLE_GAUGE_SECONDS: 30,
-  STARTING_CREDITS: 300,
-  STARTING_LIFE_FORCE: 15,
-  STARTING_STRENGTH: 3.0,
-  STARTING_SPEED: 5.0,
-  STARTING_ENDURANCE: 0.2,
-  STARTING_PANIC: 0.0,
-  STARTING_CONFIDENCE: 10,
-  STARTING_ATK: 2,
-  STARTING_DEF: 1,
-  GYM_STREAK_BONUS_PER_DAY: 0.02,
-  GYM_MAX_DRINKS: 4,
+  LF_PER_AP_MULT: 2,
+  GAUGE_DEFAULT: 10,
+  GAUGE_OTHERS: 3,
+  VILLAGE_TRAINS: 15,
+  VILLAGE_MAX: 25,
+  SPLIT_DEFAULT: 50,
+  START_CREDITS: 300,
+  START_LF: 15,
+  START_STR: 3.0,
+  START_SPD: 5.0,
+  START_END: 0.2,
+  START_PAN: 0.0,
+  START_CONF: 10,
   WELFARE_DAYS: 30,
-  TOKEN_BUY_RATE: 3,
-  TOKEN_SELL_RATE: 2,
-  TOKENS_PER_DAY: 20,
-  BLUE_HERB_REVIVE_LF: 200,
-  SEASON_FORMAT: "YYYY-MM",
-  UNLOCK_BAZAAR_DAY: 4,
-  UNLOCK_SYNDICATE_ROW_DAY: 4,
-  UNLOCK_UNDERBELLY_DAY: 8,
-  UNLOCK_FULL_STATION_DAY: 15,
+  TOKENS_DAILY: 20,
+  TOKEN_BUY: 3,
+  TOKEN_SELL: 2,
+  STREAK_BONUS: 0.02,
+  GYM_MAX_DRINKS: 4,
+  GYM_BASE_REPS: 10,       // base energy everyone gets (25%)
+  GYM_LEVEL_RATIO: 10,     // 1 energy per N levels (25%)
+  GYM_END_RATIO: 5,        // 1 energy per N endurance (50%)
+  BLUE_HERB_LF: 200,
+  UNLOCK_BAZAAR: 4,
+  UNLOCK_SYNDICATE: 4,
+  UNLOCK_UNDERBELLY: 8,
+  UNLOCK_FULL: 15,
 } as const;
 
 export function xpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.15, level - 1));
 }
 
-export function getConfidenceCap(characterSlug?: string | null): number {
-  return characterSlug === GAME_CONSTANTS.CONFIDENCE_BOOSTED_SLUG
-    ? GAME_CONSTANTS.CONFIDENCE_CAP_BOOSTED
-    : GAME_CONSTANTS.CONFIDENCE_CAP;
+export function calcATK(str: number, split: number, wpn: number): number {
+  return Math.floor((str * split) / 100) + wpn;
 }
 
-export function calculateATK(strength: number, atkDefSplit: number, weaponBonus: number): number {
-  return Math.floor((strength * atkDefSplit) / 100) + weaponBonus;
-}
-
-export function calculateDEF(strength: number, atkDefSplit: number, armorBonus: number): number {
-  return Math.floor((strength * (100 - atkDefSplit)) / 100) + armorBonus;
-}
-
-export function lfFromAP(level: number): number {
-  return GAME_CONSTANTS.LF_PER_AP_MULTIPLIER * level;
+export function calcDEF(str: number, split: number, arm: number): number {
+  return Math.floor((str * (100 - split)) / 100) + arm;
 }
 
 export function getCurrentSeason(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export function isNewbieProtected(ageDays: number, level: number): boolean {
-  return ageDays < GAME_CONSTANTS.NEWBIE_PROTECTION_DAYS && level < GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL;
-}
-
-export function calculateMotivationRegen(lastCheckTime: Date, currentMotivation: number, maxMotivation: number): number {
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - lastCheckTime.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  return Math.min(currentMotivation + regenAmount, maxMotivation);
+export function isProtected(days: number, level: number): boolean {
+  return days < GAME.NEWBIE_DAYS && level < GAME.NEWBIE_LEVEL;
 }

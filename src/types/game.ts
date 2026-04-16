@@ -1,4 +1,26 @@
-export type CharacterStats = {
+export type ItemType = 'weapon' | 'armor' | 'herb' | 'substance' | 'consumable' | 'misc';
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+export type SyndicateRole = 'leader' | 'officer' | 'member';
+export type AwardCategory = 'battle_wins' | 'total_stats' | 'wealthiest' | 'knowledge' | 'total_score';
+export type BoardType =
+  | 'general'
+  | 'operator_journals'
+  | 'rookie_bay'
+  | 'announcements'
+  | 'tactics'
+  | 'job_board'
+  | 'trading'
+  | 'market_intel'
+  | 'black_market'
+  | 'game_help'
+  | 'credit_exchange'
+  | 'token_vault'
+  | 'syndicate_finance';
+export type KillFeedType = 'kill' | 'discovery' | 'achievement' | 'syndicate';
+export type LeaderboardCategory = 'kingpin' | 'warlord' | 'chemist' | 'miner' | 'rookie';
+export type WorkoutType = 'strength' | 'speed' | 'endurance' | 'panic';
+
+export interface Character {
   id: string;
   user_id: string;
   username: string;
@@ -26,17 +48,26 @@ export type CharacterStats = {
   ap_available: number;
   gym_streak: number;
   last_gym_date: string | null;
+  gym_energy_used: number;
+  gym_energy_date: string | null;
   is_newbie: boolean;
   newbie_until: string;
   welfare_days_remaining: number;
+  battle_gauge_minutes: number;
+  last_motivation_regen: string;
+  onboarding_step: number;
+  syndicate_id: string | null;
+  loan_amount: number;
+  loan_created_at: string | null;
+  bond_amount: number;
+  bond_rate: number;
+  bond_created_at: string | null;
+  bond_matures_at: string | null;
   created_at: string;
   last_login: string;
-};
+}
 
-export type ItemType = "weapon" | "armor" | "herb" | "substance" | "consumable" | "misc";
-export type ItemRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-
-export type Item = {
+export interface Item {
   id: string;
   name: string;
   type: ItemType;
@@ -50,9 +81,9 @@ export type Item = {
   buy_price: number;
   sell_price: number;
   rarity: ItemRarity;
-};
+}
 
-export type InventoryItem = {
+export interface InventoryEntry {
   id: string;
   character_id: string;
   item_id: string;
@@ -60,18 +91,9 @@ export type InventoryItem = {
   durability: number | null;
   is_equipped: boolean;
   item?: Item;
-};
+}
 
-export type BattleLogEntry = {
-  turn: number;
-  actor: "attacker" | "defender";
-  action: "attack" | "panic_attack" | "rest";
-  damage: number;
-  remaining_lf: number;
-  message: string;
-};
-
-export type BattleResult = {
+export interface Battle {
   id: string;
   attacker_id: string;
   defender_id: string;
@@ -80,23 +102,10 @@ export type BattleResult = {
   credits_stolen: number;
   alignment_change: number;
   log_text: string;
-  log_entries: BattleLogEntry[];
   created_at: string;
-};
+}
 
-export type LeaderboardCategory = "kingpin" | "warlord" | "chemist" | "miner" | "rookie";
-
-export type LeaderboardEntry = {
-  id: string;
-  character_id: string;
-  season: string;
-  category: LeaderboardCategory;
-  score: number;
-  updated_at: string;
-  character?: { username: string; level: number };
-};
-
-export type Syndicate = {
+export interface Syndicate {
   id: string;
   name: string;
   description: string;
@@ -104,73 +113,109 @@ export type Syndicate = {
   created_by: string;
   is_subscribed: boolean;
   created_at: string;
-  member_count?: number;
-};
+}
 
-export type SyndicateRole = "leader" | "officer" | "member";
-
-export type SyndicateMember = {
+export interface SyndicateMember {
   id: string;
   syndicate_id: string;
   character_id: string;
   role: SyndicateRole;
   joined_at: string;
-  character?: { username: string; level: number };
-};
+  character?: Character;
+}
 
-export type MessageBoard = "game_help" | "trading" | "announcements" | "general";
-
-export type BoardMessage = {
+export interface Message {
   id: string;
-  board: MessageBoard;
+  board: BoardType;
   author_id: string;
   title: string;
   body: string;
   karma: number;
   created_at: string;
-  author?: { username: string };
-};
+  character?: Character;
+}
 
-export type ChatMessage = {
+export interface ChatMessage {
   id: string;
   room: string;
   author_id: string;
   author_name: string;
   body: string;
   created_at: string;
-};
+}
 
-export type KillFeedEventType = "kill" | "discovery" | "achievement" | "syndicate";
-
-export type KillFeedEvent = {
+export interface KillFeedEntry {
   id: string;
-  event_type: KillFeedEventType;
+  event_type: KillFeedType;
   message: string;
-  actor_id: string;
+  actor_id: string | null;
   target_id: string | null;
   created_at: string;
-};
+}
 
-export type District =
-  | "the_core"
-  | "hab_block"
-  | "the_academy"
-  | "hydroponics_bay"
-  | "the_bazaar"
-  | "syndicate_row"
-  | "the_underbelly"
-  | "docking_bay"
-  | "fabrication_deck"
-  | "outer_ring"
-  | "the_armory";
-
-export type StationLocation = {
+export interface LeaderboardEntry {
   id: string;
-  district: District;
-  name: string;
-  description: string;
-  route: string;
-  unlocks_at_day?: number;
-  unlocks_at_level?: number;
-  requires_item?: string;
-};
+  character_id: string;
+  season: string;
+  category: LeaderboardCategory;
+  score: number;
+  updated_at: string;
+  character?: Character;
+}
+
+export interface BattleResult {
+  winner_id: string;
+  log_entries: string[];
+  xp_gained: number;
+  credits_stolen: number;
+  alignment_change: number;
+  attacker_survived: boolean;
+  defender_survived: boolean;
+}
+
+export interface GymResult {
+  stat_name: WorkoutType;
+  gain_amount: number;
+  new_value: number;
+  energy_used: number;
+  energy_remaining: number;
+  max_energy: number;
+  streak: number;
+}
+
+export interface CharacterStats {
+  id: string;
+  username: string;
+  level: number;
+  strength: number;
+  speed: number;
+  endurance: number;
+  panic: number;
+  atk_def_split: number;
+  life_force: number;
+  max_life_force: number;
+  credits_hand: number;
+  alignment: number;
+  age_days: number;
+  is_dead: boolean;
+  is_newbie: boolean;
+  newbie_until: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+  sender?: { id: string; username: string };
+  recipient?: { id: string; username: string };
+}
+
+export interface AwardEntry {
+  character_id: string;
+  username: string;
+  level: number;
+  value: number;
+}

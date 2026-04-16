@@ -1,21 +1,17 @@
-import type { Metadata } from "next";
-import { Orbitron, Space_Grotesk } from "next/font/google";
-import { cookies } from "next/headers";
-import "./globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-body",
-});
-
-const orbitron = Orbitron({
-  subsets: ["latin"],
-  variable: "--font-display",
-});
+import type { Metadata } from 'next';
+import './globals.css';
+import Sidebar from '@/components/Sidebar';
+import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
-  title: "Bureau 21",
-  description: "A browser-first sci-fi MMORPG",
+  title: 'Bureau 21 — Free Port · Deep Space',
+  description: 'A browser-first sci-fi MMORPG on a lawless space station.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+  },
 };
 
 export default async function RootLayout({
@@ -23,13 +19,22 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const theme = cookieStore.get("bureau21-theme")?.value ?? "original";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
-    <html lang="en" data-theme={theme === "original" ? undefined : theme}>
-      <body className={`${spaceGrotesk.variable} ${orbitron.variable}`}>
-        {children}
+    <html lang="en">
+      <body className="min-h-screen bg-slate-900 text-slate-100">
+        {user ? (
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="flex-1 overflow-auto">{children}</main>
+          </div>
+        ) : (
+          <main className="min-h-screen">{children}</main>
+        )}
       </body>
     </html>
   );
