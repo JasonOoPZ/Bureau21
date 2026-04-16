@@ -78,12 +78,15 @@ model PilotState {
   bondCreatedAt     DateTime?
   bondMaturesAt     DateTime?
   bondLastClaimedAt DateTime?
+  gymEnergy         Int             @default(27)
+  lastGymEnergyAt   DateTime        @default(now())
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]
   syndicateMember   SyndicateMember?
   heroes            PlayerHero[]
   studies           StudyProgress[]
+  gymLogs           GymLog[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -267,6 +270,20 @@ model PlayerHero {
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 
   @@index([pilotId])
+}
+
+model GymLog {
+  id         String   @id @default(cuid())
+  pilotId    String
+  training   String
+  gain       Float
+  energyCost Int
+  createdAt  DateTime @default(now())
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
+  @@index([pilotId, createdAt])
 }
 
 model StudyProgress {

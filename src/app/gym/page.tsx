@@ -2,7 +2,8 @@ import { authOptions } from "@/auth";
 import { GymConsole } from "@/components/game/gym-console";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
+import { GAME_CONSTANTS, getConfidenceCap, computeGymEnergy } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -13,16 +14,36 @@ export default async function GymPage() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  // Compute current motivation with passive regen
+  // Resolve gym energy (daily reset)
   const now = new Date();
-  const minutesElapsed = Math.floor(
-    (now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60)
-  );
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(
-    pilot.motivation + regenAmount,
-    GAME_CONSTANTS.MOTIVATION_CAP_FREE
-  );
+  const hoursSinceReset =
+    (now.getTime() - pilot.lastGymEnergyAt.getTime()) / (1000 * 60 * 60);
+  const energyBreakdown = computeGymEnergy(pilot.endurance, pilot.gymStreak);
+  let currentEnergy = pilot.gymEnergy;
+  let didReset = false;
+
+  if (hoursSinceReset >= GAME_CONSTANTS.GYM_ENERGY_RESET_HOURS) {
+    currentEnergy = energyBreakdown.max;
+    didReset = true;
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { gymEnergy: currentEnergy, lastGymEnergyAt: now },
+    });
+  } else {
+    currentEnergy = Math.min(pilot.gymEnergy, energyBreakdown.max);
+  }
+
+  const hoursUntilReset = didReset
+    ? GAME_CONSTANTS.GYM_ENERGY_RESET_HOURS
+    : Math.max(0, GAME_CONSTANTS.GYM_ENERGY_RESET_HOURS - hoursSinceReset);
+
+  // Fetch last 30 days of gym logs
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const gymLogs = await prisma.gymLog.findMany({
+    where: { pilotId: pilot.id, createdAt: { gte: thirtyDaysAgo } },
+    orderBy: { createdAt: "desc" },
+    select: { training: true, gain: true, energyCost: true, createdAt: true },
+  });
 
   return (
     <>
@@ -35,17 +56,11 @@ export default async function GymPage() {
             <span className="text-[11px] text-amber-400">Galaxy Gym</span>
           </div>
 
-          <div className="rounded-md border border-amber-900/40 bg-[#0f0d08] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-amber-300">Galaxy Gym</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Spend Motivation to train your combat stats. Maintain your streak for compounding bonuses.
-            </p>
-          </div>
-
           <GymConsole
             initial={{
-              motivation: currentMotivation,
-              motivationCap: GAME_CONSTANTS.MOTIVATION_CAP_FREE,
+              gymEnergy: currentEnergy,
+              energyBreakdown,
+              hoursUntilReset,
               gymStreak: pilot.gymStreak,
               lastGymAt: pilot.lastGymAt?.toISOString() ?? null,
               strength: pilot.strength,
@@ -55,12 +70,16 @@ export default async function GymPage() {
               confidence: pilot.confidence,
               confidenceCap: getConfidenceCap(pilot.characterSlug),
               trainingOptions: [
-                { key: "strength", label: "Strength", cost: 15 },
-                { key: "speed", label: "Speed", cost: 15 },
-                { key: "endurance", label: "Endurance", cost: 10 },
-                { key: "panic_control", label: "Panic Control", cost: 20 },
-                { key: "confidence", label: "Confidence", cost: 25 },
+                { key: "strength", label: "Strength", cost: 8 },
+                { key: "speed", label: "Speed", cost: 8 },
+                { key: "endurance", label: "Endurance", cost: 5 },
+                { key: "panic_control", label: "Panic Control", cost: 10 },
+                { key: "confidence", label: "Confidence", cost: 12 },
               ],
+              gymLogs: gymLogs.map((l) => ({
+                ...l,
+                createdAt: l.createdAt.toISOString(),
+              })),
             }}
           />
         </div>

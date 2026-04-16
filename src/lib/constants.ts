@@ -34,6 +34,10 @@ export const GAME_CONSTANTS = {
   STARTING_DEF: 1,
   GYM_STREAK_BONUS_PER_DAY: 0.02,
   GYM_MAX_DRINKS: 4,
+  GYM_ENERGY_FOUNDATION: 25,
+  GYM_ENERGY_PER_ENDURANCE: 10,
+  GYM_ENERGY_MAX_STREAK: 25,
+  GYM_ENERGY_RESET_HOURS: 24,
   WELFARE_DAYS: 30,
   TOKEN_BUY_RATE: 3,
   TOKEN_SELL_RATE: 2,
@@ -84,4 +88,12 @@ export function calculateMotivationRegen(lastCheckTime: Date, currentMotivation:
   const minutesElapsed = Math.floor((now.getTime() - lastCheckTime.getTime()) / (1000 * 60));
   const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
   return Math.min(currentMotivation + regenAmount, maxMotivation);
+}
+
+/** Compute gym energy max from its three components. */
+export function computeGymEnergy(endurance: number, gymStreak: number) {
+  const foundation = GAME_CONSTANTS.GYM_ENERGY_FOUNDATION;
+  const enduranceBonus = Math.floor(endurance * GAME_CONSTANTS.GYM_ENERGY_PER_ENDURANCE);
+  const streakBonus = Math.min(GAME_CONSTANTS.GYM_ENERGY_MAX_STREAK, gymStreak);
+  return { foundation, enduranceBonus, streakBonus, max: foundation + enduranceBonus + streakBonus };
 }

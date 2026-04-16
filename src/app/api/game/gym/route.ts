@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
+import { GAME_CONSTANTS, getConfidenceCap, computeGymEnergy } from "@/lib/constants";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -7,11 +7,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const TRAINING_OPTIONS = {
-  strength: { cost: 15, field: "strength", gain: 0.3, label: "Strength" },
-  speed: { cost: 15, field: "speed", gain: 0.3, label: "Speed" },
-  endurance: { cost: 10, field: "endurance", gain: 0.02, label: "Endurance" },
-  panic_control: { cost: 20, field: "panic", gain: -0.05, label: "Panic Control" },
-  confidence: { cost: 25, field: "confidence", gain: 2, label: "Confidence" },
+  strength:      { cost: 8,  field: "strength",  gain: 0.3,   label: "Strength" },
+  speed:         { cost: 8,  field: "speed",     gain: 0.3,   label: "Speed" },
+  endurance:     { cost: 5,  field: "endurance",  gain: 0.02,  label: "Endurance" },
+  panic_control: { cost: 10, field: "panic",      gain: -0.05, label: "Panic Control" },
+  confidence:    { cost: 12, field: "confidence",  gain: 2,     label: "Confidence" },
 } as const;
 
 type TrainingType = keyof typeof TRAINING_OPTIONS;
@@ -19,6 +19,24 @@ type TrainingType = keyof typeof TRAINING_OPTIONS;
 const schema = z.object({
   training: z.enum(["strength", "speed", "endurance", "panic_control", "confidence"]),
 });
+
+/** Reset gym energy to max if 24h have passed since last reset. */
+function resolveGymEnergy(pilot: {
+  gymEnergy: number;
+  lastGymEnergyAt: Date;
+  endurance: number;
+  gymStreak: number;
+}) {
+  const now = new Date();
+  const hoursSinceReset =
+    (now.getTime() - pilot.lastGymEnergyAt.getTime()) / (1000 * 60 * 60);
+  const { max } = computeGymEnergy(pilot.endurance, pilot.gymStreak);
+
+  if (hoursSinceReset >= GAME_CONSTANTS.GYM_ENERGY_RESET_HOURS) {
+    return { energy: max, didReset: true };
+  }
+  return { energy: Math.min(pilot.gymEnergy, max), didReset: false };
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -37,27 +55,20 @@ export async function POST(request: Request) {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  // Recalculate current motivation with passive regen
-  const now = new Date();
-  const minutesElapsed = Math.floor(
-    (now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60)
-  );
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(
-    pilot.motivation + regenAmount,
-    GAME_CONSTANTS.MOTIVATION_CAP_FREE
-  );
+  // Resolve energy (daily reset if needed)
+  const { energy: currentEnergy, didReset } = resolveGymEnergy(pilot);
 
-  if (currentMotivation < option.cost) {
+  if (currentEnergy < option.cost) {
     return NextResponse.json(
       {
-        error: `Not enough motivation. Need ${option.cost}, have ${currentMotivation}. Regens 1 every ${GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES} min.`,
+        error: `Not enough gym energy. Need ${option.cost}, have ${currentEnergy}. Energy resets daily.`,
       },
       { status: 400 }
     );
   }
 
   // Calculate gym streak
+  const now = new Date();
   const lastGym = pilot.lastGymAt;
   const hoursSinceLast = lastGym
     ? (now.getTime() - lastGym.getTime()) / (1000 * 60 * 60)
@@ -75,11 +86,14 @@ export async function POST(request: Request) {
 
   // Build the update
   const update: Record<string, number | Date> = {
-    motivation: currentMotivation - option.cost,
+    gymEnergy: currentEnergy - option.cost,
     gymStreak: newStreak,
     lastGymAt: now,
-    lastMotivationAt: now,
   };
+
+  if (didReset) {
+    update.lastGymEnergyAt = now;
+  }
 
   if (training === "strength") {
     update.strength = pilot.strength + effectiveGain;
@@ -88,16 +102,26 @@ export async function POST(request: Request) {
   } else if (training === "endurance") {
     update.endurance = pilot.endurance + effectiveGain;
   } else if (training === "panic_control") {
-    update.panic = Math.max(0, pilot.panic + effectiveGain); // effectiveGain is negative, floor at 0
+    update.panic = Math.max(0, pilot.panic + effectiveGain);
   } else if (training === "confidence") {
     const cap = getConfidenceCap(pilot.characterSlug);
     update.confidence = Math.min(cap, pilot.confidence + Math.round(effectiveGain));
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: update,
-  });
+  await prisma.$transaction([
+    prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: update,
+    }),
+    prisma.gymLog.create({
+      data: {
+        pilotId: pilot.id,
+        training,
+        gain: effectiveGain,
+        energyCost: option.cost,
+      },
+    }),
+  ]);
 
   const gainLabel =
     training === "panic_control"
@@ -108,7 +132,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     message: `Training complete: ${gainLabel}${streakLabel}.`,
-    motivationLeft: currentMotivation - option.cost,
+    gymEnergy: currentEnergy - option.cost,
     gymStreak: newStreak,
     training,
     gainApplied: effectiveGain,
@@ -123,19 +147,35 @@ export async function GET() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  const now = new Date();
-  const minutesElapsed = Math.floor(
-    (now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60)
-  );
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(
-    pilot.motivation + regenAmount,
-    GAME_CONSTANTS.MOTIVATION_CAP_FREE
+  const { energy: currentEnergy, didReset } = resolveGymEnergy(pilot);
+
+  if (didReset) {
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { gymEnergy: currentEnergy, lastGymEnergyAt: new Date() },
+    });
+  }
+
+  const energyBreakdown = computeGymEnergy(pilot.endurance, pilot.gymStreak);
+
+  const hoursSinceReset =
+    (Date.now() - pilot.lastGymEnergyAt.getTime()) / (1000 * 60 * 60);
+  const hoursUntilReset = Math.max(
+    0,
+    GAME_CONSTANTS.GYM_ENERGY_RESET_HOURS - hoursSinceReset
   );
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const gymLogs = await prisma.gymLog.findMany({
+    where: { pilotId: pilot.id, createdAt: { gte: thirtyDaysAgo } },
+    orderBy: { createdAt: "desc" },
+    select: { training: true, gain: true, energyCost: true, createdAt: true },
+  });
+
   return NextResponse.json({
-    motivation: currentMotivation,
-    motivationCap: GAME_CONSTANTS.MOTIVATION_CAP_FREE,
+    gymEnergy: currentEnergy,
+    energyBreakdown,
+    hoursUntilReset,
     gymStreak: pilot.gymStreak,
     lastGymAt: pilot.lastGymAt,
     strength: pilot.strength,
@@ -144,6 +184,10 @@ export async function GET() {
     panic: pilot.panic,
     confidence: pilot.confidence,
     confidenceCap: getConfidenceCap(pilot.characterSlug),
+    gymLogs: gymLogs.map((l) => ({
+      ...l,
+      createdAt: l.createdAt.toISOString(),
+    })),
     trainingOptions: Object.entries(TRAINING_OPTIONS).map(([key, val]) => ({
       key,
       label: val.label,
