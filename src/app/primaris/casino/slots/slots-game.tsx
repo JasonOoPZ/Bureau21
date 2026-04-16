@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 const QUICK_BETS = [50, 100, 250, 500, 1000];
@@ -10,11 +10,23 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
   const [bet, setBet] = useState(100);
   const [reels, setReels] = useState(["🪙", "🪙", "🪙"]);
   const [spinning, setSpinning] = useState(false);
+  const [reelsStopped, setReelsStopped] = useState([false, false, false]);
+  const [isJackpot, setIsJackpot] = useState(false);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
+  const [creditsBump, setCreditsBump] = useState(false);
 
-  const spin = async () => {
+  useEffect(() => {
+    if (creditsBump) {
+      const t = setTimeout(() => setCreditsBump(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [creditsBump]);
+
+  const spin = useCallback(async () => {
     setSpinning(true);
     setResult(null);
+    setIsJackpot(false);
+    setReelsStopped([false, false, false]);
     // Visual spin
     const symbols = ["🎰", "💎", "⚡", "🔥", "💀", "🪙"];
     const spinInterval = setInterval(() => {
@@ -32,15 +44,35 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
     });
     const data = await res.json();
 
-    // Stop spin after delay for drama
+    // Staggered reel stops for dramatic effect
+    const finalReels = data.reels ?? reels;
     setTimeout(() => {
       clearInterval(spinInterval);
-      if (data.reels) setReels(data.reels);
-      setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
-      if (data.new_credits != null) setCredits(data.new_credits);
-      setSpinning(false);
-    }, 1200);
-  };
+      // Stop reel 1
+      setReels((prev) => [finalReels[0], prev[1], prev[2]]);
+      setReelsStopped([true, false, false]);
+
+      // Stop reel 2
+      setTimeout(() => {
+        setReels((prev) => [prev[0], finalReels[1], prev[2]]);
+        setReelsStopped([true, true, false]);
+
+        // Stop reel 3
+        setTimeout(() => {
+          setReels(finalReels);
+          setReelsStopped([true, true, true]);
+          setSpinning(false);
+          const payout = data.net_change ?? 0;
+          setResult({ label: data.label ?? data.error, payout });
+          if (payout >= bet * 10) setIsJackpot(true);
+          if (data.new_credits != null) {
+            setCredits(data.new_credits);
+            setCreditsBump(true);
+          }
+        }, 300);
+      }, 300);
+    }, 800);
+  }, [bet, reels]);
 
   return (
     <div className="min-h-screen bg-black text-slate-100 px-3 py-4">
@@ -58,14 +90,32 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
           <div className="flex justify-center gap-4 my-8">
             {reels.map((s, i) => (
               <div key={i}
-                className={`w-20 h-20 bg-slate-900 border-2 ${spinning ? "border-amber-500 animate-pulse" : "border-slate-700"} rounded-xl flex items-center justify-center text-5xl transition-all`}>
+                className={`w-20 h-20 bg-slate-900 border-2 rounded-xl flex items-center justify-center text-5xl transition-all ${
+                  spinning && !reelsStopped[i]
+                    ? "border-amber-500 animate-reel-spin"
+                    : reelsStopped[i] && spinning
+                    ? "border-amber-400 animate-reel-stop"
+                    : isJackpot
+                    ? "border-amber-400 animate-slot-glow"
+                    : "border-slate-700"
+                }`}
+                style={spinning && !reelsStopped[i] ? { animationDelay: `${i * 0.08}s` } : undefined}
+              >
                 {s}
               </div>
             ))}
           </div>
 
           {result && (
-            <div className={`rounded-lg p-3 text-sm ${result.payout > 0 ? "bg-green-900/20 border border-green-800 text-green-300" : result.payout === 0 ? "bg-slate-800 text-slate-400" : "bg-red-900/20 border border-red-800 text-red-300"}`}>
+            <div className={`rounded-lg p-3 text-sm ${
+              result.payout > 0
+                ? isJackpot
+                  ? "bg-amber-900/30 border border-amber-600 animate-jackpot"
+                  : "bg-green-900/20 border border-green-800 text-green-300 animate-win-glow"
+                : result.payout === 0
+                ? "bg-slate-800 text-slate-400"
+                : "bg-red-900/20 border border-red-800 text-red-300 animate-loss-shake"
+            }`}>
               {result.label}
               {result.payout !== 0 && (
                 <span className="ml-2 font-bold">{result.payout > 0 ? "+" : ""}{result.payout} ₡</span>
@@ -77,7 +127,7 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
           <div className="flex justify-between text-xs text-slate-400">
             <span>Credits</span>
-            <span className="text-amber-400 font-bold font-mono">{credits.toLocaleString()} ₡</span>
+            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
           </div>
           <div className="flex gap-2">
             {QUICK_BETS.map((q) => (

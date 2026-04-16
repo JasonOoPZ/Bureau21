@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const QUICK_BETS = [50, 100, 250, 500, 1000];
 
-function Card({ card }: { card: string }) {
+function Card({ card, index = 0, isNew = false }: { card: string; index?: number; isNew?: boolean }) {
   const isRed = card.includes("♥") || card.includes("♦");
   return (
-    <div className={`w-14 h-20 bg-slate-900 border border-slate-600 rounded-lg flex items-center justify-center text-xl font-bold ${isRed ? "text-red-400" : "text-slate-200"}`}>
-      {card === "??" ? "🂠" : card}
+    <div
+      className={`w-14 h-20 bg-slate-900 border border-slate-600 rounded-lg flex items-center justify-center text-xl font-bold ${
+        isRed ? "text-red-400" : "text-slate-200"
+      } ${isNew ? "animate-card-deal" : ""}`}
+      style={isNew ? { animationDelay: `${index * 0.15}s` } : undefined}
+    >
+      {card === "??" ? (
+        <span className={isNew ? "animate-card-flip" : ""}>🂠</span>
+      ) : (
+        <span className={isNew ? "animate-card-flip" : ""}>{card}</span>
+      )}
     </div>
   );
 }
@@ -24,6 +33,16 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
   const [dealerTotal, setDealerTotal] = useState<number | null>(null);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [creditsBump, setCreditsBump] = useState(false);
+  const [dealCount, setDealCount] = useState(0);
+  const [prevCardCount, setPrevCardCount] = useState(0);
+
+  useEffect(() => {
+    if (creditsBump) {
+      const t = setTimeout(() => setCreditsBump(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [creditsBump]);
 
   const api = async (action: string, extraBet?: number) => {
     setLoading(true);
@@ -41,25 +60,30 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
     setResult(null);
     const { ok, data } = await api("deal", bet);
     if (!ok) { setResult({ label: data.error, payout: 0 }); return; }
-    setCredits((c) => c - bet);
     setPlayer(data.player);
     setDealer(data.dealer);
     setPlayerTotal(data.playerTotal);
     setDealerTotal(data.dealerTotal);
+    setDealCount((c) => c + 1);
+    setPrevCardCount(0);
 
     if (data.status === "blackjack") {
       setDealer(data.dealer);
       setDealerTotal(data.dealerTotal);
-      setCredits((c) => c + data.payout);
+      setCredits((c) => c - bet + data.payout);
+      setCreditsBump(true);
       setResult({ label: data.label, payout: data.payout - bet });
       setPhase("done");
     } else {
+      setCredits((c) => c - bet);
       setPhase("playing");
     }
   };
 
   const hit = async () => {
+    const prevLen = player.length;
     const { data } = await api("hit");
+    setPrevCardCount(prevLen);
     setPlayer(data.player);
     setPlayerTotal(data.playerTotal);
     if (data.status === "bust") {
@@ -78,6 +102,7 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
     setDealerTotal(data.dealerTotal);
     const net = (data.payout ?? 0) - bet;
     setCredits((c) => c + (data.payout ?? 0));
+    setCreditsBump(true);
     setResult({ label: data.label, payout: net });
     setPhase("done");
   };
@@ -108,17 +133,23 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
             <div className="space-y-6">
               <div>
                 <div className="text-xs text-slate-400 mb-2">Dealer {dealerTotal != null ? `(${dealerTotal})` : ""}</div>
-                <div className="flex gap-2">{dealer.map((c, i) => <Card key={i} card={c} />)}</div>
+                <div className="flex gap-2">{dealer.map((c, i) => <Card key={`${dealCount}-d-${i}`} card={c} index={i} isNew={dealCount > 0} />)}</div>
               </div>
               <div>
                 <div className="text-xs text-slate-400 mb-2">You ({playerTotal})</div>
-                <div className="flex gap-2">{player.map((c, i) => <Card key={i} card={c} />)}</div>
+                <div className="flex gap-2">{player.map((c, i) => <Card key={`${dealCount}-p-${i}`} card={c} index={i} isNew={i >= prevCardCount} />)}</div>
               </div>
             </div>
           )}
 
           {result && (
-            <div className={`mt-4 rounded-lg p-3 text-sm text-center ${result.payout > 0 ? "bg-green-900/20 border border-green-800 text-green-300" : result.payout === 0 ? "bg-slate-800 text-slate-400" : "bg-red-900/20 border border-red-800 text-red-300"}`}>
+            <div className={`mt-4 rounded-lg p-3 text-sm text-center ${
+              result.payout > 0
+                ? "bg-green-900/20 border border-green-800 text-green-300 animate-win-glow"
+                : result.payout === 0
+                ? "bg-slate-800 text-slate-400"
+                : "bg-red-900/20 border border-red-800 text-red-300 animate-loss-shake"
+            }`}>
               {result.label}
               {result.payout !== 0 && (
                 <span className="ml-2 font-bold">{result.payout > 0 ? "+" : ""}{result.payout} ₡</span>
@@ -130,7 +161,7 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
           <div className="flex justify-between text-xs text-slate-400">
             <span>Credits</span>
-            <span className="text-amber-400 font-bold font-mono">{credits.toLocaleString()} ₡</span>
+            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
           </div>
 
           {phase === "betting" && (

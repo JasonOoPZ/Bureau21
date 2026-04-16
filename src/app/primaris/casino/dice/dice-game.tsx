@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const QUICK_BETS = [50, 100, 250, 500, 1000];
@@ -10,11 +10,21 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
   const [credits, setCredits] = useState(initialCredits);
   const [bet, setBet] = useState(100);
   const [rolling, setRolling] = useState(false);
+  const [landed, setLanded] = useState(false);
   const [dice, setDice] = useState<[number, number] | null>(null);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
+  const [creditsBump, setCreditsBump] = useState(false);
+
+  useEffect(() => {
+    if (creditsBump) {
+      const t = setTimeout(() => setCreditsBump(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [creditsBump]);
 
   const roll = async (choice: "over" | "under" | "seven") => {
     setRolling(true);
+    setLanded(false);
     setResult(null);
 
     // Visual dice animation
@@ -32,10 +42,16 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
     setTimeout(() => {
       clearInterval(anim);
       if (data.dice) setDice(data.dice as [number, number]);
-      setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
-      if (data.new_credits != null) setCredits(data.new_credits);
       setRolling(false);
-    }, 800);
+      setLanded(true);
+      setTimeout(() => {
+        setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
+        if (data.new_credits != null) {
+          setCredits(data.new_credits);
+          setCreditsBump(true);
+        }
+      }, 350);
+    }, 900);
   };
 
   return (
@@ -54,8 +70,8 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
           <div className="flex justify-center gap-6 my-6">
             {dice ? (
               <>
-                <div className={`text-7xl ${rolling ? "animate-bounce" : ""}`}>{DIE_FACES[dice[0]]}</div>
-                <div className={`text-7xl ${rolling ? "animate-bounce" : ""}`} style={{ animationDelay: "0.1s" }}>{DIE_FACES[dice[1]]}</div>
+                <div className={`text-7xl ${rolling ? "animate-dice-tumble" : landed ? "animate-dice-land" : ""}`}>{DIE_FACES[dice[0]]}</div>
+                <div className={`text-7xl ${rolling ? "animate-dice-tumble" : landed ? "animate-dice-land" : ""}`} style={{ animationDelay: rolling ? "0.12s" : "0.08s" }}>{DIE_FACES[dice[1]]}</div>
               </>
             ) : (
               <>
@@ -69,7 +85,11 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
           )}
 
           {result && (
-            <div className={`mt-4 rounded-lg p-3 text-sm ${result.payout > 0 ? "bg-green-900/20 border border-green-800 text-green-300" : "bg-red-900/20 border border-red-800 text-red-300"}`}>
+            <div className={`mt-4 rounded-lg p-3 text-sm ${
+              result.payout > 0
+                ? "bg-green-900/20 border border-green-800 text-green-300 animate-win-glow"
+                : "bg-red-900/20 border border-red-800 text-red-300 animate-loss-shake"
+            }`}>
               {result.label}
               {result.payout !== 0 && (
                 <span className="ml-2 font-bold">{result.payout > 0 ? "+" : ""}{result.payout} ₡</span>
@@ -81,7 +101,7 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
           <div className="flex justify-between text-xs text-slate-400">
             <span>Credits</span>
-            <span className="text-amber-400 font-bold font-mono">{credits.toLocaleString()} ₡</span>
+            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
           </div>
           <div className="flex gap-2">
             {QUICK_BETS.map((q) => (

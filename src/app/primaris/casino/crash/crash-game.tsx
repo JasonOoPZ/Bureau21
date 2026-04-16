@@ -11,10 +11,20 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
   const [phase, setPhase] = useState<"idle" | "running" | "crashed" | "cashed">("idle");
   const [multiplier, setMultiplier] = useState(1.0);
   const [result, setResult] = useState<string | null>(null);
+  const [shaking, setShaking] = useState(false);
+  const [creditsBump, setCreditsBump] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (creditsBump) {
+      const t = setTimeout(() => setCreditsBump(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [creditsBump]);
 
   const start = async () => {
     setResult(null);
+    setShaking(false);
     const res = await fetch("/api/game/casino/crash", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,6 +45,8 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
         setPhase("crashed");
         setMultiplier(d.crashPoint);
         setResult(`Crashed at ${d.crashPoint}x! You lost ${bet} ₡`);
+        setShaking(true);
+        setTimeout(() => setShaking(false), 500);
         if (pollRef.current) clearInterval(pollRef.current);
       } else if (d.status === "running") {
         setMultiplier(d.multiplier);
@@ -52,6 +64,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
       setPhase("cashed");
       setMultiplier(data.multiplier);
       setCredits((c) => c + data.payout);
+      setCreditsBump(true);
       setResult(data.label);
     } else {
       setPhase("crashed");
@@ -75,21 +88,27 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
           <span className="text-red-400">Crash</span>
         </div>
 
-        <div className="bg-[#0b0f14] border border-red-900/40 rounded-xl p-6 text-center">
+        <div className={`bg-[#0b0f14] border border-red-900/40 rounded-xl p-6 text-center ${shaking ? "animate-crash-shake" : ""}`}>
           <h1 className="text-xl font-bold text-red-400 mb-1">🚀 Crash</h1>
           <p className="text-slate-500 text-xs">Ride the multiplier. Cash out before it crashes.</p>
-          <div className={`text-6xl font-mono font-black mt-6 mb-4 ${multColor} transition-colors`}>
+          <div className={`text-6xl font-mono font-black mt-6 mb-4 ${multColor} transition-colors ${
+            phase === "running" ? "animate-mult-pulse" : phase === "crashed" ? "animate-crash-explode" : ""
+          }`}>
             {multiplier.toFixed(2)}x
           </div>
           {phase === "running" && (
             <div className="h-1 bg-gradient-to-r from-cyan-500 via-green-400 to-red-500 rounded-full animate-pulse" />
           )}
-          {phase === "crashed" && <div className="text-red-500 font-bold text-lg">💥 CRASHED</div>}
-          {phase === "cashed" && <div className="text-green-400 font-bold text-lg">💰 CASHED OUT</div>}
+          {phase === "crashed" && <div className="text-red-500 font-bold text-lg animate-crash-explode">💥 CRASHED</div>}
+          {phase === "cashed" && <div className="text-green-400 font-bold text-lg animate-win-glow">💰 CASHED OUT</div>}
         </div>
 
         {result && (
-          <div className={`rounded-lg p-3 text-sm text-center ${phase === "cashed" ? "bg-green-900/20 border border-green-800 text-green-300" : "bg-red-900/20 border border-red-800 text-red-300"}`}>
+          <div className={`rounded-lg p-3 text-sm text-center ${
+            phase === "cashed"
+              ? "bg-green-900/20 border border-green-800 text-green-300 animate-win-glow"
+              : "bg-red-900/20 border border-red-800 text-red-300 animate-loss-shake"
+          }`}>
             {result}
           </div>
         )}
@@ -97,7 +116,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
           <div className="flex justify-between text-xs text-slate-400">
             <span>Credits</span>
-            <span className="text-amber-400 font-bold font-mono">{credits.toLocaleString()} ₡</span>
+            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
           </div>
           <div className="flex gap-2">
             {QUICK_BETS.map((q) => (
