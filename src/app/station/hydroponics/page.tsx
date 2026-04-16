@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { HydroponicsClient } from "@/components/game/hydroponics-client";
+import { HydroponicsOrchestrator } from "@/components/game/hydroponics/orchestrator";
 import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -12,7 +12,7 @@ export default async function HydroponicsPage() {
   return (
     <div className="min-h-screen bg-[#0a0d11] text-slate-100">
       <TopBar session={session} />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 py-8">
         <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
           <Link href="/lobby" className="hover:text-cyan-300 transition-colors">← Hub</Link>
           <span>/</span>
@@ -28,12 +28,9 @@ export default async function HydroponicsPage() {
           <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
             Hydroponics Bay
           </h1>
-          <p className="mt-2 text-slate-400">
-            Tend your growing plots to harvest credits, restore Life Force, and cultivate rare Blue Herbs used for emergency revival.
-          </p>
         </div>
 
-        <HydroponicsClient />
+        <HydroponicsOrchestrator />
       </main>
     </div>
   );

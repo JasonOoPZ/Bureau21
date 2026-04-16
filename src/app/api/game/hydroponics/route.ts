@@ -1,15 +1,24 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { createInitialState, processOfflineProgress } from "@/lib/hydroponics/engine";
+import type { HydroponicsGameState } from "@/lib/hydroponics/types";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
-const HYDRO_COOLDOWN_MINUTES = 60;
-const CREDIT_MIN = 20;
-const CREDIT_MAX = 50;
-const LF_RESTORE = 10;
-const PLOTS = 3;
+async function loadOrCreateState(pilotId: string): Promise<{ state: HydroponicsGameState; isNew: boolean }> {
+  const existing = await prisma.hydroponicsData.findUnique({ where: { pilotId } });
+  if (existing) {
+    return { state: existing.gameState as unknown as HydroponicsGameState, isNew: false };
+  }
+  const state = createInitialState();
+  await prisma.hydroponicsData.create({ data: { pilotId, gameState: state as unknown as Prisma.InputJsonValue } });
+  return { state, isNew: true };
+}
 
+/** GET — Load game state + calculate offline progress */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -17,70 +26,87 @@ export async function GET() {
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
-  const state = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
+  const { state, isNew } = await loadOrCreateState(pilot.id);
 
-  const lastHydroAt = state?.lastHydroAt ?? new Date(0);
-  const nowMs = Date.now();
-  const elapsedMinutes = (nowMs - lastHydroAt.getTime()) / 60000;
-  const cooldownRemaining = Math.max(0, Math.ceil(HYDRO_COOLDOWN_MINUTES - elapsedMinutes));
-  const ready = cooldownRemaining === 0;
+  if (isNew) {
+    return NextResponse.json({ state, credits: pilot.credits, offline: null });
+  }
+
+  // Process offline progress
+  const now = Date.now();
+  const { state: updated, report, creditsDelta } = processOfflineProgress(state, pilot.credits, now);
+
+  // Apply credit delta from wages
+  if (creditsDelta !== 0) {
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { credits: { increment: creditsDelta } },
+    });
+  }
+
+  // Save updated state
+  await prisma.hydroponicsData.update({
+    where: { pilotId: pilot.id },
+    data: { gameState: updated as unknown as Prisma.InputJsonValue },
+  });
 
   return NextResponse.json({
-    plots: PLOTS,
-    ready,
-    cooldownRemaining,
-    cooldownMinutes: HYDRO_COOLDOWN_MINUTES,
-    lastHydroAt: lastHydroAt.toISOString(),
-    credits: pilot.credits,
-    lifeForce: pilot.lifeForce,
-    herbs: state?.herbs ?? 0,
+    state: updated,
+    credits: pilot.credits + creditsDelta,
+    offline: report.elapsedHours > 0.01 ? report : null,
   });
 }
 
-export async function POST() {
+const saveSchema = z.object({
+  action: z.enum(["save", "spend", "earn"]),
+  gameState: z.any(),
+  creditsDelta: z.number().optional(),
+});
+
+/** POST — Save state + apply credit changes atomically */
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const state = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
-  if (!state) {
-    return NextResponse.json({ error: "Pilot not found." }, { status: 404 });
+  const body = await request.json().catch(() => null);
+  const parsed = saveSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid save data." }, { status: 400 });
   }
 
-  const lastHydroAt = state.lastHydroAt ?? new Date(0);
-  const elapsedMinutes = (Date.now() - lastHydroAt.getTime()) / 60000;
+  const { action, gameState, creditsDelta } = parsed.data;
+  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  if (elapsedMinutes < HYDRO_COOLDOWN_MINUTES) {
-    const remaining = Math.ceil(HYDRO_COOLDOWN_MINUTES - elapsedMinutes);
-    return NextResponse.json(
-      { error: `Plots are not ready. Come back in ${remaining} minute${remaining === 1 ? "" : "s"}.` },
-      { status: 429 }
+  // Validate credit changes
+  if (action === "spend" && creditsDelta && creditsDelta < 0) {
+    if (pilot.credits + creditsDelta < 0) {
+      return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
+    }
+  }
+
+  // Atomic update: save state + adjust credits
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ops: any[] = [
+    prisma.hydroponicsData.upsert({
+      where: { pilotId: pilot.id },
+      update: { gameState: gameState as Prisma.InputJsonValue },
+      create: { pilotId: pilot.id, gameState: gameState as Prisma.InputJsonValue },
+    }),
+  ];
+
+  if (creditsDelta && creditsDelta !== 0) {
+    ops.push(
+      prisma.pilotState.update({
+        where: { userId: session.user.id },
+        data: { credits: { increment: creditsDelta } },
+      })
     );
   }
 
-  const creditGain = Math.floor(Math.random() * (CREDIT_MAX - CREDIT_MIN + 1)) + CREDIT_MIN;
-  const herbGain = Math.random() < 0.4 ? 1 : 0; // 40% chance of a blue herb
-  const newHerbs = (state.herbs ?? 0) + herbGain;
-  const newLf = Math.min(state.lifeForce + LF_RESTORE, state.level * 2 + 20);
+  await prisma.$transaction(ops);
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      credits: { increment: creditGain },
-      lifeForce: newLf,
-      herbs: newHerbs,
-      lastHydroAt: new Date(),
-    },
-  });
-
-  return NextResponse.json({
-    creditGain,
-    lfRestore: newLf - state.lifeForce,
-    herbGain,
-    herbs: newHerbs,
-    message: herbGain
-      ? `Harvest complete! +${creditGain} credits, +${LF_RESTORE} LF, and a Blue Herb was found in plot 3!`
-      : `Harvest complete! +${creditGain} credits and +${LF_RESTORE} Life Force restored.`,
-  });
+  const newCredits = pilot.credits + (creditsDelta ?? 0);
+  return NextResponse.json({ ok: true, credits: newCredits });
 }

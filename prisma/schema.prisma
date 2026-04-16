@@ -88,6 +88,7 @@ model PilotState {
   heroes            PlayerHero[]
   studies           StudyProgress[]
   gymLogs           GymLog[]
+  hydroponics       HydroponicsData?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -299,4 +300,14 @@ model StudyProgress {
 
   @@index([pilotId])
   @@unique([pilotId, course])
+}
+
+model HydroponicsData {
+  id        String   @id @default(cuid())
+  pilotId   String   @unique
+  gameState Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 }
