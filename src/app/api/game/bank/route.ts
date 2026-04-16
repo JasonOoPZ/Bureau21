@@ -5,7 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-const BOND_RATES: Record<number, number> = { 1: 0.5, 3: 2, 7: 5, 14: 8, 30: 12, 60: 15, 90: 18 };
+const BOND_RATES: Record<number, number> = { 7: 1, 14: 2.25, 30: 5, 45: 7.5, 60: 11, 90: 15, 180: 20, 365: 25 };
 
 function json(data: Record<string, unknown>, status = 200) {
   return NextResponse.json(data, { status });
