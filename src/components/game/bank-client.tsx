@@ -25,7 +25,10 @@ interface Props {
   initialLoanCreatedAt: string | null;
   initialBondAmount: number;
   initialBondRate: number;
+  initialBondDays: number;
   initialBondMaturesAt: string | null;
+  initialBondCreatedAt: string | null;
+  initialBondLastClaimedAt: string | null;
   buyRate: number;
   sellRate: number;
   initialBankTreasury: number;
@@ -34,7 +37,8 @@ interface Props {
 export function BankClient({
   initialCredits, initialCreditsBank, initialTokens,
   initialLoanAmount, initialLoanCreatedAt,
-  initialBondAmount, initialBondRate, initialBondMaturesAt,
+  initialBondAmount, initialBondRate, initialBondDays,
+  initialBondMaturesAt, initialBondCreatedAt, initialBondLastClaimedAt,
   buyRate, sellRate, initialBankTreasury,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
@@ -44,7 +48,10 @@ export function BankClient({
   const [loanAmount, setLoanAmount] = useState(initialLoanAmount);
   const [bondAmount, setBondAmount] = useState(initialBondAmount);
   const [bondRate, setBondRateState] = useState(initialBondRate);
+  const [activeBondDays, setActiveBondDays] = useState(initialBondDays);
   const [bondMaturesAt, setBondMaturesAt] = useState(initialBondMaturesAt);
+  const [bondCreatedAt, setBondCreatedAt] = useState(initialBondCreatedAt);
+  const [bondLastClaimedAt, setBondLastClaimedAt] = useState(initialBondLastClaimedAt);
   const [amount, setAmount] = useState(100);
   const [transferTo, setTransferTo] = useState("");
   const [bondDays, setBondDays] = useState(30);
@@ -70,7 +77,10 @@ export function BankClient({
       if (data.loanAmount != null) setLoanAmount(data.loanAmount);
       if (data.bondAmount != null) setBondAmount(data.bondAmount);
       if (data.bondRate != null) setBondRateState(data.bondRate);
+      if (data.bondDays != null) setActiveBondDays(data.bondDays);
       if (data.bondMaturesAt !== undefined) setBondMaturesAt(data.bondMaturesAt);
+      if (data.bondCreatedAt !== undefined) setBondCreatedAt(data.bondCreatedAt);
+      if (data.bondLastClaimedAt !== undefined) setBondLastClaimedAt(data.bondLastClaimedAt);
       if (data.fee != null) setBankTreasury((prev) => prev + data.fee);
       return data;
     } catch {
@@ -92,6 +102,21 @@ export function BankClient({
   const bondMatures = bondMaturesAt ? new Date(bondMaturesAt) : null;
   const bondMature = bondMatures ? bondMatures <= new Date() : false;
   const selectedBondOpt = BOND_OPTIONS.find((b) => b.days === bondDays) ?? BOND_OPTIONS[2];
+
+  // Calculate accrued yield for active bond
+  const bondCreatedDate = bondCreatedAt ? new Date(bondCreatedAt) : null;
+  const bondLastClaimedDate = bondLastClaimedAt ? new Date(bondLastClaimedAt) : null;
+  const now = new Date();
+  let accruedYield = 0;
+  let accruedDays = 0;
+  if (bondAmount > 0 && activeBondDays > 0 && bondCreatedDate && bondLastClaimedDate) {
+    const dailyRate = bondRate / activeBondDays;
+    const totalDaysPassed = Math.min(Math.floor((now.getTime() - bondCreatedDate.getTime()) / 86400000), activeBondDays);
+    const daysAlreadyClaimed = Math.floor((bondLastClaimedDate.getTime() - bondCreatedDate.getTime()) / 86400000);
+    accruedDays = Math.max(0, totalDaysPassed - daysAlreadyClaimed);
+    accruedYield = Math.floor(bondAmount * (dailyRate / 100) * accruedDays);
+  }
+
   const activeTab = tabs.find((t) => t.key === tab)!;
 
   return (
@@ -399,24 +424,95 @@ export function BankClient({
         {/* ── Bond ──────────────────────────────────────────────────── */}
         {tab === "bond" && (
           <>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">📊</span>
               <div>
                 <h2 className="text-sm font-bold text-emerald-300 uppercase tracking-wide">Investment Bonds</h2>
-                <p className="text-[11px] text-slate-400">Lock credits for guaranteed returns. Longer terms = higher yields.</p>
+                <p className="text-[11px] text-slate-400">Lock credits for daily yield. Claim anytime. 1 active bond per pilot.</p>
               </div>
             </div>
-            {bondAmount > 0 && !bondMature ? (
+
+            {bondAmount > 0 ? (
               <div className="space-y-3">
-                <div className="rounded-lg bg-emerald-950/30 border border-emerald-900/30 p-4 text-center">
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-500 font-semibold">Invested</div>
-                  <div className="text-2xl font-black text-emerald-300 font-mono">{bondAmount.toLocaleString()} ₡</div>
-                  <div className="text-xs text-slate-400 mt-1">at {bondRate}% · matures {bondMatures?.toLocaleDateString()}</div>
-                  <div className="text-xs text-emerald-400 mt-1 font-mono">
-                    Payout: {Math.floor(bondAmount * (1 + bondRate / 100)).toLocaleString()} ₡
+                {/* Active bond status */}
+                <div className="rounded-lg bg-emerald-950/30 border border-emerald-900/30 p-4 space-y-3">
+                  <div className="text-center">
+                    <div className="text-[10px] uppercase tracking-wide text-emerald-500 font-semibold">Active Bond</div>
+                    <div className="text-2xl font-black text-emerald-300 font-mono">{bondAmount.toLocaleString()} ₡</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {bondRate}% over {activeBondDays} days · {(bondRate / activeBondDays).toFixed(4)}%/day
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Status</div>
+                      <div className={`text-sm font-bold ${bondMature ? "text-amber-400" : "text-emerald-400"}`}>
+                        {bondMature ? "🎉 Matured" : "⏳ Active"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Matures</div>
+                      <div className="text-sm font-bold text-slate-300">
+                        {bondMatures?.toLocaleDateString() ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Yield</div>
+                      <div className="text-sm font-bold text-emerald-400 font-mono">
+                        +{Math.floor(bondAmount * bondRate / 100).toLocaleString()} ₡
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Daily Yield</div>
+                      <div className="text-sm font-bold text-emerald-400 font-mono">
+                        +{Math.floor(bondAmount * (bondRate / activeBondDays) / 100).toLocaleString()} ₡
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500 text-center">Cannot withdraw before maturity date.</p>
+
+                {/* Claim yield section */}
+                {!bondMature && (
+                  <div className="rounded-lg bg-cyan-950/20 border border-cyan-900/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold">Accrued Yield</div>
+                        <div className="text-[10px] text-slate-400">{accruedDays} day{accruedDays !== 1 ? "s" : ""} unclaimed</div>
+                      </div>
+                      <div className="text-xl font-black text-cyan-300 font-mono">
+                        {accruedYield > 0 ? `+${accruedYield.toLocaleString()} ₡` : "0 ₡"}
+                      </div>
+                    </div>
+                    <button onClick={() => api("claim_yield")} disabled={loading || accruedDays < 1}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
+                      💰 Claim {accruedYield > 0 ? `${accruedYield.toLocaleString()} ₡` : "Yield"}
+                    </button>
+                    <p className="text-[10px] text-slate-600 text-center">Yield accrues daily. Claim as often as you like.</p>
+                  </div>
+                )}
+
+                {/* Collect matured bond */}
+                {bondMature && (
+                  <div className="rounded-lg bg-amber-950/20 border border-amber-900/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-widest text-amber-500 font-bold">Bond Matured</div>
+                        <div className="text-[10px] text-slate-400">Collect principal + unclaimed yield</div>
+                      </div>
+                      <div className="text-xl font-black text-amber-300 font-mono">
+                        {(bondAmount + accruedYield).toLocaleString()} ₡
+                      </div>
+                    </div>
+                    <button onClick={() => api("collect_bond")} disabled={loading}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
+                      🎉 Collect Bond Payout
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -433,6 +529,9 @@ export function BankClient({
                         bondDays === b.days ? "text-emerald-300" : "text-slate-400"
                       }`}>{b.rate}%</div>
                       <div className="text-[10px] text-slate-500">{b.label}</div>
+                      <div className={`text-[9px] text-slate-600 font-mono`}>
+                        {(b.rate / b.days).toFixed(3)}%/day
+                      </div>
                       <div className={`text-[8px] uppercase tracking-wider mt-0.5 font-bold ${
                         bondDays === b.days ? "text-emerald-500" : "text-slate-600"
                       }`}>{b.tag}</div>
@@ -459,16 +558,22 @@ export function BankClient({
                 <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
 
-                <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 flex justify-between items-center">
+                <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <div className="text-[10px] text-slate-500">Projected Return</div>
-                    <div className="text-lg font-black text-emerald-300 font-mono">
+                    <div className="text-[10px] text-slate-500">Daily Yield</div>
+                    <div className="text-sm font-black text-emerald-400 font-mono">
+                      +{Math.floor(amount * selectedBondOpt.rate / selectedBondOpt.days / 100).toLocaleString()} ₡
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500">Total Return</div>
+                    <div className="text-sm font-black text-emerald-300 font-mono">
                       +{Math.floor(amount * selectedBondOpt.rate / 100).toLocaleString()} ₡
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-slate-500">Total Payout</div>
-                    <div className="text-lg font-bold text-slate-300 font-mono">
+                  <div>
+                    <div className="text-[10px] text-slate-500">Payout</div>
+                    <div className="text-sm font-bold text-slate-300 font-mono">
                       {Math.floor(amount * (1 + selectedBondOpt.rate / 100)).toLocaleString()} ₡
                     </div>
                   </div>
@@ -477,9 +582,9 @@ export function BankClient({
                 <button onClick={() => api("buy_bond", { bondDays })} disabled={loading || amount > bank || amount < 100}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-emerald-900/20">
                   📊 Invest {amount.toLocaleString()} ₡ for {selectedBondOpt.label}
-                  <span className="block text-[10px] opacity-70 font-normal">Earn {selectedBondOpt.rate}% return</span>
+                  <span className="block text-[10px] opacity-70 font-normal">{selectedBondOpt.rate}% total · {(selectedBondOpt.rate / selectedBondOpt.days).toFixed(3)}%/day · Claim daily</span>
                 </button>
-                <p className="text-[10px] text-slate-600 text-center">Minimum 100 ₡ · Funds from vault balance · Cannot withdraw early</p>
+                <p className="text-[10px] text-slate-600 text-center">Minimum 100 ₡ · Funds from vault · 1 bond per pilot · Claim yield daily</p>
               </div>
             )}
           </>

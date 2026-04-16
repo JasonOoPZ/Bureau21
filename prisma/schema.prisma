@@ -74,8 +74,10 @@ model PilotState {
   loanCreatedAt     DateTime?
   bondAmount        Int             @default(0)
   bondRate          Float           @default(0)
+  bondDays          Int             @default(0)
   bondCreatedAt     DateTime?
   bondMaturesAt     DateTime?
+  bondLastClaimedAt DateTime?
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]

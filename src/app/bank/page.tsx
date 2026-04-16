@@ -49,7 +49,10 @@ export default async function BankPage() {
             initialLoanCreatedAt={pilot.loanCreatedAt?.toISOString() ?? null}
             initialBondAmount={pilot.bondAmount}
             initialBondRate={pilot.bondRate}
+            initialBondDays={pilot.bondDays}
             initialBondMaturesAt={pilot.bondMaturesAt?.toISOString() ?? null}
+            initialBondCreatedAt={pilot.bondCreatedAt?.toISOString() ?? null}
+            initialBondLastClaimedAt={pilot.bondLastClaimedAt?.toISOString() ?? null}
             buyRate={GAME_CONSTANTS.TOKEN_BUY_RATE}
             sellRate={GAME_CONSTANTS.TOKEN_SELL_RATE}
             initialBankTreasury={global?.bankTreasury ?? 0}

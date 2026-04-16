@@ -108,28 +108,70 @@ export async function POST(request: Request) {
 
   // ── Buy Bond ────────────────────────────────────────────────────────────
   if (action === "buy_bond") {
-    if (pilot.bondAmount > 0) return json({ error: "Already have an active bond." }, 400);
+    if (pilot.bondAmount > 0) return json({ error: "Already have an active bond. Claim yield and collect first." }, 400);
     const rate = BOND_RATES[bondDays ?? 0];
     if (!rate) return json({ error: "Invalid bond duration." }, 400);
     if (amt < 100 || amt > pilot.creditsBank) return json({ error: "Insufficient bank balance (min 100 ₡)." }, 400);
     const maturesAt = new Date(Date.now() + (bondDays ?? 7) * 86400000);
+    const now = new Date();
     const updated = await prisma.pilotState.update({
       where: { userId: session.user.id },
-      data: { creditsBank: { decrement: amt }, bondAmount: amt, bondRate: rate, bondCreatedAt: new Date(), bondMaturesAt: maturesAt },
+      data: { creditsBank: { decrement: amt }, bondAmount: amt, bondRate: rate, bondDays: bondDays ?? 7, bondCreatedAt: now, bondMaturesAt: maturesAt, bondLastClaimedAt: now },
     });
-    return json({ message: `Invested ${amt.toLocaleString()} ₡ at ${rate}% for ${bondDays} days.`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondMaturesAt: updated.bondMaturesAt?.toISOString() ?? null });
+    return json({ message: `Invested ${amt.toLocaleString()} ₡ at ${rate}% for ${bondDays} days.`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondDays: updated.bondDays, bondMaturesAt: updated.bondMaturesAt?.toISOString() ?? null, bondLastClaimedAt: updated.bondLastClaimedAt?.toISOString() ?? null, bondCreatedAt: updated.bondCreatedAt?.toISOString() ?? null });
+  }
+
+  // ── Claim Yield ─────────────────────────────────────────────────────────
+  if (action === "claim_yield") {
+    if (pilot.bondAmount <= 0) return json({ error: "No active bond." }, 400);
+    if (!pilot.bondLastClaimedAt || !pilot.bondCreatedAt) return json({ error: "Bond data missing." }, 400);
+
+    const now = new Date();
+    const dailyRate = pilot.bondRate / pilot.bondDays;
+    const msSinceClaim = now.getTime() - pilot.bondLastClaimedAt.getTime();
+    const daysSinceClaim = Math.floor(msSinceClaim / 86400000);
+    if (daysSinceClaim < 1) return json({ error: "No yield to claim yet. Yield accrues daily." }, 400);
+
+    // Cap at maturity — don't accrue beyond bond end
+    const msFromStart = now.getTime() - pilot.bondCreatedAt.getTime();
+    const totalDaysPassed = Math.min(Math.floor(msFromStart / 86400000), pilot.bondDays);
+    const msClaimFromStart = pilot.bondLastClaimedAt.getTime() - pilot.bondCreatedAt.getTime();
+    const daysAlreadyClaimed = Math.floor(msClaimFromStart / 86400000);
+    const claimableDays = Math.max(0, totalDaysPassed - daysAlreadyClaimed);
+
+    if (claimableDays < 1) return json({ error: "No yield to claim." }, 400);
+
+    const yield_ = Math.floor(pilot.bondAmount * (dailyRate / 100) * claimableDays);
+    if (yield_ < 1) return json({ error: "Yield too small to claim." }, 400);
+
+    const updated = await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { creditsBank: { increment: yield_ }, bondLastClaimedAt: now },
+    });
+    return json({ message: `Claimed ${yield_.toLocaleString()} ₡ yield (${claimableDays} day${claimableDays > 1 ? "s" : ""}).`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondDays: updated.bondDays, bondMaturesAt: updated.bondMaturesAt?.toISOString() ?? null, bondLastClaimedAt: updated.bondLastClaimedAt?.toISOString() ?? null, bondCreatedAt: updated.bondCreatedAt?.toISOString() ?? null });
   }
 
   // ── Collect Bond ────────────────────────────────────────────────────────
   if (action === "collect_bond") {
     if (pilot.bondAmount <= 0) return json({ error: "No active bond." }, 400);
     if (pilot.bondMaturesAt && pilot.bondMaturesAt > new Date()) return json({ error: "Bond hasn't matured yet." }, 400);
-    const payout = Math.floor(pilot.bondAmount * (1 + pilot.bondRate / 100));
+
+    // Return principal + any unclaimed remaining yield
+    let remainingYield = 0;
+    if (pilot.bondLastClaimedAt && pilot.bondCreatedAt) {
+      const msClaimFromStart = pilot.bondLastClaimedAt.getTime() - pilot.bondCreatedAt.getTime();
+      const daysAlreadyClaimed = Math.floor(msClaimFromStart / 86400000);
+      const unclaimedDays = Math.max(0, pilot.bondDays - daysAlreadyClaimed);
+      const dailyRate = pilot.bondRate / pilot.bondDays;
+      remainingYield = Math.floor(pilot.bondAmount * (dailyRate / 100) * unclaimedDays);
+    }
+
+    const payout = pilot.bondAmount + remainingYield;
     const updated = await prisma.pilotState.update({
       where: { userId: session.user.id },
-      data: { creditsBank: { increment: payout }, bondAmount: 0, bondRate: 0, bondCreatedAt: null, bondMaturesAt: null },
+      data: { creditsBank: { increment: payout }, bondAmount: 0, bondRate: 0, bondDays: 0, bondCreatedAt: null, bondMaturesAt: null, bondLastClaimedAt: null },
     });
-    return json({ message: `Bond matured! Collected ${payout.toLocaleString()} ₡.`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondMaturesAt: null });
+    return json({ message: `Bond matured! Collected ${payout.toLocaleString()} ₡ (principal + ${remainingYield.toLocaleString()} ₡ unclaimed yield).`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondDays: 0, bondMaturesAt: null, bondLastClaimedAt: null, bondCreatedAt: null });
   }
 
   // ── Buy Tokens ──────────────────────────────────────────────────────────
@@ -173,7 +215,10 @@ export async function GET() {
     loanAmount: pilot.loanAmount,
     bondAmount: pilot.bondAmount,
     bondRate: pilot.bondRate,
+    bondDays: pilot.bondDays,
     bondMaturesAt: pilot.bondMaturesAt?.toISOString() ?? null,
+    bondCreatedAt: pilot.bondCreatedAt?.toISOString() ?? null,
+    bondLastClaimedAt: pilot.bondLastClaimedAt?.toISOString() ?? null,
     bankTreasury: global?.bankTreasury ?? 0,
   });
 }
