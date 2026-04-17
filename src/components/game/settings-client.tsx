@@ -2,6 +2,7 @@
 
 import { sideRailLinks } from "@/lib/navigation";
 import { themes, type ThemeId } from "@/lib/themes";
+import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -193,6 +194,21 @@ export function SettingsClient({ currentTheme, currentQuicklinks, walletAddress 
         ) : (
           <p className="text-[11px] text-slate-500">No wallet assigned yet.</p>
         )}
+      </div>
+
+      {/* Sign Out */}
+      <div className="rounded-md border border-red-900/40 bg-[#0b0f14] p-4">
+        <p className="mb-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">Session</p>
+        <p className="mb-3 text-[10px] text-slate-500">
+          Sign out of your Bureau 21 account on this device.
+        </p>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="rounded border border-red-500/40 bg-red-500/10 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-red-400 transition hover:border-red-400 hover:bg-red-500/20 hover:text-red-300"
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   );

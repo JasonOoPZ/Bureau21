@@ -17,6 +17,30 @@ const BOND_OPTIONS = [
 
 const QUICK_AMOUNTS = [5000, 25000, 50000, 250000, 500000];
 
+const WEALTH_OPTIONS = [
+  { days: 7,   rate: 5,   label: "7 Days",   tag: "Treasury Notes",       desc: "Government-backed short-term securities" },
+  { days: 14,  rate: 10,  label: "14 Days",  tag: "Municipal Bonds",      desc: "Infrastructure & municipal development" },
+  { days: 30,  rate: 18,  label: "30 Days",  tag: "Blue-Chip Real Estate", desc: "Prime commercial property fund" },
+  { days: 45,  rate: 28,  label: "45 Days",  tag: "Private Credit",       desc: "Direct lending to enterprise borrowers" },
+  { days: 60,  rate: 38,  label: "60 Days",  tag: "Hedge Fund LP",        desc: "Multi-strategy absolute return fund" },
+  { days: 90,  rate: 50,  label: "90 Days",  tag: "Private Equity",       desc: "Leveraged buyout & growth equity" },
+  { days: 180, rate: 65,  label: "180 Days", tag: "Venture Capital",      desc: "Early-stage tech & biotech portfolio" },
+  { days: 365, rate: 90,  label: "365 Days", tag: "Sovereign Wealth Fund", desc: "Diversified sovereign-grade portfolio" },
+];
+
+const WEALTH_QUICK_AMOUNTS = [500, 1000, 5000, 25000, 100000, 500000];
+
+interface WealthInvestmentData {
+  id: string;
+  name: string;
+  amount: number;
+  rate: number;
+  days: number;
+  createdAt: string;
+  maturesAt: string;
+  lastClaimedAt: string;
+}
+
 interface Props {
   initialCredits: number;
   initialCreditsBank: number;
@@ -33,6 +57,7 @@ interface Props {
   sellRate: number;
   initialBankTreasury: number;
   hasVentureCard: boolean;
+  initialWealthInvestments: WealthInvestmentData[];
 }
 
 export function BankClient({
@@ -41,6 +66,7 @@ export function BankClient({
   initialBondAmount, initialBondRate, initialBondDays,
   initialBondMaturesAt, initialBondCreatedAt, initialBondLastClaimedAt,
   buyRate, sellRate, initialBankTreasury, hasVentureCard,
+  initialWealthInvestments,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
   const [credits, setCredits] = useState(initialCredits);
@@ -59,6 +85,9 @@ export function BankClient({
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [bankTreasury, setBankTreasury] = useState(initialBankTreasury);
+  const [wealthInvestments, setWealthInvestments] = useState<WealthInvestmentData[]>(initialWealthInvestments);
+  const [wealthDays, setWealthDays] = useState(30);
+  const [wealthAmount, setWealthAmount] = useState(500);
 
   const api = async (action: string, extra: Record<string, unknown> = {}) => {
     setLoading(true);
@@ -83,6 +112,31 @@ export function BankClient({
       if (data.bondCreatedAt !== undefined) setBondCreatedAt(data.bondCreatedAt);
       if (data.bondLastClaimedAt !== undefined) setBondLastClaimedAt(data.bondLastClaimedAt);
       if (data.fee != null) setBankTreasury((prev) => prev + data.fee);
+      return data;
+    } catch {
+      setMsg({ text: "Connection error.", ok: false });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const wealthApi = async (action: string, extra: Record<string, unknown> = {}) => {
+    setLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/game/wealth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, amount: wealthAmount, ...extra }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg({ text: data.error, ok: false }); return null; }
+      setMsg({ text: data.message, ok: true });
+      if (data.credits != null) setCredits(data.credits);
+      if (data.creditsBank != null) setBank(data.creditsBank);
+      if (data.tokens != null) setTokens(data.tokens);
+      if (data.investments) setWealthInvestments(data.investments);
       return data;
     } catch {
       setMsg({ text: "Connection error.", ok: false });
@@ -137,10 +191,10 @@ export function BankClient({
           <div className="text-[10px] text-cyan-700 mt-0.5">₡ secured</div>
         </div>
         <div className="relative overflow-hidden rounded-xl border border-violet-800/30 bg-gradient-to-br from-violet-950/40 via-[#0d080f] to-[#0a0d11] p-4">
-          <div className="absolute -top-3 -right-3 text-5xl opacity-10">💎</div>
-          <div className="text-[9px] uppercase tracking-[0.2em] text-violet-600/80 font-semibold">Tokens</div>
-          <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens}</div>
-          <div className="text-[10px] text-violet-700 mt-0.5">B21 tokens</div>
+          <div className="absolute -top-3 -right-3 text-5xl opacity-10">🪙</div>
+          <div className="text-[9px] uppercase tracking-[0.2em] text-violet-600/80 font-semibold">Sovereigns</div>
+          <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString()}</div>
+          <div className="text-[10px] text-violet-700 mt-0.5">SVN</div>
         </div>
       </div>
 
@@ -592,13 +646,15 @@ export function BankClient({
         )}
 
         {/* ── Wealth Management ─────────────────────────────────────── */}
-        {tab === "wealth" && (
+        {tab === "wealth" && (() => {
+          const selectedWealthOpt = WEALTH_OPTIONS.find((w) => w.days === wealthDays) ?? WEALTH_OPTIONS[2];
+          return (
           <>
             <div className="flex items-center gap-3 mb-1">
               <span className="text-3xl">👑</span>
               <div>
                 <h2 className="text-sm font-bold text-yellow-300 uppercase tracking-wide">Wealth Management</h2>
-                <p className="text-[11px] text-slate-400">Private B21 token exchange · Centurion members only.</p>
+                <p className="text-[11px] text-slate-400">Private UHNWI investment desk · Sovereign-denominated · Up to 5 concurrent positions.</p>
               </div>
             </div>
 
@@ -607,47 +663,232 @@ export function BankClient({
                 <span className="text-sm">💳</span>
                 <span className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Centurion Venture Card Holder</span>
               </div>
-              <p className="text-[10px] text-slate-500">You have exclusive access to the Bureau Bank&apos;s private trading floor.</p>
+              <p className="text-[10px] text-slate-500">Exclusive access to Bureau Bank&apos;s private wealth desk. Investments denominated in Sovereigns — guaranteed returns backed by Bureau reserves.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Buy Rate</div>
-                <div className="text-lg font-bold text-yellow-300 font-mono">{buyRate} ₡</div>
-                <div className="text-[10px] text-slate-600">per token</div>
+            {/* Portfolio summary */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-2.5 text-center">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Active Positions</div>
+                <div className="text-lg font-black text-yellow-300 font-mono">{wealthInvestments.length}/5</div>
               </div>
-              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
-                <div className="text-[10px] text-slate-500 uppercase">Sell Rate</div>
-                <div className="text-lg font-bold text-amber-300 font-mono">{sellRate} ₡</div>
-                <div className="text-[10px] text-slate-600">per token</div>
+              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-2.5 text-center">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Invested</div>
+                <div className="text-lg font-black text-amber-300 font-mono">
+                  {wealthInvestments.reduce((s, i) => s + i.amount, 0).toLocaleString()} <span className="text-[10px] text-amber-600">SVN</span>
+                </div>
+              </div>
+              <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-2.5 text-center">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Return</div>
+                <div className="text-lg font-black text-emerald-400 font-mono">
+                  +{wealthInvestments.reduce((s, i) => s + Math.floor(i.amount * i.rate / 100), 0).toLocaleString()} <span className="text-[10px] text-emerald-600">SVN</span>
+                </div>
               </div>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              {[1, 5, 10, 25, 50].map((q) => (
-                <button key={q} onClick={() => setAmount(q)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    amount === q ? "bg-yellow-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
-                  }`}>
-                  {q}
+
+            {/* Active investments */}
+            {wealthInvestments.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Active Investments</div>
+                {wealthInvestments.map((inv) => {
+                  const matures = new Date(inv.maturesAt);
+                  const created = new Date(inv.createdAt);
+                  const lastClaimed = new Date(inv.lastClaimedAt);
+                  const isMatured = matures <= new Date();
+                  const dailyRate = inv.rate / inv.days;
+                  const totalDaysPassed = Math.min(Math.floor((Date.now() - created.getTime()) / 86400000), inv.days);
+                  const daysClaimed = Math.floor((lastClaimed.getTime() - created.getTime()) / 86400000);
+                  const claimableDays = Math.max(0, totalDaysPassed - daysClaimed);
+                  const pendingYield = Math.floor(inv.amount * (dailyRate / 100) * claimableDays);
+                  const totalYield = Math.floor(inv.amount * inv.rate / 100);
+                  const progressPct = Math.min(100, Math.floor((totalDaysPassed / inv.days) * 100));
+
+                  return (
+                    <div key={inv.id} className={`rounded-xl border p-3 space-y-2 ${
+                      isMatured
+                        ? "border-amber-500/50 bg-gradient-to-r from-amber-950/30 to-yellow-950/20 animate-pulse"
+                        : "border-yellow-900/30 bg-black/20"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-yellow-300">{inv.name}</div>
+                          <div className="text-[10px] text-slate-500">
+                            {inv.amount.toLocaleString()} SVN · {inv.rate}% / {inv.days}d · {dailyRate.toFixed(3)}%/day
+                          </div>
+                        </div>
+                        <div className={`text-[10px] font-bold uppercase tracking-wide ${isMatured ? "text-amber-400" : "text-emerald-500"}`}>
+                          {isMatured ? "🎉 Matured" : `⏳ ${inv.days - totalDaysPassed}d left`}
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${isMatured ? "bg-amber-500" : "bg-yellow-600"}`}
+                          style={{ width: `${progressPct}%` }} />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Total yield: <span className="text-emerald-400 font-mono font-bold">+{totalYield.toLocaleString()} SVN</span></span>
+                        {pendingYield > 0 && !isMatured && (
+                          <span className="text-cyan-400 font-mono font-bold">+{pendingYield.toLocaleString()} SVN pending</span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        {!isMatured && (
+                          <button onClick={() => wealthApi("claim_yield", { investmentId: inv.id })}
+                            disabled={loading || claimableDays < 1}
+                            className="flex-1 py-2 rounded-lg bg-gradient-to-r from-cyan-800 to-cyan-700 hover:from-cyan-700 hover:to-cyan-600 text-white font-bold text-[11px] disabled:opacity-30 transition-all">
+                            💰 Claim {pendingYield > 0 ? `${pendingYield.toLocaleString()} SVN` : "Yield"}
+                          </button>
+                        )}
+                        {isMatured && (
+                          <button onClick={() => wealthApi("collect_investment", { investmentId: inv.id })}
+                            disabled={loading}
+                            className="flex-1 py-2 rounded-lg bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold text-[11px] disabled:opacity-30 transition-all">
+                            🎉 Collect {(inv.amount + Math.floor(inv.amount * (dailyRate / 100) * Math.max(0, inv.days - daysClaimed))).toLocaleString()} SVN
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* New investment */}
+            {wealthInvestments.length < 5 && (
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Open New Position</div>
+
+                {/* Investment product cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {WEALTH_OPTIONS.map((w) => (
+                    <button key={w.days} onClick={() => setWealthDays(w.days)}
+                      className={`rounded-xl border p-2.5 text-center transition-all ${
+                        wealthDays === w.days
+                          ? "border-yellow-500 bg-yellow-950/40 scale-[1.03] shadow-lg shadow-yellow-900/20"
+                          : "border-slate-800/50 bg-black/30 hover:border-slate-700 hover:bg-slate-900/40"
+                      }`}>
+                      <div className={`text-lg font-black font-mono ${
+                        wealthDays === w.days ? "text-yellow-300" : "text-slate-400"
+                      }`}>{w.rate}%</div>
+                      <div className="text-[10px] text-slate-500">{w.label}</div>
+                      <div className="text-[9px] text-slate-600 font-mono">
+                        {(w.rate / w.days).toFixed(3)}%/day
+                      </div>
+                      <div className={`text-[8px] uppercase tracking-wider mt-0.5 font-bold leading-tight ${
+                        wealthDays === w.days ? "text-yellow-500" : "text-slate-600"
+                      }`}>{w.tag}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Amount selection */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {WEALTH_QUICK_AMOUNTS.filter((q) => q <= tokens).map((q) => (
+                    <button key={q} onClick={() => setWealthAmount(q)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                        wealthAmount === q ? "bg-yellow-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                      }`}>
+                      {q >= 1000000 ? `${(q / 1000000).toFixed(0)}M` : q >= 1000 ? `${(q / 1000).toFixed(0)}K` : q}
+                    </button>
+                  ))}
+                </div>
+                <input type="number" value={wealthAmount}
+                  onChange={(e) => setWealthAmount(Math.max(1, Number(e.target.value)))}
+                  min={500} max={3000000}
+                  className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
+
+                {/* Projection */}
+                <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-[10px] text-slate-500">Daily Yield</div>
+                    <div className="text-sm font-black text-yellow-400 font-mono">
+                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / selectedWealthOpt.days / 100).toLocaleString()} SVN
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500">Total Return</div>
+                    <div className="text-sm font-black text-emerald-300 font-mono">
+                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / 100).toLocaleString()} SVN
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500">Payout</div>
+                    <div className="text-sm font-bold text-slate-300 font-mono">
+                      {Math.floor(wealthAmount * (1 + selectedWealthOpt.rate / 100)).toLocaleString()} SVN
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => wealthApi("buy_investment", { investmentDays: wealthDays })}
+                  disabled={loading || wealthAmount > tokens || wealthAmount < 500 || wealthAmount > 3000000}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-amber-600 hover:from-yellow-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
+                  👑 Invest {wealthAmount.toLocaleString()} SVN in {selectedWealthOpt.tag}
+                  <span className="block text-[10px] opacity-70 font-normal">
+                    {selectedWealthOpt.rate}% over {selectedWealthOpt.days} days · Guaranteed return · Claim daily
+                  </span>
                 </button>
-              ))}
-            </div>
-            <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-              min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
-                className="py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
-                💎 Buy {amount}
-                <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
-              </button>
-              <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
-                className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
-                💰 Sell {amount}
-                <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString()} ₡</span>
-              </button>
+                <p className="text-[10px] text-slate-600 text-center">
+                  Min 500 SVN · Max 3,000,000 SVN per issuance · Up to 5 concurrent · Funds from Sovereign balance
+                </p>
+              </div>
+            )}
+
+            {wealthInvestments.length >= 5 && (
+              <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-center">
+                <div className="text-xs text-red-400 font-bold">Maximum 5 active positions reached</div>
+                <div className="text-[10px] text-slate-500 mt-1">Collect a matured investment to open a new position.</div>
+              </div>
+            )}
+
+            {/* Sovereign exchange */}
+            <div className="border-t border-yellow-900/20 pt-4 mt-2 space-y-3">
+              <div className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Sovereign Exchange</div>
+              <div className="rounded-lg bg-slate-900/30 border border-slate-800/30 p-2.5">
+                <p className="text-[10px] text-slate-500">Convert credits to Sovereigns to invest. The buy/sell spread acts as a commitment fee — long-term investments recoup the difference through yield.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Buy Rate</div>
+                  <div className="text-lg font-bold text-yellow-300 font-mono">{buyRate} ₡</div>
+                  <div className="text-[10px] text-slate-600">per Sovereign</div>
+                </div>
+                <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Sell Rate</div>
+                  <div className="text-lg font-bold text-amber-300 font-mono">{sellRate} ₡</div>
+                  <div className="text-[10px] text-slate-600">per Sovereign</div>
+                </div>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {[1, 5, 10, 25, 50].map((q) => (
+                  <button key={q} onClick={() => setAmount(q)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      amount === q ? "bg-yellow-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                    }`}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
+                  className="py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
+                  🪙 Buy {amount.toLocaleString()} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
+                </button>
+                <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
+                  className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
+                  💰 Sell {amount.toLocaleString()} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString()} ₡</span>
+                </button>
+              </div>
             </div>
           </>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

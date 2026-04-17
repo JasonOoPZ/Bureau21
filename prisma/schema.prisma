@@ -89,10 +89,27 @@ model PilotState {
   studies           StudyProgress[]
   gymLogs           GymLog[]
   hydroponics       HydroponicsData?
+  wealthInvestments WealthInvestment[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WealthInvestment {
+  id            String   @id @default(cuid())
+  pilotId       String
+  name          String
+  amount        Int
+  rate          Float
+  days          Int
+  createdAt     DateTime @default(now())
+  maturesAt     DateTime
+  lastClaimedAt DateTime
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
 }
 
 model BattleLog {

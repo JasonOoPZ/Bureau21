@@ -44,7 +44,7 @@ const PATCH_NOTES: PatchNote[] = [
     entries: [
       "Battle Arena — turn-based combat with 5 NPC bots (Scrap Drone → Syndicate Hunter).",
       "Gym — 5 training types with motivation cost, daily regen, and streak bonuses.",
-      "Bank — credit/token exchange at defined buy/sell rates.",
+      "Bank — credit/Sovereign exchange at defined buy/sell rates.",
       "Armory — item shop with T1/T2/T3 catalog and credit deduction.",
       "House (Character Sheet) — full pilot portrait, stat bars, loadout, and battle history.",
     ],
@@ -56,7 +56,7 @@ const PATCH_NOTES: PatchNote[] = [
     entries: [
       "PilotState: added combat stats (strength, speed, endurance, panic, confidence, LF, atkSplit).",
       "PilotState: added gym fields (gymStreak, lastGymAt, motivation, lastMotivationAt).",
-      "PilotState: added economy fields (tokens).",
+      "PilotState: added economy fields (Sovereigns).",
       "BattleLog model added. Combat results now persisted to database.",
       "Battle engine: ATK/DEF formula, crit system (7%), equipment bonuses.",
     ],

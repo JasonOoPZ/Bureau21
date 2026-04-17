@@ -240,8 +240,8 @@ export default async function HousePage() {
 
                   <span className="font-semibold text-slate-400">Credits:</span>
                   <span className="text-amber-300">{pilot.credits.toLocaleString()}</span>
-                  <span className="font-semibold text-slate-400">Tokens:</span>
-                  <span className="text-purple-300">{pilot.tokens}</span>
+                  <span className="font-semibold text-slate-400">Sovereigns:</span>
+                  <span className="text-purple-300">{pilot.tokens.toLocaleString()}</span>
 
                   <span className="font-semibold text-slate-400">Account Age:</span>
                   <span className="text-slate-200">{accountAgeDays} days</span>
@@ -397,8 +397,8 @@ export default async function HousePage() {
                     </p>
                   </div>
                   <div className="rounded border border-purple-900/40 bg-purple-950/20 p-3 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-purple-500">Tokens</p>
-                    <p className="mt-1 text-2xl font-bold text-purple-300">{pilot.tokens}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-purple-500">Sovereigns</p>
+                    <p className="mt-1 text-2xl font-bold text-purple-300">{pilot.tokens.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">

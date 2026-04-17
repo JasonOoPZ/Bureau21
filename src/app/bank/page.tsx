@@ -12,7 +12,7 @@ export default async function BankPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const [pilot, global, ventureCard] = await Promise.all([
+  const [pilot, global, ventureCard, wealthInvestments] = await Promise.all([
     getOrCreatePilotState(session.user.id, session.user.name),
     prisma.gameGlobal.findUnique({ where: { id: "singleton" } }),
     prisma.inventoryItem.findFirst({
@@ -21,6 +21,10 @@ export default async function BankPage() {
         name: "Centurion Venture Card",
         type: "special",
       },
+    }),
+    prisma.wealthInvestment.findMany({
+      where: { pilot: { userId: session.user.id } },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -42,7 +46,7 @@ export default async function BankPage() {
               <div>
                 <h1 className="text-xl font-black uppercase tracking-[0.15em] text-amber-300">Bureau Bank</h1>
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                  Secure vault · Loans · Bonds · Token exchange · Pilot transfers
+                  Secure vault · Loans · Bonds · Sovereign exchange · Pilot transfers
                 </p>
               </div>
             </div>
@@ -64,6 +68,16 @@ export default async function BankPage() {
             sellRate={GAME_CONSTANTS.TOKEN_SELL_RATE}
             initialBankTreasury={global?.bankTreasury ?? 0}
             hasVentureCard={!!ventureCard}
+            initialWealthInvestments={wealthInvestments.map((inv) => ({
+              id: inv.id,
+              name: inv.name,
+              amount: inv.amount,
+              rate: inv.rate,
+              days: inv.days,
+              createdAt: inv.createdAt.toISOString(),
+              maturesAt: inv.maturesAt.toISOString(),
+              lastClaimedAt: inv.lastClaimedAt.toISOString(),
+            }))}
           />
         </div>
       </main>

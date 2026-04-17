@@ -49,7 +49,7 @@ const DISTRICTS: District[] = [
     locations: [
       { name: "Armory", href: "/station/armory", description: "Weapons, shields, and engines for sale.", status: "live" },
       { name: "Bazaar", href: "/station/bazaar", description: "Player-driven marketplace and loot exchange.", status: "live" },
-      { name: "Bank", href: "/bank", description: "Deposit credits, earn interest, manage tokens.", status: "live" },
+      { name: "Bank", href: "/bank", description: "Deposit credits, earn interest, manage Sovereigns.", status: "live" },
       { name: "Fabrication", href: "/station/fabrication", description: "Craft and upgrade equipment from salvage.", status: "live" },
       { name: "Inventory", href: "/inventory", description: "Manage your gear and equipment loadout.", status: "live" },
       { name: "Pawn Shop", href: "/primaris/pawn-shop", description: "Sell unwanted gear for quick credits.", status: "live" },

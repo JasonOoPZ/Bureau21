@@ -97,7 +97,7 @@ export default async function AccountPage() {
                 { label: "Level", value: pilot.level },
                 { label: "XP", value: pilot.xp.toLocaleString() },
                 { label: "Credits", value: `${pilot.credits} cr` },
-                { label: "Tokens", value: pilot.tokens },
+                { label: "Sovereigns", value: pilot.tokens },
                 { label: "Inventory", value: `${inventoryCount}/20` },
                 { label: "Kill Count", value: pilot.kills ?? 0 },
               ].map(({ label, value }) => (
