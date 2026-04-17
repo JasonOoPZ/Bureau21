@@ -34,7 +34,10 @@ const TYPE_ICONS: Record<string, string> = {
   special: "🃏",
 };
 
-function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: number }) {
+function BonusLabel({ bonusType, bonusAmt, itemName }: { bonusType: string; bonusAmt: number; itemName?: string }) {
+  // Name-specific overrides
+  if (itemName === "Ring Of Power") return <span className="text-emerald-400 text-[10px]">Exclusive Perks</span>;
+
   const labels: Record<string, string> = {
     credits: `+${bonusAmt}% credits`,
     xp: `+${bonusAmt}% XP`,
@@ -43,6 +46,7 @@ function BonusLabel({ bonusType, bonusAmt }: { bonusType: string; bonusAmt: numb
     atk: `+${bonusAmt} ATK`,
     def: `+${bonusAmt} DEF`,
     access: "Exclusive Access",
+    yield: "Max Yield",
   };
   return <span className="text-emerald-400 text-[10px]">{labels[bonusType] ?? bonusType}</span>;
 }
@@ -152,7 +156,7 @@ export function InventoryClient({
               >
                 <span className="text-sm">{TYPE_ICONS[item.type]}</span>
                 <span className="text-[11px] text-emerald-200">{item.name}</span>
-                <BonusLabel bonusType={item.bonusType} bonusAmt={item.bonusAmt} />
+                <BonusLabel bonusType={item.bonusType} bonusAmt={item.bonusAmt} itemName={item.name} />
               </div>
             ))}
           </div>
@@ -204,7 +208,7 @@ export function InventoryClient({
                     <p className="text-[10px] capitalize text-slate-500">
                       {item.type} · {TIER_LABELS[item.tier] ?? `T${item.tier}`}
                     </p>
-                    <BonusLabel bonusType={item.bonusType} bonusAmt={item.bonusAmt} />
+                    <BonusLabel bonusType={item.bonusType} bonusAmt={item.bonusAmt} itemName={item.name} />
                   </div>
                 </div>
 
@@ -279,6 +283,14 @@ const SPECIAL_ITEM_INFO: Record<string, { description: string; icon: string }> =
   "God Card": {
     description: "A mythic obsidian card pulsing with unstable energy. Bypasses all level and stat requirements for equipment and grants unrestricted access to every sector and facility aboard the station. Rumored to be forged in the core of a collapsed star.",
     icon: "🃏",
+  },
+  "Nexus Limitless Yield": {
+    description: "A radiant crystalline data-shard humming with quantum resonance. Removes the maximum SVN cap on all Wealth Management investments, allowing unlimited position sizes. Issued by the Bureau's inner council.",
+    icon: "♾️",
+  },
+  "Ring Of Power": {
+    description: "A single band of dark metal etched with shifting glyphs. The holder may equip any weapon, armor, or ship regardless of level, clearance, or stat requirements. There is only one.",
+    icon: "💍",
   },
 };
 

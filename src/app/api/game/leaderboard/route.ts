@@ -42,6 +42,7 @@ export async function GET(request: Request) {
   const leaderboard = pilots.map((p, i) => ({
     rank: i + 1,
     callsign: p.callsign,
+    userId: p.userId,
     level: p.level,
     xp: p.xp,
     credits: p.credits,

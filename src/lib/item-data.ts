@@ -97,6 +97,14 @@ export const SPECIAL_ITEMS = {
     bonusAmt: 0,
     description: "A mythic obsidian card pulsing with unstable energy. Bypasses all level and stat requirements for equipment and grants unrestricted access to every sector and facility aboard the station.",
   },
+  RING_OF_POWER: {
+    name: "Ring Of Power",
+    type: "special" as ItemType,
+    tier: 5,
+    bonusType: "access" as BonusType,
+    bonusAmt: 0,
+    description: "A single band of dark metal etched with shifting glyphs. The holder may equip any weapon, armor, or ship regardless of level, clearance, or stat requirements. There is only one.",
+  },
 };
 
 import { prisma } from "@/lib/prisma";
@@ -111,4 +119,29 @@ export async function pilotHasGodCard(userId: string): Promise<boolean> {
     select: { id: true },
   });
   return !!card;
+}
+
+export async function pilotHasRingOfPower(userId: string): Promise<boolean> {
+  const ring = await prisma.inventoryItem.findFirst({
+    where: {
+      pilot: { userId },
+      name: SPECIAL_ITEMS.RING_OF_POWER.name,
+      type: "special",
+    },
+    select: { id: true },
+  });
+  return !!ring;
+}
+
+/** Returns true if pilot has God Card OR Ring Of Power — bypasses all equip requirements */
+export async function pilotBypassesEquipRequirements(userId: string): Promise<boolean> {
+  const bypass = await prisma.inventoryItem.findFirst({
+    where: {
+      pilot: { userId },
+      type: "special",
+      name: { in: [SPECIAL_ITEMS.GOD_CARD.name, SPECIAL_ITEMS.RING_OF_POWER.name] },
+    },
+    select: { id: true },
+  });
+  return !!bypass;
 }

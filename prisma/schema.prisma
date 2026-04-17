@@ -109,6 +109,7 @@ model WealthInvestment {
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 
+  @@unique([pilotId, days])
   @@index([pilotId])
 }
 

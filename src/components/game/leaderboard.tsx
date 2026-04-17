@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PilotHoverCard } from "@/components/game/pilot-hover-card";
 
 type LeaderboardEntry = {
   rank: number;
   callsign: string;
+  userId: string;
   level: number;
   xp: number;
   credits: number;
@@ -125,9 +127,12 @@ export function Leaderboard({ compact = false }: LeaderboardProps) {
                     )}
                   </td>
                   <td className="py-2.5 pr-3">
-                    <span className={entry.isYou ? "text-cyan-300 font-semibold" : "text-slate-200"}>
+                    <PilotHoverCard
+                      userId={entry.userId}
+                      className={entry.isYou ? "text-cyan-300 font-semibold underline decoration-cyan-700 hover:decoration-cyan-400 cursor-pointer" : "text-slate-200 underline decoration-slate-700 hover:text-cyan-300 hover:decoration-cyan-600 cursor-pointer"}
+                    >
                       {entry.callsign}
-                    </span>
+                    </PilotHoverCard>
                     {entry.isYou && (
                       <span className="ml-1.5 rounded border border-cyan-500/40 px-1 py-0.5 text-[9px] uppercase tracking-[0.1em] text-cyan-400">
                         You

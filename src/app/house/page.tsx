@@ -192,7 +192,7 @@ export default async function HousePage() {
                 </p>
                 {[
                   { label: "Weapon", item: weaponItem },
-                  { label: "Shield", item: shieldItem },
+                  { label: "Armor", item: armorItem },
                   { label: "Engine", item: engineItem },
                 ].map(({ label, item }) => (
                   <div

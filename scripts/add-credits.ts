@@ -18,7 +18,7 @@ async function main() {
 
   const updated = await prisma.pilotState.update({
     where: { id: pilot.id },
-    data: { credits: 1690000 },
+    data: { credits: 1000000000 },
   });
   console.log(`Credits updated: ${pilot.credits} → ${updated.credits}`);
 }

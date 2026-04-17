@@ -151,10 +151,10 @@ export default async function LobbyPage() {
               <p className="mt-1 text-sm text-cyan-300">{gameTime}</p>
             </section>
 
-            <Link href="/chat" className="block rounded-md border border-slate-800 bg-[#0a0d11] p-3 transition hover:border-cyan-900/50 hover:bg-[#0b1015]">
+            <div className="block rounded-md border border-slate-800 bg-[#0a0d11] p-3 transition hover:border-cyan-900/50 hover:bg-[#0b1015]">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs uppercase tracking-[0.15em] text-slate-500">Town Hall</span>
-                <span className="text-[11px] text-cyan-600">[open chat →]</span>
+                <Link href="/chat" className="text-[11px] text-cyan-600 hover:text-cyan-400">[open chat →]</Link>
               </div>
               <div className="space-y-1 text-[12px] text-slate-300">
                 {recentChats.length === 0 ? (
@@ -162,12 +162,12 @@ export default async function LobbyPage() {
                 ) : (
                   recentChats.reverse().map((m) => (
                     <p key={m.id} className="truncate">
-                      <span className="text-cyan-300">{m.author.name ?? "Unknown"}</span>: {m.body}
+                      <Link href={`/pilot/${m.author.id}`} className="text-cyan-300 underline decoration-cyan-800 hover:decoration-cyan-400">{m.author.name ?? "Unknown"}</Link>: {m.body}
                     </p>
                   ))
                 )}
               </div>
-            </Link>
+            </div>
 
             <Leaderboard compact />
           </aside>

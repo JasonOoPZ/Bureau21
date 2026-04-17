@@ -1,6 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// ── Inline SVG Graphics ────────────────────────────────────────────
+
+/* Large vault door illustration for the vault tab */
+const VaultDoorGraphic = () => (
+  <svg viewBox="0 0 120 120" fill="none" className="w-20 h-20 flex-shrink-0">
+    <circle cx="60" cy="60" r="56" stroke="url(#vaultGrad)" strokeWidth="3" fill="#0e1a24"/>
+    <circle cx="60" cy="60" r="48" stroke="#22d3ee" strokeWidth="1.5" strokeDasharray="6 4" opacity="0.4"/>
+    <circle cx="60" cy="60" r="38" stroke="#22d3ee" strokeWidth="1" strokeDasharray="3 6" opacity="0.25"/>
+    <circle cx="60" cy="60" r="16" stroke="#22d3ee" strokeWidth="2.5" fill="#164e63" fillOpacity="0.3"/>
+    <path d="M60 32V28M60 92V88M32 60H28M92 60H88" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+    <path d="M60 48V72M48 60H72" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M42 42l-3-3M78 42l3-3M42 78l-3 3M78 78l3 3" stroke="#22d3ee" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+    <defs><linearGradient id="vaultGrad" x1="0" y1="0" x2="120" y2="120"><stop stopColor="#22d3ee" stopOpacity="0.8"/><stop offset="1" stopColor="#0891b2" stopOpacity="0.3"/></linearGradient></defs>
+  </svg>
+);
+
+/* Transfer arrows graphic */
+const TransferGraphic = () => (
+  <svg viewBox="0 0 120 80" fill="none" className="w-20 h-14 flex-shrink-0">
+    <path d="M15 28H95" stroke="#a855f7" strokeWidth="2" strokeDasharray="4 3" opacity="0.3"/>
+    <path d="M15 52H95" stroke="#a855f7" strokeWidth="2" strokeDasharray="4 3" opacity="0.3"/>
+    <path d="M20 28l75 0" stroke="url(#tfGrad1)" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M88 20l10 8-10 8" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#c084fc" fillOpacity="0.15"/>
+    <path d="M100 52l-75 0" stroke="url(#tfGrad2)" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M32 44l-10 8 10 8" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#c084fc" fillOpacity="0.15"/>
+    <circle cx="60" cy="40" r="10" fill="#7c3aed" fillOpacity="0.15" stroke="#a855f7" strokeWidth="1.5"/>
+    <text x="60" y="44" textAnchor="middle" fill="#c084fc" fontSize="11" fontWeight="bold">₡</text>
+    <defs>
+      <linearGradient id="tfGrad1" x1="20" y1="28" x2="95" y2="28"><stop stopColor="#7c3aed" stopOpacity="0.2"/><stop offset="1" stopColor="#c084fc"/></linearGradient>
+      <linearGradient id="tfGrad2" x1="100" y1="52" x2="25" y2="52"><stop stopColor="#7c3aed" stopOpacity="0.2"/><stop offset="1" stopColor="#c084fc"/></linearGradient>
+    </defs>
+  </svg>
+);
+
+/* Loan credit card graphic */
+const LoanGraphic = () => (
+  <svg viewBox="0 0 120 80" fill="none" className="w-20 h-14 flex-shrink-0">
+    <rect x="10" y="10" width="100" height="60" rx="8" fill="url(#loanGrad)" stroke="#f97316" strokeWidth="1.5"/>
+    <rect x="10" y="26" width="100" height="10" fill="#f97316" fillOpacity="0.3"/>
+    <rect x="20" y="46" width="30" height="4" rx="2" fill="#fb923c" fillOpacity="0.5"/>
+    <rect x="20" y="54" width="50" height="3" rx="1.5" fill="#fb923c" fillOpacity="0.3"/>
+    <circle cx="90" cy="52" r="8" fill="#f97316" fillOpacity="0.15" stroke="#fb923c" strokeWidth="1"/>
+    <circle cx="82" cy="52" r="8" fill="#f97316" fillOpacity="0.1" stroke="#fb923c" strokeWidth="1"/>
+    <defs><linearGradient id="loanGrad" x1="10" y1="10" x2="110" y2="70"><stop stopColor="#431407"/><stop offset="1" stopColor="#1c0a00"/></linearGradient></defs>
+  </svg>
+);
+
+/* Bond chart graphic */
+const BondGraphic = () => (
+  <svg viewBox="0 0 120 80" fill="none" className="w-20 h-14 flex-shrink-0">
+    <path d="M15 65V20M15 65H110" stroke="#10b981" strokeWidth="1" opacity="0.3"/>
+    <path d="M15 60l15-5 15 3 15-12 15-8 15-15 15-3" stroke="url(#bondGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M15 60l15-5 15 3 15-12 15-8 15-15 15-3V65H15Z" fill="url(#bondFill)" opacity="0.15"/>
+    <circle cx="105" cy="20" r="5" fill="#10b981" fillOpacity="0.2" stroke="#34d399" strokeWidth="1.5"/>
+    <circle cx="105" cy="20" r="2" fill="#34d399"/>
+    {[25, 40, 55, 70, 85].map((x) => (
+      <line key={x} x1={x} y1="65" x2={x} y2="62" stroke="#10b981" strokeWidth="0.5" opacity="0.3"/>
+    ))}
+    <defs>
+      <linearGradient id="bondGrad" x1="15" y1="60" x2="105" y2="20"><stop stopColor="#059669"/><stop offset="1" stopColor="#34d399"/></linearGradient>
+      <linearGradient id="bondFill" x1="60" y1="20" x2="60" y2="65"><stop stopColor="#34d399"/><stop offset="1" stopColor="#10b981" stopOpacity="0"/></linearGradient>
+    </defs>
+  </svg>
+);
+
+/* Wealth crown graphic */
+const WealthGraphic = () => (
+  <svg viewBox="0 0 120 80" fill="none" className="w-20 h-14 flex-shrink-0">
+    <path d="M25 55l10-30 15 15 10-20 10 20 15-15 10 30z" fill="url(#crownGrad)" stroke="#eab308" strokeWidth="1.5" strokeLinejoin="round"/>
+    <rect x="22" y="55" width="76" height="8" rx="2" fill="url(#crownBase)" stroke="#eab308" strokeWidth="1"/>
+    <circle cx="60" cy="38" r="4" fill="#fde047" fillOpacity="0.4" stroke="#eab308" strokeWidth="1"/>
+    <circle cx="40" cy="43" r="2.5" fill="#fde047" fillOpacity="0.3"/>
+    <circle cx="80" cy="43" r="2.5" fill="#fde047" fillOpacity="0.3"/>
+    <defs>
+      <linearGradient id="crownGrad" x1="60" y1="25" x2="60" y2="55"><stop stopColor="#854d0e" stopOpacity="0.6"/><stop offset="1" stopColor="#422006" stopOpacity="0.3"/></linearGradient>
+      <linearGradient id="crownBase" x1="22" y1="55" x2="98" y2="63"><stop stopColor="#854d0e"/><stop offset="1" stopColor="#713f12"/></linearGradient>
+    </defs>
+  </svg>
+);
 
 type Tab = "vault" | "transfer" | "loan" | "bond" | "wealth";
 
@@ -18,14 +98,14 @@ const BOND_OPTIONS = [
 const QUICK_AMOUNTS = [5000, 25000, 50000, 250000, 500000];
 
 const WEALTH_OPTIONS = [
-  { days: 7,   rate: 5,   label: "7 Days",   tag: "Treasury Notes",       desc: "Government-backed short-term securities" },
-  { days: 14,  rate: 10,  label: "14 Days",  tag: "Municipal Bonds",      desc: "Infrastructure & municipal development" },
-  { days: 30,  rate: 18,  label: "30 Days",  tag: "Blue-Chip Real Estate", desc: "Prime commercial property fund" },
-  { days: 45,  rate: 28,  label: "45 Days",  tag: "Private Credit",       desc: "Direct lending to enterprise borrowers" },
-  { days: 60,  rate: 38,  label: "60 Days",  tag: "Hedge Fund LP",        desc: "Multi-strategy absolute return fund" },
-  { days: 90,  rate: 50,  label: "90 Days",  tag: "Private Equity",       desc: "Leveraged buyout & growth equity" },
-  { days: 180, rate: 65,  label: "180 Days", tag: "Venture Capital",      desc: "Early-stage tech & biotech portfolio" },
-  { days: 365, rate: 90,  label: "365 Days", tag: "Sovereign Wealth Fund", desc: "Diversified sovereign-grade portfolio" },
+  { days: 7,   rate: 2,    label: "7 Days",   tag: "Treasury Notes",       desc: "Government-backed short-term securities" },
+  { days: 14,  rate: 5,    label: "14 Days",  tag: "Municipal Bonds",      desc: "Infrastructure & municipal development" },
+  { days: 30,  rate: 13,   label: "30 Days",  tag: "Blue-Chip Real Estate", desc: "Prime commercial property fund" },
+  { days: 45,  rate: 22,   label: "45 Days",  tag: "Private Credit",       desc: "Direct lending to enterprise borrowers" },
+  { days: 60,  rate: 33,   label: "60 Days",  tag: "Hedge Fund LP",        desc: "Multi-strategy absolute return fund" },
+  { days: 90,  rate: 55,   label: "90 Days",  tag: "Private Equity",       desc: "Leveraged buyout & growth equity" },
+  { days: 180, rate: 125,  label: "180 Days", tag: "Venture Capital",      desc: "Early-stage tech & biotech portfolio" },
+  { days: 365, rate: 275,  label: "365 Days", tag: "Sovereign Wealth Fund", desc: "Diversified sovereign-grade portfolio" },
 ];
 
 const WEALTH_QUICK_AMOUNTS = [500, 1000, 5000, 25000, 100000, 500000];
@@ -57,6 +137,7 @@ interface Props {
   sellRate: number;
   initialBankTreasury: number;
   hasVentureCard: boolean;
+  hasLimitlessCard: boolean;
   initialWealthInvestments: WealthInvestmentData[];
 }
 
@@ -65,7 +146,7 @@ export function BankClient({
   initialLoanAmount, initialLoanCreatedAt,
   initialBondAmount, initialBondRate, initialBondDays,
   initialBondMaturesAt, initialBondCreatedAt, initialBondLastClaimedAt,
-  buyRate, sellRate, initialBankTreasury, hasVentureCard,
+  buyRate, sellRate, initialBankTreasury, hasVentureCard, hasLimitlessCard: initialHasLimitlessCard,
   initialWealthInvestments,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
@@ -88,6 +169,19 @@ export function BankClient({
   const [wealthInvestments, setWealthInvestments] = useState<WealthInvestmentData[]>(initialWealthInvestments);
   const [wealthDays, setWealthDays] = useState(30);
   const [wealthAmount, setWealthAmount] = useState(500);
+  const [hasLimitlessCard, setHasLimitlessCard] = useState(initialHasLimitlessCard);
+
+  // Verify limitless card status on mount (in case SSR prop was stale)
+  useEffect(() => {
+    fetch("/api/game/wealth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check_status" }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.hasLimitlessCard === "boolean") setHasLimitlessCard(d.hasLimitlessCard); })
+      .catch(() => {});
+  }, []);
 
   const api = async (action: string, extra: Record<string, unknown> = {}) => {
     setLoading(true);
@@ -137,6 +231,7 @@ export function BankClient({
       if (data.creditsBank != null) setBank(data.creditsBank);
       if (data.tokens != null) setTokens(data.tokens);
       if (data.investments) setWealthInvestments(data.investments);
+      if (typeof data.hasLimitlessCard === "boolean") setHasLimitlessCard(data.hasLimitlessCard);
       return data;
     } catch {
       setMsg({ text: "Connection error.", ok: false });
@@ -146,12 +241,12 @@ export function BankClient({
     }
   };
 
-  const tabs: { key: Tab; label: string; icon: string; color: string }[] = [
-    { key: "vault",    label: "Vault",    icon: "🔒", color: "from-cyan-500/20 to-cyan-900/10 border-cyan-800/40" },
-    { key: "transfer", label: "Transfer", icon: "⚡", color: "from-purple-500/20 to-purple-900/10 border-purple-800/40" },
-    { key: "loan",     label: "Loans",    icon: "💳", color: "from-orange-500/20 to-orange-900/10 border-orange-800/40" },
-    { key: "bond",     label: "Bonds",    icon: "📊", color: "from-emerald-500/20 to-emerald-900/10 border-emerald-800/40" },
-    ...(hasVentureCard ? [{ key: "wealth" as Tab, label: "Wealth", icon: "👑", color: "from-yellow-500/20 to-yellow-900/10 border-yellow-800/40" }] : []),
+  const tabDefs: { key: Tab; label: string; icon: string; color: string; accent: string }[] = [
+    { key: "vault",    label: "Vault",    icon: "🔒", color: "from-cyan-500/20 to-cyan-900/10 border-cyan-800/40", accent: "bg-cyan-400" },
+    { key: "transfer", label: "Transfer", icon: "⚡", color: "from-purple-500/20 to-purple-900/10 border-purple-800/40", accent: "bg-purple-400" },
+    { key: "loan",     label: "Loans",    icon: "💳", color: "from-orange-500/20 to-orange-900/10 border-orange-800/40", accent: "bg-orange-400" },
+    { key: "bond",     label: "Bonds",    icon: "📊", color: "from-emerald-500/20 to-emerald-900/10 border-emerald-800/40", accent: "bg-emerald-400" },
+    ...(hasVentureCard ? [{ key: "wealth" as Tab, label: "Wealth", icon: "👑", color: "from-yellow-500/20 to-yellow-900/10 border-yellow-800/40", accent: "bg-yellow-400" }] : []),
   ];
 
   const bondMatures = bondMaturesAt ? new Date(bondMaturesAt) : null;
@@ -166,35 +261,49 @@ export function BankClient({
   let accruedDays = 0;
   if (bondAmount > 0 && activeBondDays > 0 && bondCreatedDate && bondLastClaimedDate) {
     const dailyRate = bondRate / activeBondDays;
-    const totalDaysPassed = Math.min(Math.floor((now.getTime() - bondCreatedDate.getTime()) / 86400000), activeBondDays);
-    const daysAlreadyClaimed = Math.floor((bondLastClaimedDate.getTime() - bondCreatedDate.getTime()) / 86400000);
-    accruedDays = Math.max(0, totalDaysPassed - daysAlreadyClaimed);
+    // Yield accrues at midnight UTC — first yield the day AFTER creation
+    const accrualStart = Math.floor(bondCreatedDate.getTime() / 86_400_000) + 1;
+    const nowDay = Math.floor(now.getTime() / 86_400_000);
+    const claimedDay = Math.max(Math.floor(bondLastClaimedDate.getTime() / 86_400_000), accrualStart - 1);
+    const totalDaysPassed = Math.min(Math.max(0, nowDay - accrualStart + 1), activeBondDays);
+    const daysClaimed = Math.max(0, claimedDay - accrualStart + 1);
+    accruedDays = Math.max(0, totalDaysPassed - daysClaimed);
     accruedYield = Math.floor(bondAmount * (dailyRate / 100) * accruedDays);
   }
 
-  const activeTab = tabs.find((t) => t.key === tab)!;
+  const activeTab = tabDefs.find((t) => t.key === tab)!;
 
   return (
     <div className="space-y-4">
       {/* ── Hero Balance Cards ─────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="relative overflow-hidden rounded-xl border border-amber-800/30 bg-gradient-to-br from-amber-950/40 via-[#0f0d08] to-[#0a0d11] p-4">
-          <div className="absolute -top-3 -right-3 text-5xl opacity-10">💰</div>
-          <div className="text-[9px] uppercase tracking-[0.2em] text-amber-600/80 font-semibold">On Hand</div>
+        <div className="relative overflow-hidden rounded-xl border border-amber-700/40 bg-gradient-to-br from-amber-950/60 to-[#0a0d11] p-4">
+          <svg className="absolute -right-3 -bottom-3 w-16 h-16 text-amber-500 opacity-20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M14.5 9.5A3 3 0 0012 8.5c-1.7 0-3 1.3-3 3s1.3 3 3 3a3 3 0 002.5-1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M12 6.5v1M12 16.5v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <div className="text-[9px] uppercase tracking-[0.2em] text-amber-500 font-semibold">On Hand</div>
           <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString()}</div>
-          <div className="text-[10px] text-amber-700 mt-0.5">₡ credits</div>
+          <div className="text-[10px] text-amber-600 mt-0.5">₡ credits</div>
         </div>
-        <div className="relative overflow-hidden rounded-xl border border-cyan-800/30 bg-gradient-to-br from-cyan-950/40 via-[#080d0f] to-[#0a0d11] p-4">
-          <div className="absolute -top-3 -right-3 text-5xl opacity-10">🏦</div>
-          <div className="text-[9px] uppercase tracking-[0.2em] text-cyan-600/80 font-semibold">In Vault</div>
+        <div className="relative overflow-hidden rounded-xl border border-cyan-700/40 bg-gradient-to-br from-cyan-950/60 to-[#0a0d11] p-4">
+          <svg className="absolute -right-2 -bottom-2 w-16 h-16 text-cyan-400 opacity-20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z" stroke="currentColor" strokeWidth="1.5"/>
+            <rect x="10" y="10" width="4" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+            <circle cx="12" cy="12" r="0.8" fill="currentColor"/>
+          </svg>
+          <div className="text-[9px] uppercase tracking-[0.2em] text-cyan-500 font-semibold">In Vault</div>
           <div className="text-2xl font-black text-cyan-300 font-mono mt-1">{bank.toLocaleString()}</div>
-          <div className="text-[10px] text-cyan-700 mt-0.5">₡ secured</div>
+          <div className="text-[10px] text-cyan-600 mt-0.5">₡ secured</div>
         </div>
-        <div className="relative overflow-hidden rounded-xl border border-violet-800/30 bg-gradient-to-br from-violet-950/40 via-[#0d080f] to-[#0a0d11] p-4">
-          <div className="absolute -top-3 -right-3 text-5xl opacity-10">🪙</div>
-          <div className="text-[9px] uppercase tracking-[0.2em] text-violet-600/80 font-semibold">Sovereigns</div>
+        <div className="relative overflow-hidden rounded-xl border border-violet-700/40 bg-gradient-to-br from-violet-950/60 to-[#0a0d11] p-4">
+          <svg className="absolute -right-2 -bottom-2 w-16 h-16 text-violet-400 opacity-20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2l2.5 6.5H22l-6 4.5 2.5 7L12 16l-6.5 4 2.5-7-6-4.5h7.5L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+          <div className="text-[9px] uppercase tracking-[0.2em] text-violet-500 font-semibold">Sovereigns</div>
           <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString()}</div>
-          <div className="text-[10px] text-violet-700 mt-0.5">SVN</div>
+          <div className="text-[10px] text-violet-600 mt-0.5">SVN</div>
         </div>
       </div>
 
@@ -236,10 +345,10 @@ export function BankClient({
       )}
 
       {/* ── Tab Navigation ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {tabs.map((t) => (
+      <div className={`grid gap-1.5 ${tabDefs.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        {tabDefs.map((t) => (
           <button key={t.key} onClick={() => { setTab(t.key); setMsg(null); }}
-            className={`relative rounded-xl border py-3 text-center transition-all duration-200 ${
+            className={`relative rounded-xl border py-3 text-center transition-all duration-200 overflow-hidden ${
               tab === t.key
                 ? `bg-gradient-to-b ${t.color} border-opacity-100 scale-[1.02] shadow-lg`
                 : "bg-[#0a0d11] border-slate-800/50 hover:border-slate-700 hover:bg-slate-900/50"
@@ -248,6 +357,7 @@ export function BankClient({
             <div className={`text-[10px] font-bold uppercase tracking-wider ${
               tab === t.key ? "text-slate-200" : "text-slate-500"
             }`}>{t.label}</div>
+            {tab === t.key && <div className={`absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full ${t.accent} bank-glow-line`}/>}
           </button>
         ))}
       </div>
@@ -270,11 +380,15 @@ export function BankClient({
         {/* ── Vault ─────────────────────────────────────────────────── */}
         {tab === "vault" && (
           <>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">🔒</span>
+            <div className="flex items-center gap-4 mb-3 p-3 rounded-xl bg-cyan-950/30 border border-cyan-900/20">
+              <VaultDoorGraphic />
               <div>
-                <h2 className="text-sm font-bold text-cyan-300 uppercase tracking-wide">Secure Vault</h2>
-                <p className="text-[11px] text-slate-400">Credits in the vault are safe from theft and death.</p>
+                <h2 className="text-base font-black text-cyan-300 uppercase tracking-wide">Secure Vault</h2>
+                <p className="text-[11px] text-slate-400 mt-1">Credits stored in the vault are protected from theft, death penalties, and combat losses.</p>
+                <div className="flex gap-3 mt-2">
+                  <div className="text-[10px]"><span className="text-slate-500">Balance: </span><span className="text-cyan-300 font-mono font-bold">{bank.toLocaleString()} ₡</span></div>
+                  <div className="text-[10px]"><span className="text-slate-500">Withdraw fee: </span><span className="text-red-400 font-mono">2.5%</span></div>
+                </div>
               </div>
             </div>
 
@@ -288,7 +402,7 @@ export function BankClient({
               <div className="flex gap-1.5 flex-wrap">
                 {QUICK_AMOUNTS.map((q) => (
                   <button key={q} onClick={() => setAmount(q)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-cyan-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                     }`}>
                     {q.toLocaleString()}
@@ -298,15 +412,15 @@ export function BankClient({
               <div className="flex gap-1.5 flex-wrap">
                 {[10, 25, 50, 75, 100].map((pct) => (
                   <button key={pct} onClick={() => setAmount(Math.max(1, Math.floor(credits * pct / 100)))}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-900/30 text-cyan-400 hover:bg-cyan-800/40 transition">
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-900/30 text-cyan-400 hover:bg-cyan-800/40 transition">
                     {pct}%
                   </button>
                 ))}
               </div>
               <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2 text-sm text-center font-mono text-slate-200" />
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               <button onClick={() => api("deposit")} disabled={loading || amount > credits || amount < 1}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
                 ⬇️ Deposit {amount.toLocaleString()} ₡
               </button>
             </div>
@@ -321,7 +435,7 @@ export function BankClient({
               <div className="flex gap-1.5 flex-wrap">
                 {QUICK_AMOUNTS.map((q) => (
                   <button key={q} onClick={() => setAmount(q)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-amber-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                     }`}>
                     {q.toLocaleString()}
@@ -331,13 +445,13 @@ export function BankClient({
               <div className="flex gap-1.5 flex-wrap">
                 {[10, 25, 50, 75, 100].map((pct) => (
                   <button key={pct} onClick={() => setAmount(Math.max(1, Math.floor(bank * pct / 100)))}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 transition">
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 transition">
                     {pct}%
                   </button>
                 ))}
               </div>
               <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2 text-sm text-center font-mono text-slate-200" />
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               {amount > 0 && (
                 <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-xs">
                   <div>
@@ -351,9 +465,52 @@ export function BankClient({
                 </div>
               )}
               <button onClick={() => api("withdraw")} disabled={loading || amount > bank || amount < 1}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
                 ⬆️ Withdraw {amount.toLocaleString()} ₡
               </button>
+            </div>
+
+            {/* ── Sovereign Exchange (Credits ↔ SVN) ── */}
+            <div className="rounded-lg bg-violet-950/20 border border-violet-900/30 p-3 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🪙</span>
+                <span className="text-[10px] uppercase tracking-widest text-violet-400 font-bold">Sovereign Exchange</span>
+                <span className="text-[10px] text-slate-500 ml-auto">Buy {buyRate}₡ · Sell {sellRate}₡</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-black/30 border border-violet-800/20 p-3 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Your Credits</div>
+                  <div className="text-lg font-black text-amber-300 font-mono">{credits.toLocaleString()} ₡</div>
+                </div>
+                <div className="rounded-lg bg-black/30 border border-violet-800/20 p-3 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase">Your Sovereigns</div>
+                  <div className="text-lg font-black text-violet-300 font-mono">{tokens.toLocaleString()} SVN</div>
+                </div>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {[10, 50, 100, 500, 1000, 5000].map((q) => (
+                  <button key={q} onClick={() => setAmount(q)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      amount === q ? "bg-violet-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
+                    }`}>
+                    {q >= 1000 ? `${(q / 1000)}K` : q}
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
+                  className="py-3 rounded-xl bg-gradient-to-r from-violet-700 to-violet-600 hover:from-violet-600 hover:to-violet-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-violet-900/20">
+                  🪙 Buy {amount.toLocaleString()} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
+                </button>
+                <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
+                  className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
+                  💰 Sell {amount.toLocaleString()} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString()} ₡</span>
+                </button>
+              </div>
             </div>
 
             {/* Bank treasury */}
@@ -371,11 +528,11 @@ export function BankClient({
         {/* ── Transfer ──────────────────────────────────────────────── */}
         {tab === "transfer" && (
           <>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-3xl">⚡</span>
+            <div className="flex items-center gap-4 mb-3 p-3 rounded-xl bg-purple-950/30 border border-purple-900/20">
+              <TransferGraphic />
               <div>
-                <h2 className="text-sm font-bold text-purple-300 uppercase tracking-wide">Instant Transfer</h2>
-                <p className="text-[11px] text-slate-400">Send credits to any pilot instantly. No fees.</p>
+                <h2 className="text-base font-black text-purple-300 uppercase tracking-wide">Instant Transfer</h2>
+                <p className="text-[11px] text-slate-400 mt-1">Send credits to any pilot instantly. No fees.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -409,11 +566,11 @@ export function BankClient({
         {/* ── Loan ──────────────────────────────────────────────────── */}
         {tab === "loan" && (
           <>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-3xl">💳</span>
+            <div className="flex items-center gap-4 mb-3 p-3 rounded-xl bg-orange-950/30 border border-orange-900/20">
+              <LoanGraphic />
               <div>
-                <h2 className="text-sm font-bold text-orange-300 uppercase tracking-wide">Emergency Loans</h2>
-                <p className="text-[11px] text-slate-400">Borrow up to 5% of your vault balance. 6.9% surcharge.</p>
+                <h2 className="text-base font-black text-orange-300 uppercase tracking-wide">Emergency Loans</h2>
+                <p className="text-[11px] text-slate-400 mt-1">Borrow up to 5% of your vault balance. 6.9% surcharge.</p>
               </div>
             </div>
             {loanAmount > 0 ? (
@@ -479,11 +636,11 @@ export function BankClient({
         {/* ── Bond ──────────────────────────────────────────────────── */}
         {tab === "bond" && (
           <>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">📊</span>
+            <div className="flex items-center gap-4 mb-3 p-3 rounded-xl bg-emerald-950/30 border border-emerald-900/20">
+              <BondGraphic />
               <div>
-                <h2 className="text-sm font-bold text-emerald-300 uppercase tracking-wide">Investment Bonds</h2>
-                <p className="text-[11px] text-slate-400">Lock credits for daily yield. Claim anytime. 1 active bond per pilot.</p>
+                <h2 className="text-base font-black text-emerald-300 uppercase tracking-wide">Investment Bonds</h2>
+                <p className="text-[11px] text-slate-400 mt-1">Lock credits for daily yield. Claim anytime. 1 active bond per pilot.</p>
               </div>
             </div>
 
@@ -542,11 +699,18 @@ export function BankClient({
                         {accruedYield > 0 ? `+${accruedYield.toLocaleString()} ₡` : "0 ₡"}
                       </div>
                     </div>
-                    <button onClick={() => api("claim_yield")} disabled={loading || accruedDays < 1}
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
-                      💰 Claim {accruedYield > 0 ? `${accruedYield.toLocaleString()} ₡` : "Yield"}
-                    </button>
-                    <p className="text-[10px] text-slate-600 text-center">Yield accrues daily. Claim as often as you like.</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => api("claim_yield")} disabled={loading || accruedDays < 1}
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
+                        💰 Claim {accruedYield > 0 ? `${accruedYield.toLocaleString()} ₡` : "Yield"}
+                      </button>
+                      <button onClick={() => { if (confirm(`Early bond withdrawal?\n\nYou'll receive ${(bondAmount - Math.floor(bondAmount * 0.15)).toLocaleString()} ₡ back.\n15% penalty: −${Math.floor(bondAmount * 0.15).toLocaleString()} ₡\n\nAll unclaimed yield is forfeited.`)) api("early_withdraw_bond"); }}
+                        disabled={loading}
+                        className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-900/80 to-red-800/80 hover:from-red-800 hover:to-red-700 text-red-200 font-bold text-[11px] disabled:opacity-30 transition-all">
+                        ⚠️ Withdraw
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-600 text-center">Yield accrues daily. Early withdrawal: 15% penalty on principal.</p>
                   </div>
                 )}
 
@@ -650,10 +814,10 @@ export function BankClient({
           const selectedWealthOpt = WEALTH_OPTIONS.find((w) => w.days === wealthDays) ?? WEALTH_OPTIONS[2];
           return (
           <>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-3xl">👑</span>
+            <div className="flex items-center gap-4 mb-3 p-3 rounded-xl bg-yellow-950/30 border border-yellow-900/20">
+              <WealthGraphic />
               <div>
-                <h2 className="text-sm font-bold text-yellow-300 uppercase tracking-wide">Wealth Management</h2>
+                <h2 className="text-base font-black text-yellow-300 uppercase tracking-wide">Wealth Management</h2>
                 <p className="text-[11px] text-slate-400">Private UHNWI investment desk · Sovereign-denominated · Up to 5 concurrent positions.</p>
               </div>
             </div>
@@ -664,6 +828,87 @@ export function BankClient({
                 <span className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Centurion Venture Card Holder</span>
               </div>
               <p className="text-[10px] text-slate-500">Exclusive access to Bureau Bank&apos;s private wealth desk. Investments denominated in Sovereigns — guaranteed returns backed by Bureau reserves.</p>
+            </div>
+
+            {hasLimitlessCard && (
+              <div className="rounded-lg bg-violet-950/20 border border-violet-700/30 p-3 flex items-center gap-3">
+                <span className="text-lg">♾️</span>
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-violet-400 font-bold">Nexus Limitless Yield</div>
+                  <div className="text-[10px] text-slate-500">Maximum SVN per position cap waived — invest without limits.</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Quick SVN Exchange ── */}
+            <div className="rounded-xl bg-gradient-to-r from-yellow-950/40 to-amber-950/30 border border-yellow-700/40 p-4 space-y-3">
+              {/* Balance display */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-black/40 border border-violet-700/30 p-3 text-center">
+                  <div className="text-[9px] uppercase tracking-widest text-violet-500 font-semibold">Your Sovereigns</div>
+                  <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString()}</div>
+                  <div className="text-[10px] text-violet-600">SVN</div>
+                </div>
+                <div className="rounded-lg bg-black/40 border border-amber-700/30 p-3 text-center">
+                  <div className="text-[9px] uppercase tracking-widest text-amber-500 font-semibold">Credits On Hand</div>
+                  <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString()}</div>
+                  <div className="text-[10px] text-amber-600">₡ · buys up to {Math.floor(credits / buyRate).toLocaleString()} SVN</div>
+                </div>
+              </div>
+
+              <div className="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Buy SVN</div>
+
+              {/* Fixed amount buttons */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[500, 1000, 5000, 25000, 100000, 500000, 1000000].map((q) => (
+                  <button key={q} onClick={() => setAmount(q)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      amount === q ? "bg-yellow-600 text-white" : "bg-black/40 text-slate-400 hover:bg-slate-700 border border-slate-800/50"
+                    }`}>
+                    {q >= 1000000 ? `${(q / 1000000)}M` : q >= 1000 ? `${(q / 1000).toLocaleString()}K` : q}
+                  </button>
+                ))}
+              </div>
+
+              {/* Percentage of credits on hand */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[10, 25, 50, 75, 100].map((pct) => {
+                  const svnFromPct = Math.max(1, Math.floor((credits * pct / 100) / buyRate));
+                  return (
+                    <button key={pct} onClick={() => setAmount(svnFromPct)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        amount === svnFromPct ? "bg-yellow-600 text-white" : "bg-yellow-900/30 text-yellow-400 hover:bg-yellow-800/40 border border-yellow-800/30"
+                      }`}>
+                      {pct}% ₡ → {svnFromPct.toLocaleString()} SVN
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-2">
+                <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                  min={1} placeholder="SVN amount..."
+                  className="flex-1 rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
+                <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/30 whitespace-nowrap">
+                  🪙 Buy {amount.toLocaleString()} SVN
+                </button>
+              </div>
+
+              <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-[10px]">
+                <span className="text-slate-500">Rate: <span className="text-yellow-400 font-mono font-bold">{buyRate} ₡</span>/SVN</span>
+                <span className="text-slate-500">Cost: <span className="text-amber-300 font-mono font-bold">{(amount * buyRate).toLocaleString()} ₡</span></span>
+                <span className="text-slate-500">Remaining: <span className="text-amber-300 font-mono font-bold">{Math.max(0, credits - amount * buyRate).toLocaleString()} ₡</span></span>
+              </div>
+
+              {/* Sell option */}
+              <div className="flex items-center gap-2 pt-1 border-t border-yellow-900/20">
+                <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
+                  className="px-4 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-amber-400 font-bold text-[11px] disabled:opacity-30 transition border border-slate-700/40">
+                  💰 Sell {amount.toLocaleString()} SVN → {(amount * sellRate).toLocaleString()} ₡
+                </button>
+                <span className="text-[10px] text-slate-600">Sell rate: {sellRate} ₡/SVN</span>
+              </div>
             </div>
 
             {/* Portfolio summary */}
@@ -696,8 +941,12 @@ export function BankClient({
                   const lastClaimed = new Date(inv.lastClaimedAt);
                   const isMatured = matures <= new Date();
                   const dailyRate = inv.rate / inv.days;
-                  const totalDaysPassed = Math.min(Math.floor((Date.now() - created.getTime()) / 86400000), inv.days);
-                  const daysClaimed = Math.floor((lastClaimed.getTime() - created.getTime()) / 86400000);
+                  // Yield accrues at midnight UTC — first yield available the day AFTER creation
+                  const accrualStart = Math.floor(created.getTime() / 86_400_000) + 1;
+                  const nowDay = Math.floor(Date.now() / 86_400_000);
+                  const claimedDay = Math.max(Math.floor(lastClaimed.getTime() / 86_400_000), accrualStart - 1);
+                  const totalDaysPassed = Math.min(Math.max(0, nowDay - accrualStart + 1), inv.days);
+                  const daysClaimed = Math.max(0, claimedDay - accrualStart + 1);
                   const claimableDays = Math.max(0, totalDaysPassed - daysClaimed);
                   const pendingYield = Math.floor(inv.amount * (dailyRate / 100) * claimableDays);
                   const totalYield = Math.floor(inv.amount * inv.rate / 100);
@@ -742,6 +991,13 @@ export function BankClient({
                             💰 Claim {pendingYield > 0 ? `${pendingYield.toLocaleString()} SVN` : "Yield"}
                           </button>
                         )}
+                        {!isMatured && (
+                          <button onClick={() => { if (confirm(`Early withdrawal from ${inv.name}?\n\nYou'll receive ${(inv.amount - Math.floor(inv.amount * 0.15)).toLocaleString()} SVN back.\n15% penalty: −${Math.floor(inv.amount * 0.15).toLocaleString()} SVN`)) wealthApi("early_withdraw", { investmentId: inv.id }); }}
+                            disabled={loading}
+                            className="py-2 px-3 rounded-lg bg-gradient-to-r from-red-900/80 to-red-800/80 hover:from-red-800 hover:to-red-700 text-red-200 font-bold text-[11px] disabled:opacity-30 transition-all">
+                            ⚠️ Withdraw
+                          </button>
+                        )}
                         {isMatured && (
                           <button onClick={() => wealthApi("collect_investment", { investmentId: inv.id })}
                             disabled={loading}
@@ -761,27 +1017,45 @@ export function BankClient({
               <div className="space-y-3">
                 <div className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Open New Position</div>
 
+                {/* No duplicates warning */}
+                <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 flex items-start gap-3">
+                  <span className="text-xl leading-none mt-0.5">⚠️</span>
+                  <div>
+                    <div className="text-xs font-bold text-amber-300 uppercase tracking-wide">One Position Per Type</div>
+                    <div className="text-[11px] text-amber-200/70 mt-0.5">
+                      Only <span className="font-bold text-white">1 investment per tier</span> is allowed. Duplicates are blocked.
+                      Greyed-out tiers are already active in your portfolio. Yield accrues daily at <span className="font-bold text-cyan-300">midnight UTC</span>.
+                    </div>
+                  </div>
+                </div>
+
                 {/* Investment product cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {WEALTH_OPTIONS.map((w) => (
-                    <button key={w.days} onClick={() => setWealthDays(w.days)}
+                  {WEALTH_OPTIONS.map((w) => {
+                    const alreadyOwned = wealthInvestments.some((inv) => inv.days === w.days);
+                    return (
+                    <button key={w.days} onClick={() => !alreadyOwned && setWealthDays(w.days)}
+                      disabled={alreadyOwned}
                       className={`rounded-xl border p-2.5 text-center transition-all ${
-                        wealthDays === w.days
+                        alreadyOwned
+                          ? "border-slate-800/30 bg-black/20 opacity-40 cursor-not-allowed"
+                          : wealthDays === w.days
                           ? "border-yellow-500 bg-yellow-950/40 scale-[1.03] shadow-lg shadow-yellow-900/20"
                           : "border-slate-800/50 bg-black/30 hover:border-slate-700 hover:bg-slate-900/40"
                       }`}>
                       <div className={`text-lg font-black font-mono ${
-                        wealthDays === w.days ? "text-yellow-300" : "text-slate-400"
+                        alreadyOwned ? "text-slate-600" : wealthDays === w.days ? "text-yellow-300" : "text-slate-400"
                       }`}>{w.rate}%</div>
-                      <div className="text-[10px] text-slate-500">{w.label}</div>
+                      <div className="text-[10px] text-slate-500">{alreadyOwned ? "Active" : w.label}</div>
                       <div className="text-[9px] text-slate-600 font-mono">
                         {(w.rate / w.days).toFixed(3)}%/day
                       </div>
                       <div className={`text-[8px] uppercase tracking-wider mt-0.5 font-bold leading-tight ${
-                        wealthDays === w.days ? "text-yellow-500" : "text-slate-600"
+                        alreadyOwned ? "text-slate-700" : wealthDays === w.days ? "text-yellow-500" : "text-slate-600"
                       }`}>{w.tag}</div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Amount selection */}
@@ -797,7 +1071,7 @@ export function BankClient({
                 </div>
                 <input type="number" value={wealthAmount}
                   onChange={(e) => setWealthAmount(Math.max(1, Number(e.target.value)))}
-                  min={500} max={3000000}
+                  min={500} {...(!hasLimitlessCard ? { max: 3000000 } : {})}
                   className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
 
                 {/* Projection */}
@@ -823,7 +1097,7 @@ export function BankClient({
                 </div>
 
                 <button onClick={() => wealthApi("buy_investment", { investmentDays: wealthDays })}
-                  disabled={loading || wealthAmount > tokens || wealthAmount < 500 || wealthAmount > 3000000}
+                  disabled={loading || wealthAmount > tokens || wealthAmount < 500 || (!hasLimitlessCard && wealthAmount > 3000000) || wealthInvestments.some((inv) => inv.days === wealthDays)}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-amber-600 hover:from-yellow-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
                   👑 Invest {wealthAmount.toLocaleString()} SVN in {selectedWealthOpt.tag}
                   <span className="block text-[10px] opacity-70 font-normal">
@@ -831,7 +1105,7 @@ export function BankClient({
                   </span>
                 </button>
                 <p className="text-[10px] text-slate-600 text-center">
-                  Min 500 SVN · Max 3,000,000 SVN per issuance · Up to 5 concurrent · Funds from Sovereign balance
+                  Min 500 SVN · {hasLimitlessCard ? 'No max limit' : 'Max 3,000,000 SVN per issuance'} · 1 per type · Up to 5 concurrent · Funds from Sovereign balance
                 </p>
               </div>
             )}
@@ -842,50 +1116,6 @@ export function BankClient({
                 <div className="text-[10px] text-slate-500 mt-1">Collect a matured investment to open a new position.</div>
               </div>
             )}
-
-            {/* Sovereign exchange */}
-            <div className="border-t border-yellow-900/20 pt-4 mt-2 space-y-3">
-              <div className="text-[10px] uppercase tracking-widest text-yellow-600 font-bold">Sovereign Exchange</div>
-              <div className="rounded-lg bg-slate-900/30 border border-slate-800/30 p-2.5">
-                <p className="text-[10px] text-slate-500">Convert credits to Sovereigns to invest. The buy/sell spread acts as a commitment fee — long-term investments recoup the difference through yield.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase">Buy Rate</div>
-                  <div className="text-lg font-bold text-yellow-300 font-mono">{buyRate} ₡</div>
-                  <div className="text-[10px] text-slate-600">per Sovereign</div>
-                </div>
-                <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-3 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase">Sell Rate</div>
-                  <div className="text-lg font-bold text-amber-300 font-mono">{sellRate} ₡</div>
-                  <div className="text-[10px] text-slate-600">per Sovereign</div>
-                </div>
-              </div>
-              <div className="flex gap-1.5 flex-wrap">
-                {[1, 5, 10, 25, 50].map((q) => (
-                  <button key={q} onClick={() => setAmount(q)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      amount === q ? "bg-yellow-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
-                    }`}>
-                    {q}
-                  </button>
-                ))}
-              </div>
-              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-                min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
-                  className="py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
-                  🪙 Buy {amount.toLocaleString()} SVN
-                  <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
-                </button>
-                <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
-                  className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
-                  💰 Sell {amount.toLocaleString()} SVN
-                  <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString()} ₡</span>
-                </button>
-              </div>
-            </div>
           </>
           );
         })()}

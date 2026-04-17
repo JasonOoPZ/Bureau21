@@ -128,18 +128,15 @@ export async function POST(request: Request) {
 
     const now = new Date();
     const dailyRate = pilot.bondRate / pilot.bondDays;
-    const msSinceClaim = now.getTime() - pilot.bondLastClaimedAt.getTime();
-    const daysSinceClaim = Math.floor(msSinceClaim / 86400000);
-    if (daysSinceClaim < 1) return json({ error: "No yield to claim yet. Yield accrues daily." }, 400);
-
-    // Cap at maturity — don't accrue beyond bond end
-    const msFromStart = now.getTime() - pilot.bondCreatedAt.getTime();
-    const totalDaysPassed = Math.min(Math.floor(msFromStart / 86400000), pilot.bondDays);
-    const msClaimFromStart = pilot.bondLastClaimedAt.getTime() - pilot.bondCreatedAt.getTime();
-    const daysAlreadyClaimed = Math.floor(msClaimFromStart / 86400000);
+    // Yield accrues at midnight UTC — first yield available the day AFTER creation
+    const accrualStart = Math.floor(pilot.bondCreatedAt.getTime() / 86_400_000) + 1;
+    const nowDay = Math.floor(now.getTime() / 86_400_000);
+    const lastClaimedDay = Math.max(Math.floor(pilot.bondLastClaimedAt.getTime() / 86_400_000), accrualStart - 1);
+    const totalDaysPassed = Math.min(Math.max(0, nowDay - accrualStart + 1), pilot.bondDays);
+    const daysAlreadyClaimed = Math.max(0, lastClaimedDay - accrualStart + 1);
     const claimableDays = Math.max(0, totalDaysPassed - daysAlreadyClaimed);
 
-    if (claimableDays < 1) return json({ error: "No yield to claim." }, 400);
+    if (claimableDays < 1) return json({ error: "No yield to claim yet. Yield accrues at midnight UTC." }, 400);
 
     const yield_ = Math.floor(pilot.bondAmount * (dailyRate / 100) * claimableDays);
     if (yield_ < 1) return json({ error: "Yield too small to claim." }, 400);
@@ -159,8 +156,9 @@ export async function POST(request: Request) {
     // Return principal + any unclaimed remaining yield
     let remainingYield = 0;
     if (pilot.bondLastClaimedAt && pilot.bondCreatedAt) {
-      const msClaimFromStart = pilot.bondLastClaimedAt.getTime() - pilot.bondCreatedAt.getTime();
-      const daysAlreadyClaimed = Math.floor(msClaimFromStart / 86400000);
+      const accrualStart = Math.floor(pilot.bondCreatedAt.getTime() / 86_400_000) + 1;
+      const lastClaimedDay = Math.max(Math.floor(pilot.bondLastClaimedAt.getTime() / 86_400_000), accrualStart - 1);
+      const daysAlreadyClaimed = Math.max(0, lastClaimedDay - accrualStart + 1);
       const unclaimedDays = Math.max(0, pilot.bondDays - daysAlreadyClaimed);
       const dailyRate = pilot.bondRate / pilot.bondDays;
       remainingYield = Math.floor(pilot.bondAmount * (dailyRate / 100) * unclaimedDays);
@@ -172,6 +170,28 @@ export async function POST(request: Request) {
       data: { creditsBank: { increment: payout }, bondAmount: 0, bondRate: 0, bondDays: 0, bondCreatedAt: null, bondMaturesAt: null, bondLastClaimedAt: null },
     });
     return json({ message: `Bond matured! Collected ${payout.toLocaleString()} ₡ (principal + ${remainingYield.toLocaleString()} ₡ unclaimed yield).`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondDays: 0, bondMaturesAt: null, bondLastClaimedAt: null, bondCreatedAt: null });
+  }
+
+  // ── Early Bond Withdrawal (15% penalty) ─────────────────────────────────
+  if (action === "early_withdraw_bond") {
+    if (pilot.bondAmount <= 0) return json({ error: "No active bond." }, 400);
+
+    const penalty = Math.floor(pilot.bondAmount * 0.15);
+    const payout = pilot.bondAmount - penalty;
+
+    const updated = await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { creditsBank: { increment: payout }, bondAmount: 0, bondRate: 0, bondDays: 0, bondCreatedAt: null, bondMaturesAt: null, bondLastClaimedAt: null },
+    });
+    // Add penalty to bank treasury
+    if (penalty > 0) {
+      await prisma.gameGlobal.upsert({
+        where: { id: "singleton" },
+        update: { bankTreasury: { increment: penalty } },
+        create: { id: "singleton", bankTreasury: penalty },
+      });
+    }
+    return json({ message: `Early withdrawal. Returned ${payout.toLocaleString()} ₡ (15% penalty: −${penalty.toLocaleString()} ₡).`, credits: updated.credits, creditsBank: updated.creditsBank, tokens: updated.tokens, loanAmount: updated.loanAmount, bondAmount: updated.bondAmount, bondRate: updated.bondRate, bondDays: 0, bondMaturesAt: null, bondLastClaimedAt: null, bondCreatedAt: null });
   }
 
   // ── Buy Tokens ──────────────────────────────────────────────────────────

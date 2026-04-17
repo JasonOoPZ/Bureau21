@@ -279,7 +279,7 @@ export function PilotConsole() {
                     ))}
                   </div>
                   <p className="pt-1 text-center text-[10px] text-slate-600">
-                    {state.inventory.length}/20 slots &nbsp;·&nbsp; One weapon, shield & engine can be equipped at once
+                    {state.inventory.length}/20 slots &nbsp;·&nbsp; One weapon, armor & engine can be equipped at once
                   </p>
                 </>
               )}

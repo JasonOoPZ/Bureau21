@@ -162,7 +162,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
                 {!isMe && (
                   <Link
                     href={`/pilot/${msg.authorId}`}
-                    className="block text-[10px] text-cyan-500 font-medium mb-0.5 hover:text-cyan-300 hover:underline"
+                    className="block text-[10px] text-cyan-500 font-medium mb-0.5 underline decoration-cyan-800 hover:text-cyan-300 hover:decoration-cyan-400"
                   >
                     {msg.authorName}
                   </Link>
