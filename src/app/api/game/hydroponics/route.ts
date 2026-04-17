@@ -79,34 +79,57 @@ export async function POST(request: Request) {
   const { action, gameState, creditsDelta } = parsed.data;
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  // Validate credit changes
+  // Block earn actions from sending negative deltas
+  if (action === "earn" && creditsDelta && creditsDelta < 0) {
+    return NextResponse.json({ error: "Invalid credit operation." }, { status: 400 });
+  }
+
+  // Only "spend" actions are allowed to deduct credits
+  if (creditsDelta && creditsDelta < 0 && action !== "spend") {
+    return NextResponse.json({ error: "Invalid credit operation." }, { status: 400 });
+  }
+
+  // Pre-flight balance check
   if (action === "spend" && creditsDelta && creditsDelta < 0) {
     if (pilot.credits + creditsDelta < 0) {
       return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
     }
   }
 
-  // Atomic update: save state + adjust credits
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ops: any[] = [
-    prisma.hydroponicsData.upsert({
-      where: { pilotId: pilot.id },
-      update: { gameState: gameState as Prisma.InputJsonValue },
-      create: { pilotId: pilot.id, gameState: gameState as Prisma.InputJsonValue },
-    }),
-  ];
+  // Atomic update with balance re-check inside transaction to prevent race conditions
+  try {
+    const newCredits = await prisma.$transaction(async (tx) => {
+      // Save/upsert game state
+      await tx.hydroponicsData.upsert({
+        where: { pilotId: pilot.id },
+        update: { gameState: gameState as Prisma.InputJsonValue },
+        create: { pilotId: pilot.id, gameState: gameState as Prisma.InputJsonValue },
+      });
 
-  if (creditsDelta && creditsDelta !== 0) {
-    ops.push(
-      prisma.pilotState.update({
-        where: { userId: session.user.id },
-        data: { credits: { increment: creditsDelta } },
-      })
-    );
+      if (creditsDelta && creditsDelta !== 0) {
+        // Re-read balance inside transaction for atomicity
+        if (creditsDelta < 0) {
+          const fresh = await tx.pilotState.findUnique({ where: { userId: session.user.id }, select: { credits: true } });
+          if (!fresh || fresh.credits + creditsDelta < 0) {
+            throw new Error("INSUFFICIENT_CREDITS");
+          }
+        }
+
+        const updated = await tx.pilotState.update({
+          where: { userId: session.user.id },
+          data: { credits: { increment: creditsDelta } },
+        });
+        return updated.credits;
+      }
+
+      return pilot.credits;
+    });
+
+    return NextResponse.json({ ok: true, credits: newCredits });
+  } catch (err) {
+    if (err instanceof Error && err.message === "INSUFFICIENT_CREDITS") {
+      return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
+    }
+    throw err;
   }
-
-  await prisma.$transaction(ops);
-
-  const newCredits = pilot.credits + (creditsDelta ?? 0);
-  return NextResponse.json({ ok: true, credits: newCredits });
 }
