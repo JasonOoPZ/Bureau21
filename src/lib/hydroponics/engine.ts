@@ -325,6 +325,9 @@ export function rollEvents(
   equipEventReduction: number,
   rng = Math.random,
 ): ActiveEvent[] {
+  // DORMANT: Random events disabled until reworked
+  return [];
+
   const baseChance = EVENT_BASE_CHANCE;
   const riskMult = propertyDef.type === "outdoor" ? PLOT_TYPE_MODS.outdoor.eventRiskMult
     : propertyDef.type === "indoor" ? PLOT_TYPE_MODS.indoor.eventRiskMult
@@ -630,32 +633,9 @@ export function processOfflineProgress(
     }
   }
 
-  // 4. Events (simplified for offline — just count, don't apply plot effects)
-  const eventChecks = Math.floor(elapsed / EVENT_CHECK_INTERVAL_MS);
-  for (let i = 0; i < Math.min(eventChecks, 10); i++) {
-    for (const prop of s.properties) {
-      const propDef = PROPERTIES.find((p) => p.id === prop.id);
-      if (!propDef) continue;
-      const secSkill = s.staff
-        .filter((st) => st.role === "security" && st.assignedPropertyId === prop.id)
-        .reduce((sum, st) => sum + st.skillLevel, 0);
-      const techRisk = getTechEffect(s.techUnlocked, "eventRiskReduction");
-      const equipRisk = getEquipmentEffect("cameras", prop.equipment.cameras ?? 0);
-      const events = rollEvents(prop, propDef, secSkill, techRisk, equipRisk, seededRandom);
-      for (const ev of events) {
-        const evDef = EVENTS.find((e) => e.id === ev.eventDefId);
-        if (evDef) {
-          report.eventsOccurred.push(evDef.name);
-          s.eventLog.push({
-            timestamp: ev.appliedAt,
-            icon: evDef.icon,
-            message: `${evDef.name} at ${propDef.name}`,
-            type: "event",
-          });
-        }
-      }
-    }
-  }
+  // 4. Events — DORMANT: disabled until reworked
+  // const eventChecks = Math.floor(elapsed / EVENT_CHECK_INTERVAL_MS);
+  // for (let i = 0; i < Math.min(eventChecks, 10); i++) { ... }
 
   // Trim event log
   s.eventLog = s.eventLog.slice(-MAX_EVENT_LOG);
