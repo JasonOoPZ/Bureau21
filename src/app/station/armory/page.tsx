@@ -3,7 +3,7 @@ import { ArmoryClient } from "@/components/game/armory-client";
 import { EquipmentVendor } from "@/components/game/equipment-vendor";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { ITEM_TEMPLATES } from "@/lib/item-data";
+import { ITEM_TEMPLATES, pilotHasGodCard } from "@/lib/item-data";
 import { getVendorCatalog } from "@/lib/equipment-data";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
@@ -16,6 +16,7 @@ export default async function ArmoryPage() {
   if (!session?.user) redirect("/");
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
 
   const catalog = ITEM_TEMPLATES.map((t) => ({
     name: t.name,
@@ -62,6 +63,7 @@ export default async function ArmoryPage() {
             pilotLevel={pilot.level}
             initialCredits={pilot.credits}
             inventoryCount={pilot.inventory.length}
+            hasGodCard={godCard}
           />
 
           {/* ── Field Gadgets (Legacy items) ── */}

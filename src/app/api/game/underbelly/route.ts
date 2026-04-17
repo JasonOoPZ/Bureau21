@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { pilotHasGodCard } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -22,8 +23,9 @@ export async function POST(request: Request) {
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
 
-  if (pilot.level < UNLOCK_LEVEL) {
+  if (!godCard && pilot.level < UNLOCK_LEVEL) {
     return NextResponse.json(
       { error: `Underbelly requires Level ${UNLOCK_LEVEL}. You are Level ${pilot.level}.` },
       { status: 403 }

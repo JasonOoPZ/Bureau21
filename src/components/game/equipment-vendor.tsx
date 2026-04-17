@@ -26,6 +26,7 @@ interface Props {
   pilotLevel: number;
   initialCredits: number;
   inventoryCount: number;
+  hasGodCard?: boolean;
 }
 
 /* ═══════════════════════════════════════════════
@@ -55,7 +56,7 @@ const TIER_DESC: Record<ClearanceTier, string> = {
 /* ═══════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════ */
-export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, inventoryCount }: Props) {
+export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, inventoryCount, hasGodCard }: Props) {
   const [tab, setTab] = useState<EquipmentSlot>("weapon");
   const [credits, setCredits] = useState(initialCredits);
   const [invCount, setInvCount] = useState(inventoryCount);
@@ -146,7 +147,7 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {tierItems.map((item) => {
                 const canAfford = credits >= item.price;
-                const meetsLevel = pilotLevel >= item.lvl;
+                const meetsLevel = hasGodCard || pilotLevel >= item.lvl;
                 const full = invCount >= 20;
                 const isLoading = buying === item.name;
                 const msg = messages[item.name];

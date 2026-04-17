@@ -68,6 +68,7 @@ export const TIER_LABELS: Record<number, string> = {
   2: "Rare",
   3: "Legendary",
   4: "Exclusive",
+  5: "Mythic",
 };
 
 export const TYPE_LABELS: Record<ItemType, string> = {
@@ -88,4 +89,26 @@ export const SPECIAL_ITEMS = {
     bonusAmt: 0,
     description: "An exclusive black-and-gold membership card granting access to the Bureau Bank's private Wealth Management suite. Issued to select pilots of distinguished financial standing.",
   },
+  GOD_CARD: {
+    name: "God Card",
+    type: "special" as ItemType,
+    tier: 5,
+    bonusType: "access" as BonusType,
+    bonusAmt: 0,
+    description: "A mythic obsidian card pulsing with unstable energy. Bypasses all level and stat requirements for equipment and grants unrestricted access to every sector and facility aboard the station.",
+  },
 };
+
+import { prisma } from "@/lib/prisma";
+
+export async function pilotHasGodCard(userId: string): Promise<boolean> {
+  const card = await prisma.inventoryItem.findFirst({
+    where: {
+      pilot: { userId },
+      name: SPECIAL_ITEMS.GOD_CARD.name,
+      type: "special",
+    },
+    select: { id: true },
+  });
+  return !!card;
+}

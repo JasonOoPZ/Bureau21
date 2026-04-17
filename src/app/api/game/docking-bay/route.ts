@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
 import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
+import { pilotHasGodCard } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -23,6 +24,7 @@ export async function GET() {
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
   const state = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
 
   const lastDockAt = state?.lastDockAt ?? new Date(0);
@@ -31,7 +33,7 @@ export async function GET() {
   const ready = cooldownRemaining === 0;
 
   return NextResponse.json({
-    jobs: JOBS.map((j) => ({ ...j, available: pilot.level >= j.levelReq })),
+    jobs: JOBS.map((j) => ({ ...j, available: godCard || pilot.level >= j.levelReq })),
     ready,
     cooldownRemaining,
     cooldownMinutes: COOLDOWN_MINUTES,
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCardPost = await pilotHasGodCard(session.user.id);
   const state = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
 
   const lastDockAt = state?.lastDockAt ?? new Date(0);
@@ -71,7 +74,7 @@ export async function POST(request: Request) {
   const job = JOBS.find((j) => j.id === parsed.data.jobId);
   if (!job) return NextResponse.json({ error: "Unknown job." }, { status: 400 });
 
-  if (pilot.level < job.levelReq) {
+  if (!godCardPost && pilot.level < job.levelReq) {
     return NextResponse.json(
       { error: `${job.label} requires Level ${job.levelReq}.` },
       { status: 403 }

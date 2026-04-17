@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { findEquipment, getVendorCatalog } from "@/lib/equipment-data";
+import { pilotHasGodCard } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -26,9 +27,10 @@ export async function POST(request: Request) {
   }
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
 
-  // Level requirement
-  if (pilot.level < equip.lvl) {
+  // Level requirement (bypassed by God Card)
+  if (!godCard && pilot.level < equip.lvl) {
     return NextResponse.json(
       { error: `Requires level ${equip.lvl}. You are level ${pilot.level}.` },
       { status: 400 }

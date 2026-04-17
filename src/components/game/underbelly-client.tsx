@@ -22,9 +22,10 @@ const QUICK_BETS = [10, 25, 50, 100, 250, 500];
 interface Props {
   initialCredits: number;
   pilotLevel: number;
+  hasGodCard?: boolean;
 }
 
-export function UnderbellyClient({ initialCredits, pilotLevel }: Props) {
+export function UnderbellyClient({ initialCredits, pilotLevel, hasGodCard }: Props) {
   const [credits, setCredits] = useState(initialCredits);
   const [bet, setBet] = useState(25);
   const [rolling, setRolling] = useState(false);
@@ -33,7 +34,7 @@ export function UnderbellyClient({ initialCredits, pilotLevel }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const UNLOCK_LEVEL = 5;
-  const locked = pilotLevel < UNLOCK_LEVEL;
+  const locked = !hasGodCard && pilotLevel < UNLOCK_LEVEL;
 
   const roll = async () => {
     if (locked) return;

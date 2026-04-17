@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { pilotHasGodCard } from "@/lib/item-data";
 import { OuterRingClient } from "@/components/game/outer-ring-client";
 import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
@@ -11,6 +12,7 @@ export default async function OuterRingPage() {
   if (!session?.user) redirect("/");
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
 
   return (
     <div className="min-h-screen bg-[#0a0d11] text-slate-100">
@@ -47,6 +49,7 @@ export default async function OuterRingPage() {
           pilotLevel={pilot.level}
           pilotLf={pilot.lifeForce}
           pilotCredits={pilot.credits}
+          hasGodCard={godCard}
         />
       </main>
     </div>

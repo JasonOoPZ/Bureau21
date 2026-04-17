@@ -65,9 +65,10 @@ interface Props {
   pilotLevel: number;
   pilotLf: number;
   pilotCredits: number;
+  hasGodCard?: boolean;
 }
 
-export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits }: Props) {
+export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard }: Props) {
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
   const [fighting, setFighting] = useState(false);
   const [result, setResult] = useState<BattleResult | null>(null);
@@ -107,7 +108,7 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits }: Props) {
     }
   };
 
-  if (level < UNLOCK_LEVEL) {
+  if (!hasGodCard && level < UNLOCK_LEVEL) {
     return (
       <div className="space-y-4">
         <div className="rounded-xl border border-slate-700 bg-[#0b0f14] p-8 text-center">
@@ -182,7 +183,7 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits }: Props) {
         <div className="space-y-3">
           {BOTS.map((bot) => {
             const diff = DIFF_LABEL(bot.diffMult);
-            const unlocked = level >= bot.levelReq;
+            const unlocked = hasGodCard || level >= bot.levelReq;
             return (
               <button
                 key={bot.slug}

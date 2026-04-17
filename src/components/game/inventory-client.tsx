@@ -276,6 +276,10 @@ const SPECIAL_ITEM_INFO: Record<string, { description: string; icon: string }> =
     description: "An exclusive black-and-gold membership card granting access to the Bureau Bank's private Wealth Management suite. Issued to select pilots of distinguished financial standing. This card is non-transferable and bound to the holder's identity.",
     icon: "💳",
   },
+  "God Card": {
+    description: "A mythic obsidian card pulsing with unstable energy. Bypasses all level and stat requirements for equipment and grants unrestricted access to every sector and facility aboard the station. Rumored to be forged in the core of a collapsed star.",
+    icon: "🃏",
+  },
 };
 
 function SpecialItemOverlay({
@@ -301,6 +305,15 @@ function SpecialItemOverlay({
 
   const info = SPECIAL_ITEM_INFO[item.name];
   const maskedId = pilotId ? pilotId.slice(0, 6) + "••••" + pilotId.slice(-4) : "——";
+  const isGodCard = item.name === "God Card";
+  const borderColor = isGodCard ? "border-purple-700/40" : "border-yellow-700/40";
+  const glowColor = isGodCard ? "rgba(168,85,247,0.08)" : "rgba(234,179,8,0.08)";
+  const glowColor2 = isGodCard ? "rgba(168,85,247,0.04)" : "rgba(234,179,8,0.04)";
+  const stripGradient = isGodCard
+    ? "from-transparent via-purple-500 to-transparent"
+    : "from-transparent via-yellow-500 to-transparent";
+  const accentText = isGodCard ? "text-purple-300" : "text-yellow-300";
+  const accentDim = isGodCard ? "text-purple-600" : "text-yellow-600";
 
   return (
     <div
@@ -312,10 +325,10 @@ function SpecialItemOverlay({
       <div
         ref={panelRef}
         className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-yellow-700/40 bg-[#0a0e14] shadow-2xl"
-        style={{ boxShadow: "0 0 80px rgba(234,179,8,0.08), 0 0 30px rgba(234,179,8,0.04)" }}
+        style={{ boxShadow: `0 0 80px ${glowColor}, 0 0 30px ${glowColor2}` }}
       >
         {/* Top glow strip */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+        <div className={`h-1 bg-gradient-to-r ${stripGradient}`} />
 
         {/* Close button */}
         <button
@@ -329,42 +342,42 @@ function SpecialItemOverlay({
         <div className="p-6">
           {/* Card visual */}
           <div className="mb-5 flex justify-center">
-            <div className="relative w-72 h-44 rounded-2xl overflow-hidden border-2 border-yellow-600/50 shadow-xl" style={{ background: "linear-gradient(135deg, #0c0c0c 0%, #1a1508 30%, #0c0c0c 60%, #1a1508 100%)" }}>
-              {/* Gold foil accent lines */}
-              <div className="absolute inset-0 opacity-20" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(234,179,8,0.1) 20px, rgba(234,179,8,0.1) 21px)" }} />
+            <div className={`relative w-72 h-44 rounded-2xl overflow-hidden border-2 ${isGodCard ? "border-purple-600/50" : "border-yellow-600/50"} shadow-xl`} style={{ background: isGodCard ? "linear-gradient(135deg, #0c0010 0%, #1a0828 30%, #0c0010 60%, #1a0828 100%)" : "linear-gradient(135deg, #0c0c0c 0%, #1a1508 30%, #0c0c0c 60%, #1a1508 100%)" }}>
+              {/* Accent lines */}
+              <div className="absolute inset-0 opacity-20" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 20px, ${isGodCard ? "rgba(168,85,247,0.1)" : "rgba(234,179,8,0.1)"} 20px, ${isGodCard ? "rgba(168,85,247,0.1)" : "rgba(234,179,8,0.1)"} 21px)` }} />
               {/* Top bar */}
-              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-yellow-700/30 via-yellow-500/20 to-yellow-700/30 flex items-center px-4">
-                <span className="text-[8px] uppercase tracking-[0.3em] text-yellow-500/80 font-bold">Bureau 21 · Private Banking</span>
+              <div className={`absolute top-0 left-0 right-0 h-8 ${isGodCard ? "bg-gradient-to-r from-purple-700/30 via-purple-500/20 to-purple-700/30" : "bg-gradient-to-r from-yellow-700/30 via-yellow-500/20 to-yellow-700/30"} flex items-center px-4`}>
+                <span className={`text-[8px] uppercase tracking-[0.3em] ${isGodCard ? "text-purple-500/80" : "text-yellow-500/80"} font-bold`}>{isGodCard ? "Bureau 21 · Mythic Access" : "Bureau 21 · Private Banking"}</span>
               </div>
               {/* Card content */}
               <div className="absolute inset-0 flex flex-col justify-center items-center pt-4">
-                <span className="text-4xl mb-1">💳</span>
-                <div className="text-[10px] uppercase tracking-[0.25em] text-yellow-500 font-bold">Centurion Venture Card</div>
+                <span className="text-4xl mb-1">{info?.icon ?? "💳"}</span>
+                <div className={`text-[10px] uppercase tracking-[0.25em] ${isGodCard ? "text-purple-500" : "text-yellow-500"} font-bold`}>{item.name}</div>
               </div>
               {/* Bottom details */}
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-2.5 pt-1 bg-gradient-to-t from-black/60">
                 <div className="flex justify-between items-end">
                   <div>
-                    <div className="text-[8px] uppercase tracking-wider text-yellow-600/60">Cardholder</div>
-                    <div className="text-[11px] font-bold text-yellow-300 font-mono">{pilotCallsign ?? "——"}</div>
+                    <div className={`text-[8px] uppercase tracking-wider ${isGodCard ? "text-purple-600/60" : "text-yellow-600/60"}`}>Cardholder</div>
+                    <div className={`text-[11px] font-bold ${accentText} font-mono`}>{pilotCallsign ?? "——"}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[8px] uppercase tracking-wider text-yellow-600/60">Pilot ID</div>
-                    <div className="text-[9px] font-mono text-yellow-400/80">{maskedId}</div>
+                    <div className={`text-[8px] uppercase tracking-wider ${isGodCard ? "text-purple-600/60" : "text-yellow-600/60"}`}>Pilot ID</div>
+                    <div className={`text-[9px] font-mono ${isGodCard ? "text-purple-400/80" : "text-yellow-400/80"}`}>{maskedId}</div>
                   </div>
                 </div>
               </div>
               {/* Holographic sheen */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-yellow-500/5 pointer-events-none" />
+              <div className={`absolute inset-0 bg-gradient-to-br ${isGodCard ? "from-purple-500/5 via-transparent to-purple-500/5" : "from-yellow-500/5 via-transparent to-yellow-500/5"} pointer-events-none`} />
             </div>
           </div>
 
           {/* Item info */}
           <div className="mb-4 text-center">
-            <h3 className="text-lg font-black uppercase tracking-wide text-yellow-300">
+            <h3 className={`text-lg font-black uppercase tracking-wide ${accentText}`}>
               {item.name}
             </h3>
-            <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-yellow-600">
+            <p className={`mt-0.5 text-[10px] uppercase tracking-[0.2em] ${accentDim}`}>
               {TIER_LABELS[item.tier] ?? "Special"} · {item.type}
             </p>
           </div>
@@ -374,12 +387,12 @@ function SpecialItemOverlay({
           </p>
 
           {/* Cardholder details */}
-          <div className="rounded-xl border border-yellow-800/30 bg-yellow-950/10 p-4 space-y-2">
-            <div className="text-[9px] uppercase tracking-[0.15em] text-yellow-600 font-semibold text-center mb-2">Cardholder Information</div>
+          <div className={`rounded-xl border ${isGodCard ? "border-purple-800/30 bg-purple-950/10" : "border-yellow-800/30 bg-yellow-950/10"} p-4 space-y-2`}>
+            <div className={`text-[9px] uppercase tracking-[0.15em] ${accentDim} font-semibold text-center mb-2`}>Cardholder Information</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
                 <div className="text-[9px] uppercase tracking-wider text-slate-500">Callsign</div>
-                <div className="text-sm font-bold text-yellow-300">{pilotCallsign ?? "——"}</div>
+                <div className={`text-sm font-bold ${accentText}`}>{pilotCallsign ?? "——"}</div>
               </div>
               <div className="text-center">
                 <div className="text-[9px] uppercase tracking-wider text-slate-500">Pilot ID</div>
@@ -389,15 +402,15 @@ function SpecialItemOverlay({
           </div>
 
           <div className="mt-4 text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-800/30 bg-emerald-950/20 px-3 py-1.5">
-              <span className="text-xs">✅</span>
-              <span className="text-[10px] text-emerald-400 font-semibold">Wealth Management Access Granted</span>
+            <div className={`inline-flex items-center gap-1.5 rounded-lg border ${isGodCard ? "border-purple-800/30 bg-purple-950/20" : "border-emerald-800/30 bg-emerald-950/20"} px-3 py-1.5`}>
+              <span className="text-xs">{isGodCard ? "⚡" : "✅"}</span>
+              <span className={`text-[10px] ${isGodCard ? "text-purple-400" : "text-emerald-400"} font-semibold`}>{isGodCard ? "All Level & Area Restrictions Bypassed" : "Wealth Management Access Granted"}</span>
             </div>
           </div>
         </div>
 
         {/* Bottom glow strip */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+        <div className={`h-1 bg-gradient-to-r ${stripGradient}`} />
       </div>
     </div>
   );

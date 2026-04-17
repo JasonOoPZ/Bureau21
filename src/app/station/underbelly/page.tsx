@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { pilotHasGodCard } from "@/lib/item-data";
 import { UnderbellyClient } from "@/components/game/underbelly-client";
 import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
@@ -11,6 +12,7 @@ export default async function UnderbellyPage() {
   if (!session?.user) redirect("/");
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const godCard = await pilotHasGodCard(session.user.id);
 
   return (
     <div className="min-h-screen bg-[#0a0d11] text-slate-100">
@@ -36,7 +38,7 @@ export default async function UnderbellyPage() {
           </p>
         </div>
 
-        <UnderbellyClient initialCredits={pilot.credits} pilotLevel={pilot.level} />
+        <UnderbellyClient initialCredits={pilot.credits} pilotLevel={pilot.level} hasGodCard={godCard} />
       </main>
     </div>
   );
