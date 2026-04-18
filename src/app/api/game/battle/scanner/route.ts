@@ -68,9 +68,9 @@ export async function POST(request: Request) {
     where.lastActionAt = { gte: onlineCutoff };
   }
 
-  // Attackable only (level >= newbie protection)
-  if (filters.attackableOnly) {
-    where.level = { ...where.level, gte: Math.max(where.level?.gte ?? 0, GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL) };
+  // Attackable only: level 6+ cannot target level 5 or below
+  if (filters.attackableOnly && pilot.level >= 6) {
+    where.level = { ...where.level, gte: Math.max(where.level?.gte ?? 0, 6) };
   }
 
   // Exclude bureau staff

@@ -116,6 +116,14 @@ export async function POST(request: Request) {
     });
   }
 
+  // Level-based attack restriction: level 6+ cannot attack level 5 or below
+  if (pilot.level >= 6 && defenderPilot.level <= 5) {
+    return NextResponse.json(
+      { error: "You cannot attack pilots level 5 or below." },
+      { status: 403 }
+    );
+  }
+
   // Fetch active heroes for both players
   const [attackerHeroes, defenderHeroes] = await Promise.all([
     prisma.playerHero.findMany({ where: { pilotId: pilot.id, active: true } }),
