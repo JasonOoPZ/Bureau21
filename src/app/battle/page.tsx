@@ -1,7 +1,9 @@
 import { authOptions } from "@/auth";
 import { BattleHub } from "@/components/game/battle-hub";
+import { StatAllocator } from "@/components/game/stat-allocator";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { hpPerPoint } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
@@ -82,6 +84,15 @@ export default async function BattlePage({
               </div>
             </div>
           </div>
+
+          {/* Stat Allocation */}
+          {pilot.unspentPoints > 0 && (
+            <StatAllocator
+              unspentPoints={pilot.unspentPoints}
+              level={pilot.level}
+              hpPerPoint={hpPerPoint(pilot.level)}
+            />
+          )}
 
           <BattleHub
             initialLogs={recentLogs.map((l) => ({ id: l.id, opponentName: l.opponentName, result: l.result, xpGained: l.xpGained, creditsGained: l.creditsGained, roundsCount: l.roundsCount, createdAt: l.createdAt.toISOString() }))}
