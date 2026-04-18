@@ -241,3 +241,39 @@ export interface PvpTarget {
   level: number;
   characterSlug: string;
 }
+
+/**
+ * Simulate N battles between two pilots and return estimated win percentage for the attacker.
+ * Uses the real battle engine with randomized rolls each iteration.
+ */
+export function simulateWinChance(
+  attacker: PvpPilotInput,
+  defender: PvpPilotInput,
+  attackerHeroBonuses?: HeroBonuses,
+  defenderHeroBonuses?: HeroBonuses,
+  iterations = 100
+): { winPct: number; avgRounds: number; avgLfRemaining: number } {
+  let wins = 0;
+  let totalRounds = 0;
+  let totalLfRemaining = 0;
+
+  for (let i = 0; i < iterations; i++) {
+    const result = resolvePvpBattle(
+      { ...attacker, lifeForce: Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, attacker.level * 5) },
+      { ...defender, lifeForce: Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, defender.level * 5) },
+      attackerHeroBonuses,
+      defenderHeroBonuses
+    );
+    if (result.winner === "attacker") {
+      wins++;
+      totalLfRemaining += result.attackerLfAfter;
+    }
+    totalRounds += result.totalRounds;
+  }
+
+  return {
+    winPct: Math.round((wins / iterations) * 100),
+    avgRounds: Math.round(totalRounds / iterations),
+    avgLfRemaining: wins > 0 ? Math.round(totalLfRemaining / wins) : 0,
+  };
+}
