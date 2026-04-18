@@ -870,20 +870,7 @@ export function BankClient({
                 ))}
               </div>
 
-              {/* Percentage of credits on hand */}
-              <div className="flex gap-1.5 flex-wrap">
-                {[10, 25, 50, 75, 100].map((pct) => {
-                  const svnFromPct = Math.max(1, Math.floor((credits * pct / 100) / buyRate));
-                  return (
-                    <button key={pct} onClick={() => setAmount(svnFromPct)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                        amount === svnFromPct ? "bg-yellow-600 text-white" : "bg-yellow-900/30 text-yellow-400 hover:bg-yellow-800/40 border border-yellow-800/30"
-                      }`}>
-                      {pct}% ₡ → {svnFromPct.toLocaleString()} SVN
-                    </button>
-                  );
-                })}
-              </div>
+
 
               <div className="flex gap-2">
                 <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
@@ -901,13 +888,16 @@ export function BankClient({
                 <span className="text-slate-500">Remaining: <span className="text-amber-300 font-mono font-bold">{Math.max(0, credits - amount * buyRate).toLocaleString()} ₡</span></span>
               </div>
 
-              {/* Sell option */}
-              <div className="flex items-center gap-2 pt-1 border-t border-yellow-900/20">
-                <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
-                  className="px-4 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-amber-400 font-bold text-[11px] disabled:opacity-30 transition border border-slate-700/40">
-                  💰 Sell {amount.toLocaleString()} SVN → {(amount * sellRate).toLocaleString()} ₡
-                </button>
-                <span className="text-[10px] text-slate-600">Sell rate: {sellRate} ₡/SVN</span>
+              {/* Sell SVN */}
+              <div className="rounded-lg bg-gradient-to-r from-amber-950/40 to-yellow-950/30 border border-amber-700/40 p-3 space-y-2">
+                <div className="text-[10px] uppercase tracking-widest text-amber-400 font-bold">Sell SVN</div>
+                <div className="flex gap-2 items-center">
+                  <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
+                    className="flex-1 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-yellow-600 hover:from-amber-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/30">
+                    💰 Sell {amount.toLocaleString()} SVN → {(amount * sellRate).toLocaleString()} ₡
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-500">Sell rate: <span className="text-amber-400 font-mono font-bold">{sellRate} ₡</span>/SVN</div>
               </div>
             </div>
 
