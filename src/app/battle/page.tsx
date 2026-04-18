@@ -87,21 +87,8 @@ export default async function BattlePage({
             initialLogs={recentLogs.map((l) => ({ id: l.id, opponentName: l.opponentName, result: l.result, xpGained: l.xpGained, creditsGained: l.creditsGained, roundsCount: l.roundsCount, createdAt: l.createdAt.toISOString() }))}
             pilotLevel={pilot.level}
             watchlistCount={watchlistCount}
+            initialTarget={params.target ?? ""}
           />
-
-          {/* Pre-fill target from scanner link */}
-          {params.target && (
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  (function(){
-                    var input = document.querySelector('input[placeholder="Enter callsign..."]');
-                    if(input) { var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; nativeInputValueSetter.call(input, ${JSON.stringify(params.target)}); input.dispatchEvent(new Event('input', { bubbles: true })); }
-                  })();
-                `,
-              }}
-            />
-          )}
         </div>
       </main>
     </>

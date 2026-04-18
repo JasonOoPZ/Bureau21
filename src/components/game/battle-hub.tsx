@@ -16,10 +16,11 @@ interface Props {
   }>;
   pilotLevel: number;
   watchlistCount: number;
+  initialTarget?: string;
 }
 
-export function BattleHub({ initialLogs, pilotLevel, watchlistCount }: Props) {
-  const [callsign, setCallsign] = useState("");
+export function BattleHub({ initialLogs, pilotLevel, watchlistCount, initialTarget }: Props) {
+  const [callsign, setCallsign] = useState(initialTarget ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<BattleOutcome | null>(null);
