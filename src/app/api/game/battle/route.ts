@@ -175,6 +175,7 @@ export async function POST(request: Request) {
       lifeForce: outcome.attackerLfAfter,
       confidence: atkNewConf,
       kills: outcome.winner === "attacker" ? { increment: 1 } : undefined,
+      unspentPoints: { increment: atkProgressed.pointsEarned },
       lastActionAt: new Date(),
     },
   });
@@ -195,6 +196,7 @@ export async function POST(request: Request) {
       lifeForce: outcome.defenderLfAfter,
       confidence: defNewConf,
       kills: outcome.winner === "defender" ? { increment: 1 } : undefined,
+      unspentPoints: { increment: defProgressed.pointsEarned },
       lastAttackedAt: new Date(),
     },
   });

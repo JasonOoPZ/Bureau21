@@ -2,8 +2,9 @@ import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
 import { HerbUseButton } from "@/components/game/herb-use-button";
+import { StatAllocator } from "@/components/game/stat-allocator";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap, getCombatBonuses } from "@/lib/constants";
+import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap, getCombatBonuses, hpPerPoint, calculateMotivationRegen } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -89,6 +90,8 @@ export default async function HousePage() {
   const def = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const maxXp = xpForLevel(pilot.level);
   const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
+  const currentMotivation = calculateMotivationRegen(pilot.lastMotivationAt, pilot.motivation, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
+  const currentHpPerPoint = hpPerPoint(pilot.level);
 
   const missions = await prisma.mission.findMany({ where: { pilotId: pilot.id } });
 
@@ -236,7 +239,7 @@ export default async function HousePage() {
                   <span className="font-semibold text-slate-400">Life Force:</span>
                   <span className="text-slate-200">{pilot.lifeForce}/{maxLF}</span>
                   <span className="font-semibold text-slate-400">Motivation:</span>
-                  <span className="text-slate-200">{pilot.motivation}/{GAME_CONSTANTS.MOTIVATION_CAP_FREE}</span>
+                  <span className="text-slate-200">{currentMotivation}/{GAME_CONSTANTS.MOTIVATION_CAP_FREE}</span>
 
                   <span className="font-semibold text-slate-400">Credits:</span>
                   <span className="text-amber-300">{pilot.credits.toLocaleString()}</span>
@@ -290,12 +293,21 @@ export default async function HousePage() {
                   />
                   <StatBar
                     label="Motivation"
-                    value={pilot.motivation}
+                    value={currentMotivation}
                     max={GAME_CONSTANTS.MOTIVATION_CAP_FREE}
                     color="amber"
                   />
                 </div>
               </section>
+
+              {/* Stat Allocation */}
+              {pilot.unspentPoints > 0 && (
+                <StatAllocator
+                  unspentPoints={pilot.unspentPoints}
+                  level={pilot.level}
+                  hpPerPoint={currentHpPerPoint}
+                />
+              )}
 
               {/* Consumables */}
               <HerbUseButton

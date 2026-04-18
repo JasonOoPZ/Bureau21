@@ -88,6 +88,7 @@ model PilotState {
   simTrainsToday    Int             @default(0)
   lastSimTrainAt    DateTime?
   lastAttackedAt    DateTime?
+  unspentPoints     Int             @default(0)
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]

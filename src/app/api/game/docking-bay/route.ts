@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       credits: { increment: job.creditReward },
       xp: progressed.xp,
       level: progressed.level,
+      unspentPoints: { increment: progressed.pointsEarned },
       lastDockAt: new Date(),
     },
   });

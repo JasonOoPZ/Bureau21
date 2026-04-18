@@ -85,10 +85,10 @@ export async function POST(request: Request) {
   const progressed = type === "xp"
     ? applyLevelProgression(pilot.xp + xpGain, pilot.level)
     : type === "level" && leveledUp
-    ? { level: pilot.level + 1, xp: 0 }
+    ? { level: pilot.level + 1, xp: 0, pointsEarned: GAME_CONSTANTS.POINTS_PER_LEVEL }
     : type === "level"
-    ? { level: pilot.level, xp: 0 }
-    : { level: pilot.level, xp: pilot.xp };
+    ? { level: pilot.level, xp: 0, pointsEarned: 0 }
+    : { level: pilot.level, xp: pilot.xp, pointsEarned: 0 };
 
   await prisma.pilotState.update({
     where: { userId: session.user.id },
@@ -97,6 +97,7 @@ export async function POST(request: Request) {
       xp: progressed.xp,
       level: progressed.level,
       lifeForce: type === "level" && leveledUp ? Math.max(15, progressed.level * 5) : undefined,
+      unspentPoints: { increment: progressed.pointsEarned },
       simTrainsToday: newTrainCount,
       lastSimTrainAt: new Date(),
       lastActionAt: new Date(),

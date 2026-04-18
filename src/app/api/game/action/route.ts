@@ -171,6 +171,7 @@ export async function POST(request: Request) {
       lifeForce,
       xp,
       level,
+      unspentPoints: { increment: progressed.pointsEarned },
       currentSector,
       kills,
       lastActionAt: new Date(),

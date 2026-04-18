@@ -55,7 +55,19 @@ export const GAME_CONSTANTS = {
   UNLOCK_SYNDICATE_ROW_DAY: 4,
   UNLOCK_UNDERBELLY_DAY: 8,
   UNLOCK_FULL_STATION_DAY: 15,
+  POINTS_PER_LEVEL: 8,
+  POINT_STR_GAIN: 1.0,
+  POINT_SPEED_GAIN: 1.0,
+  POINT_END_GAIN: 0.5,
+  POINT_PANIC_GAIN: 0.5,
+  POINT_CONF_GAIN: 0.25,
 } as const;
+
+/** HP gained per allocation point at a given level. Scales with level. */
+export function hpPerPoint(level: number): number {
+  // Lvl 1: 25, Lvl 5: 33, Lvl 10: 43, Lvl 20: 61, Lvl 50: 133
+  return Math.floor(25 + (level - 1) * 1.8);
+}
 
 export function xpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.15, level - 1));

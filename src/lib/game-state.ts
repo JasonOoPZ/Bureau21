@@ -1,3 +1,4 @@
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { defaultStarterCharacter } from "@/lib/starter-characters";
 import { rollItemDrop } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
@@ -21,13 +22,15 @@ export async function getOrCreatePilotState(userId: string, displayName?: string
 export function applyLevelProgression(xp: number, level: number) {
   let currentXp = xp;
   let currentLevel = level;
+  let pointsEarned = 0;
 
   while (currentXp >= currentLevel * 100) {
     currentXp -= currentLevel * 100;
     currentLevel += 1;
+    pointsEarned += GAME_CONSTANTS.POINTS_PER_LEVEL;
   }
 
-  return { xp: currentXp, level: currentLevel };
+  return { xp: currentXp, level: currentLevel, pointsEarned };
 }
 
 export function applyPassiveRegeneration(state: {
