@@ -83,6 +83,20 @@ interface GameState {
   baseBet: number;
   insuranceBet: number;
   phase: "player_turn" | "resolving" | "done";
+  pilotId: string;
+}
+
+async function logBlackjackBet(game: GameState, totalPayout: number) {
+  const totalWagered = game.hands.reduce((s, h) => s + h.bet, 0) + game.insuranceBet;
+  await prisma.casinoBet.create({
+    data: {
+      pilotId: game.pilotId,
+      game: "blackjack",
+      bet: totalWagered,
+      payout: totalPayout,
+      net: totalPayout - totalWagered,
+    },
+  });
 }
 
 const activeGames = new Map<string, GameState>();
@@ -242,6 +256,7 @@ export async function POST(request: Request) {
       baseBet: bet,
       insuranceBet: 0,
       phase: "player_turn",
+      pilotId: pilot.id,
     };
 
     const dealerUpAce = cardRank(dealerCards[0]) === "A";
@@ -253,6 +268,7 @@ export async function POST(request: Request) {
       game.phase = "done";
       const payout = dealerBJ ? bet : bet + Math.floor(bet * 1.5);
       await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
+      await logBlackjackBet(game, payout);
       activeGames.delete(uid);
       return NextResponse.json({
         status: dealerBJ ? "push" : "blackjack",
@@ -314,6 +330,7 @@ export async function POST(request: Request) {
       if (payout > 0) {
         await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
       }
+      await logBlackjackBet(game, payout);
       game.phase = "done";
       activeGames.delete(uid);
       return NextResponse.json({
@@ -332,6 +349,7 @@ export async function POST(request: Request) {
       // Player BJ, no dealer BJ
       const payout = game.baseBet + Math.floor(game.baseBet * 1.5);
       await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
+      await logBlackjackBet(game, payout);
       game.phase = "done";
       activeGames.delete(uid);
       return NextResponse.json({
@@ -380,6 +398,7 @@ export async function POST(request: Request) {
         if (totalPayout > 0) {
           await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: totalPayout } } });
         }
+        await logBlackjackBet(game, totalPayout);
         activeGames.delete(uid);
         return NextResponse.json({
           status: "done",
@@ -400,6 +419,7 @@ export async function POST(request: Request) {
         if (totalPayout > 0) {
           await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: totalPayout } } });
         }
+        await logBlackjackBet(game, totalPayout);
         activeGames.delete(uid);
         return NextResponse.json({
           status: "done",
@@ -439,6 +459,7 @@ export async function POST(request: Request) {
       if (totalPayout > 0) {
         await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: totalPayout } } });
       }
+      await logBlackjackBet(game, totalPayout);
       activeGames.delete(uid);
       return NextResponse.json({
         status: "done",
@@ -488,6 +509,7 @@ export async function POST(request: Request) {
       if (totalPayout > 0) {
         await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: totalPayout } } });
       }
+      await logBlackjackBet(game, totalPayout);
       activeGames.delete(uid);
       return NextResponse.json({
         status: "done",
@@ -563,6 +585,7 @@ export async function POST(request: Request) {
         if (totalPayout > 0) {
           await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: totalPayout } } });
         }
+        await logBlackjackBet(game, totalPayout);
         activeGames.delete(uid);
         return NextResponse.json({
           status: "done",

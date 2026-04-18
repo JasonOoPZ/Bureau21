@@ -99,10 +99,15 @@ export async function POST(request: Request) {
   const netChange = result.payout - bet;
   const newCredits = pilot.credits + netChange;
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: { credits: newCredits },
-  });
+  await prisma.$transaction([
+    prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { credits: newCredits },
+    }),
+    prisma.casinoBet.create({
+      data: { pilotId: pilot.id, game, bet, payout: result.payout, net: netChange },
+    }),
+  ]);
 
   return NextResponse.json({ ...result, bet, net_change: netChange, new_credits: newCredits });
 }

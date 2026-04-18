@@ -56,17 +56,16 @@ export const GAME_CONSTANTS = {
   UNLOCK_UNDERBELLY_DAY: 8,
   UNLOCK_FULL_STATION_DAY: 15,
   POINTS_PER_LEVEL: 8,
-  POINT_STR_GAIN: 1.0,
-  POINT_SPEED_GAIN: 1.0,
-  POINT_END_GAIN: 0.5,
-  POINT_PANIC_GAIN: 0.5,
-  POINT_CONF_GAIN: 0.25,
+  POINT_STR_GAIN: 1,
+  POINT_SPEED_GAIN: 1,
+  POINT_END_GAIN: 1,
+  POINT_PANIC_GAIN: 1,
+  POINT_CONF_GAIN: 1,
 } as const;
 
-/** HP gained per allocation point at a given level. Scales with level. */
-export function hpPerPoint(level: number): number {
-  // Lvl 1: 25, Lvl 5: 33, Lvl 10: 43, Lvl 20: 61, Lvl 50: 133
-  return Math.floor(25 + (level - 1) * 1.8);
+/** HP gained per allocation point. Fixed 1:1 ratio. */
+export function hpPerPoint(_level: number): number {
+  return 1;
 }
 
 export function xpForLevel(level: number): number {

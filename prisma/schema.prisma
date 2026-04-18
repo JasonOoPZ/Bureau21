@@ -98,6 +98,7 @@ model PilotState {
   gymLogs           GymLog[]
   hydroponics       HydroponicsData?
   wealthInvestments WealthInvestment[]
+  casinoBets        CasinoBet[]
   watchlistOwned    Watchlist[]     @relation("WatchlistOwner")
   watchlistTargeted Watchlist[]     @relation("WatchlistTarget")
   createdAt         DateTime        @default(now())
@@ -353,4 +354,20 @@ model Watchlist {
 
   @@unique([pilotId, targetPilotId])
   @@index([pilotId])
+}
+
+model CasinoBet {
+  id        String   @id @default(cuid())
+  pilotId   String
+  game      String
+  bet       Int
+  payout    Int
+  net       Int
+  createdAt DateTime @default(now())
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId])
+  @@index([pilotId, game])
+  @@index([pilotId, createdAt])
 }

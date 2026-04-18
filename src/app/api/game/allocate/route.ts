@@ -1,7 +1,7 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
-import { GAME_CONSTANTS, hpPerPoint } from "@/lib/constants";
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -34,7 +34,15 @@ export async function POST(request: Request) {
     );
   }
 
-  // Calculate stat gains
+  // Confidence cap check
+  if (stat === "confidence" && pilot.confidence >= GAME_CONSTANTS.CONFIDENCE_CAP) {
+    return NextResponse.json(
+      { error: "Max confidence reached." },
+      { status: 400 }
+    );
+  }
+
+  // Calculate stat gains — 1 point per allocation
   const data: Record<string, unknown> = {
     unspentPoints: { decrement: points },
   };
@@ -43,39 +51,43 @@ export async function POST(request: Request) {
 
   switch (stat) {
     case "hp": {
-      const hpGain = hpPerPoint(pilot.level) * points;
-      data.lifeForce = pilot.lifeForce + hpGain;
-      gainDescription = `+${hpGain} Life Force`;
+      data.lifeForce = pilot.lifeForce + points;
+      gainDescription = `+${points} Life Force`;
       break;
     }
     case "strength": {
-      const gain = GAME_CONSTANTS.POINT_STR_GAIN * points;
-      data.strength = pilot.strength + gain;
-      gainDescription = `+${gain.toFixed(1)} Strength`;
+      data.strength = pilot.strength + points;
+      gainDescription = `+${points} Strength`;
       break;
     }
     case "speed": {
-      const gain = GAME_CONSTANTS.POINT_SPEED_GAIN * points;
-      data.speed = pilot.speed + gain;
-      gainDescription = `+${gain.toFixed(1)} Speed`;
+      data.speed = pilot.speed + points;
+      gainDescription = `+${points} Speed`;
       break;
     }
     case "endurance": {
-      const gain = GAME_CONSTANTS.POINT_END_GAIN * points;
-      data.endurance = pilot.endurance + gain;
-      gainDescription = `+${gain.toFixed(2)} Endurance`;
+      data.endurance = pilot.endurance + points;
+      gainDescription = `+${points} Endurance`;
       break;
     }
     case "panic": {
-      const gain = GAME_CONSTANTS.POINT_PANIC_GAIN * points;
-      data.panic = pilot.panic + gain;
-      gainDescription = `+${gain.toFixed(2)} Panic`;
+      data.panic = pilot.panic + points;
+      gainDescription = `+${points} Panic`;
       break;
     }
     case "confidence": {
-      const gain = GAME_CONSTANTS.POINT_CONF_GAIN * points;
-      data.confidence = Math.min(pilot.confidence + gain, GAME_CONSTANTS.CONFIDENCE_CAP);
-      gainDescription = `+${gain.toFixed(2)} Confidence`;
+      const newConf = Math.min(pilot.confidence + points, GAME_CONSTANTS.CONFIDENCE_CAP);
+      const actualGain = newConf - pilot.confidence;
+      if (actualGain <= 0) {
+        return NextResponse.json(
+          { error: "Max confidence reached." },
+          { status: 400 }
+        );
+      }
+      // Only spend the points that actually raise confidence
+      data.confidence = newConf;
+      data.unspentPoints = { decrement: actualGain };
+      gainDescription = `+${actualGain} Confidence`;
       break;
     }
   }

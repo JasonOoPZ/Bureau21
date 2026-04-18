@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOrCreatePilotState } from "@/lib/game-state";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -58,6 +59,65 @@ export default async function CasinoPage() {
   if (!session?.user) redirect("/");
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
+  // Fetch casino stats
+  const bets = await prisma.casinoBet.findMany({
+    where: { pilotId: pilot.id },
+    select: { game: true, bet: true, net: true },
+  });
+
+  const stats = (() => {
+    if (bets.length === 0) return null;
+    let wins = 0, losses = 0, totalWagered = 0, totalNet = 0;
+    const gameCounts: Record<string, number> = {};
+    for (const b of bets) {
+      if (b.net > 0) wins++;
+      else if (b.net < 0) losses++;
+      totalWagered += b.bet;
+      totalNet += b.net;
+      gameCounts[b.game] = (gameCounts[b.game] ?? 0) + 1;
+    }
+    const favoriteGame = Object.entries(gameCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+    return { totalBets: bets.length, wins, losses, totalWagered, totalNet, averageBet: Math.round(totalWagered / bets.length), favoriteGame };
+  })();
+
+  const GAME_LABELS: Record<string, string> = {
+    slots: "Slots", dice: "Dice Pit", coinflip: "Coin Flip", blackjack: "Blackjack", crash: "Crash",
+  };
+
+  // ── Public leaderboard data ────────────────────────────────────────
+  const allBets = await prisma.casinoBet.findMany({
+    select: { pilotId: true, bet: true, net: true },
+  });
+
+  // Aggregate per pilot
+  const pilotAgg: Record<string, { wagered: number; net: number }> = {};
+  let casinoRevenue = 0;
+  for (const b of allBets) {
+    const p = (pilotAgg[b.pilotId] ??= { wagered: 0, net: 0 });
+    p.wagered += b.bet;
+    p.net += b.net;
+    casinoRevenue -= b.net; // house earns the inverse of player net
+  }
+
+  const pilotIds = Object.keys(pilotAgg);
+  const pilotNames = pilotIds.length > 0
+    ? await prisma.pilotState.findMany({
+        where: { id: { in: pilotIds } },
+        select: { id: true, callsign: true },
+      })
+    : [];
+  const nameMap = Object.fromEntries(pilotNames.map((p) => [p.id, p.callsign]));
+
+  // High roller = most total wagered
+  const highRoller = pilotIds.length > 0
+    ? pilotIds.reduce((a, b) => pilotAgg[a].wagered >= pilotAgg[b].wagered ? a : b)
+    : null;
+
+  // Biggest loser = most negative net
+  const biggestLoser = pilotIds.length > 0
+    ? pilotIds.reduce((a, b) => pilotAgg[a].net <= pilotAgg[b].net ? a : b)
+    : null;
+
   return (
     <>
       <TopBar session={session} />
@@ -109,6 +169,75 @@ export default async function CasinoPage() {
             <p>⚠️ <span className="text-red-400 font-semibold">House Warning:</span> The Underbelly takes a cut on every game. Credits lost here are gone for good.</p>
             <p>All games use your credits directly.</p>
           </div>
+
+          {/* ── Public Leaderboard ─────────────────────────────────── */}
+          <div className="rounded-md border border-red-900/60 bg-[#0b0f14] p-5 space-y-3">
+            <h2 className="text-sm font-bold text-red-400 uppercase tracking-wider">🏛 The Underbelly — House Ledger</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded border border-amber-900/40 bg-black/40 p-3 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Casino Revenue</p>
+                <p className="text-lg font-bold text-amber-400 font-mono">{casinoRevenue.toLocaleString()} ₡</p>
+              </div>
+              <div className="rounded border border-red-900/40 bg-black/40 p-3 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">High Roller</p>
+                {highRoller ? (
+                  <>
+                    <p className="text-sm font-bold text-red-300">{nameMap[highRoller] ?? "Unknown"}</p>
+                    <p className="text-[10px] text-slate-600 font-mono">{pilotAgg[highRoller].wagered.toLocaleString()} ₡ wagered</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-600">No bets yet</p>
+                )}
+              </div>
+              <div className="rounded border border-purple-900/40 bg-black/40 p-3 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Biggest Loser</p>
+                {biggestLoser && pilotAgg[biggestLoser].net < 0 ? (
+                  <>
+                    <p className="text-sm font-bold text-purple-300">{nameMap[biggestLoser] ?? "Unknown"}</p>
+                    <p className="text-[10px] text-slate-600 font-mono">{Math.abs(pilotAgg[biggestLoser].net).toLocaleString()} ₡ lost</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-600">No losses yet</p>
+                )}
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-600 text-center italic">All figures public. The house always keeps score.</p>
+          </div>
+
+          {/* ── Personal Stats ─────────────────────────────────────── */}
+          {stats && (
+            <div className="rounded-md border border-slate-800 bg-[#0b0f14] p-5 space-y-3">
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">📊 Your Record</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded border border-slate-800 bg-black/40 p-2.5 text-center">
+                  <p className="text-[10px] text-slate-500">Total Bets</p>
+                  <p className="text-sm font-bold text-slate-200 font-mono">{stats.totalBets}</p>
+                </div>
+                <div className="rounded border border-slate-800 bg-black/40 p-2.5 text-center">
+                  <p className="text-[10px] text-slate-500">Wins / Losses</p>
+                  <p className="text-sm font-mono">
+                    <span className="text-emerald-400 font-bold">{stats.wins}</span>
+                    <span className="text-slate-600"> / </span>
+                    <span className="text-red-400 font-bold">{stats.losses}</span>
+                  </p>
+                </div>
+                <div className="rounded border border-slate-800 bg-black/40 p-2.5 text-center">
+                  <p className="text-[10px] text-slate-500">Net P&L</p>
+                  <p className={`text-sm font-bold font-mono ${stats.totalNet >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {stats.totalNet >= 0 ? "+" : ""}{stats.totalNet.toLocaleString()} ₡
+                  </p>
+                </div>
+                <div className="rounded border border-slate-800 bg-black/40 p-2.5 text-center">
+                  <p className="text-[10px] text-slate-500">Avg Bet</p>
+                  <p className="text-sm font-bold text-amber-400 font-mono">{stats.averageBet.toLocaleString()} ₡</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500">
+                <span>Total Wagered: <span className="text-slate-300 font-mono">{stats.totalWagered.toLocaleString()} ₡</span></span>
+                <span>Favorite Game: <span className="text-red-300">{GAME_LABELS[stats.favoriteGame] ?? stats.favoriteGame}</span></span>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </>

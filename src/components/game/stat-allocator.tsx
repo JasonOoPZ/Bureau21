@@ -10,12 +10,12 @@ interface Props {
 }
 
 const STATS = [
-  { key: "hp", label: "Life Force (HP)", gain: (hp: number) => `+${hp} per point`, color: "text-emerald-400" },
-  { key: "strength", label: "Strength", gain: () => "+1.0 per point", color: "text-red-400" },
-  { key: "speed", label: "Speed", gain: () => "+1.0 per point", color: "text-cyan-400" },
-  { key: "endurance", label: "Endurance", gain: () => "+0.5 per point", color: "text-amber-400" },
-  { key: "panic", label: "Panic", gain: () => "+0.5 per point", color: "text-purple-400" },
-  { key: "confidence", label: "Confidence", gain: () => "+0.25 per point", color: "text-yellow-400" },
+  { key: "hp", label: "Life Force (HP)", color: "text-emerald-400" },
+  { key: "strength", label: "Strength", color: "text-red-400" },
+  { key: "speed", label: "Speed", color: "text-cyan-400" },
+  { key: "endurance", label: "Endurance", color: "text-amber-400" },
+  { key: "panic", label: "Panic", color: "text-purple-400" },
+  { key: "confidence", label: "Confidence (max 50)", color: "text-yellow-400" },
 ] as const;
 
 export function StatAllocator({ unspentPoints, level, hpPerPoint: hpp }: Props) {
@@ -75,7 +75,7 @@ export function StatAllocator({ unspentPoints, level, hpPerPoint: hpp }: Props) 
             <div>
               <span className={`text-[11px] font-semibold ${s.color}`}>{s.label}</span>
               <span className="ml-2 text-[10px] text-slate-600">
-                {s.key === "hp" ? s.gain(hpp) : s.gain()}
+                +1 per point
               </span>
             </div>
             <div className="flex gap-1">

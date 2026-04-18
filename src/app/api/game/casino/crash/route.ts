@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 // In-memory crash game state per user
-const activeCrash = new Map<string, { bet: number; multiplier: number; crashPoint: number; startedAt: number }>();
+const activeCrash = new Map<string, { bet: number; multiplier: number; crashPoint: number; startedAt: number; pilotId: string }>();
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const r = Math.random();
   const crashPoint = r < 0.03 ? 1.0 : Math.max(1.0, parseFloat((0.97 / (1 - r)).toFixed(2)));
 
-  activeCrash.set(uid, { bet, multiplier: 1.0, crashPoint, startedAt: Date.now() });
+  activeCrash.set(uid, { bet, multiplier: 1.0, crashPoint, startedAt: Date.now(), pilotId: pilot.id });
 
   return NextResponse.json({ status: "started", crashPoint_hint: "hidden" });
 }
@@ -49,6 +49,9 @@ export async function GET() {
   const currentMult = parseFloat(Math.pow(Math.E, elapsed * 0.08).toFixed(2));
 
   if (currentMult >= game.crashPoint) {
+    await prisma.casinoBet.create({
+      data: { pilotId: game.pilotId, game: "crash", bet: game.bet, payout: 0, net: -game.bet },
+    });
     activeCrash.delete(session.user.id);
     return NextResponse.json({
       status: "crashed",
@@ -77,6 +80,9 @@ export async function PUT() {
   const currentMult = parseFloat(Math.pow(Math.E, elapsed * 0.08).toFixed(2));
 
   if (currentMult >= game.crashPoint) {
+    await prisma.casinoBet.create({
+      data: { pilotId: game.pilotId, game: "crash", bet: game.bet, payout: 0, net: -game.bet },
+    });
     activeCrash.delete(uid);
     return NextResponse.json({
       status: "crashed",
@@ -88,6 +94,9 @@ export async function PUT() {
 
   const payout = Math.floor(game.bet * currentMult);
   await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
+  await prisma.casinoBet.create({
+    data: { pilotId: game.pilotId, game: "crash", bet: game.bet, payout, net: payout - game.bet },
+  });
   activeCrash.delete(uid);
 
   return NextResponse.json({
