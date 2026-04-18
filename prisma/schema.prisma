@@ -81,6 +81,13 @@ model PilotState {
   bondLastClaimedAt DateTime?
   gymEnergy         Int             @default(27)
   lastGymEnergyAt   DateTime        @default(now())
+  autoHerbs         Boolean         @default(false)
+  hideBattleLogs    Boolean         @default(false)
+  battleCooldown    Int             @default(5)
+  combatStimUse     String          @default("attack_or_defend")
+  simTrainsToday    Int             @default(0)
+  lastSimTrainAt    DateTime?
+  lastAttackedAt    DateTime?
   missions          Mission[]
   inventory         InventoryItem[]
   battleLogs        BattleLog[]
@@ -90,6 +97,8 @@ model PilotState {
   gymLogs           GymLog[]
   hydroponics       HydroponicsData?
   wealthInvestments WealthInvestment[]
+  watchlistOwned    Watchlist[]     @relation("WatchlistOwner")
+  watchlistTargeted Watchlist[]     @relation("WatchlistTarget")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -328,4 +337,19 @@ model HydroponicsData {
   updatedAt DateTime @updatedAt
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+}
+
+model Watchlist {
+  id            String   @id @default(cuid())
+  pilotId       String
+  targetPilotId String
+  blockComms    Boolean  @default(false)
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+
+  pilot       PilotState @relation("WatchlistOwner", fields: [pilotId], references: [id], onDelete: Cascade)
+  targetPilot PilotState @relation("WatchlistTarget", fields: [targetPilotId], references: [id], onDelete: Cascade)
+
+  @@unique([pilotId, targetPilotId])
+  @@index([pilotId])
 }

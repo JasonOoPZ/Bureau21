@@ -831,10 +831,10 @@ export function BankClient({
             </div>
 
             {hasLimitlessCard && (
-              <div className="rounded-lg bg-violet-950/20 border border-violet-700/30 p-3 flex items-center gap-3">
+              <div className="rounded-lg bg-blue-950/20 border-2 border-blue-500/60 p-3 flex items-center gap-3">
                 <span className="text-lg">♾️</span>
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-violet-400 font-bold">Nexus Limitless Yield</div>
+                  <div className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Nexus Limitless Yield</div>
                   <div className="text-[10px] text-slate-500">Maximum SVN per position cap waived — invest without limits.</div>
                 </div>
               </div>

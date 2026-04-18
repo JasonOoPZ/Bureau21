@@ -10,7 +10,10 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const schema = z.object({ targetUserId: z.string().min(1) });
+const schema = z.object({
+  targetUserId: z.string().min(1).optional(),
+  targetCallsign: z.string().min(1).max(40).optional(),
+}).refine((d) => d.targetUserId || d.targetCallsign, { message: "Target required" });
 
 /** Check if midnight HKT (UTC+8) has passed since last reset, return reset confidence if so */
 function resolveConfidenceReset(confidence: number, lastResetAt: Date): { confidence: number; didReset: boolean } {
@@ -53,6 +56,19 @@ export async function POST(request: Request) {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
+  // Resolve target: by userId or callsign lookup
+  let resolvedTargetUserId = parsed.data.targetUserId;
+  if (!resolvedTargetUserId && parsed.data.targetCallsign) {
+    const found = await prisma.pilotState.findFirst({
+      where: { callsign: { equals: parsed.data.targetCallsign, mode: "insensitive" } },
+      select: { userId: true },
+    });
+    if (!found) return NextResponse.json({ error: "Pilot not found." }, { status: 404 });
+    resolvedTargetUserId = found.userId;
+  }
+  if (!resolvedTargetUserId) return NextResponse.json({ error: "Target required." }, { status: 400 });
+  if (resolvedTargetUserId === session.user.id) return NextResponse.json({ error: "You cannot fight yourself." }, { status: 400 });
+
   // Daily confidence reset at midnight HKT for attacker
   const { confidence: atkConfidence, didReset: atkConfReset } = resolveConfidenceReset(
     pilot.confidence, pilot.lastConfidenceResetAt
@@ -67,11 +83,25 @@ export async function POST(request: Request) {
 
   // Fetch defender
   const defenderPilot = await prisma.pilotState.findUnique({
-    where: { userId: parsed.data.targetUserId },
+    where: { userId: resolvedTargetUserId },
     include: { inventory: true },
   });
   if (!defenderPilot) {
     return NextResponse.json({ error: "Opponent not found." }, { status: 404 });
+  }
+
+  // Check defender's attack cooldown setting
+  const defAny = defenderPilot as unknown as Record<string, unknown>;
+  if (defAny.lastAttackedAt) {
+    const cooldownMs = ((defAny.battleCooldown as number) ?? 5) * 60 * 1000;
+    const elapsed = Date.now() - (defAny.lastAttackedAt as Date).getTime();
+    if (elapsed < cooldownMs) {
+      const remaining = Math.ceil((cooldownMs - elapsed) / 60000);
+      return NextResponse.json(
+        { error: `That pilot was attacked recently. Try again in ~${remaining} minute(s).` },
+        { status: 429 }
+      );
+    }
   }
 
   // Daily confidence reset at midnight HKT for defender
@@ -155,7 +185,7 @@ export async function POST(request: Request) {
     },
   });
 
-  // Update defender
+  // Update defender (including lastAttackedAt)
   const defProgressed = applyLevelProgression(
     defenderPilot.xp + outcome.defenderXp,
     defenderPilot.level
@@ -171,6 +201,7 @@ export async function POST(request: Request) {
       lifeForce: outcome.defenderLfAfter,
       confidence: defNewConf,
       kills: outcome.winner === "defender" ? { increment: 1 } : undefined,
+      lastAttackedAt: new Date(),
     },
   });
 
@@ -202,7 +233,20 @@ export async function POST(request: Request) {
     );
   }
 
+  // Auto-herbs: if attacker has autoHerbs and herbs > 0 and LF is below max, heal
+  const pilotAny = pilot as Record<string, unknown>;
+  if (pilotAny.autoHerbs && pilot.herbs > 0) {
+    const maxLf = Math.max(15, atkProgressed.level * 5);
+    if (outcome.attackerLfAfter < maxLf) {
+      await prisma.pilotState.update({
+        where: { userId: session.user.id },
+        data: { lifeForce: maxLf, herbs: { decrement: 1 } },
+      });
+    }
+  }
+
   // Battle logs for both players
+  const logText = pilotAny.hideBattleLogs ? "[Battle log hidden by attacker]" : outcome.logText;
   await Promise.all([
     prisma.battleLog.create({
       data: {
@@ -223,7 +267,7 @@ export async function POST(request: Request) {
         xpGained: outcome.defenderXp,
         creditsGained: outcome.defenderCredits,
         roundsCount: outcome.totalRounds,
-        logText: outcome.logText,
+        logText,
       },
     }),
   ]);
