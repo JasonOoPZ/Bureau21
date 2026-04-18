@@ -116,20 +116,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // Newbie protection check
-  if (pilot.level < GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL) {
-    return NextResponse.json(
-      { error: `You must be level ${GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL} to engage in PVP.` },
-      { status: 403 }
-    );
-  }
-  if (defenderPilot.level < GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL) {
-    return NextResponse.json(
-      { error: "That pilot is under newbie protection." },
-      { status: 403 }
-    );
-  }
-
   // Fetch active heroes for both players
   const [attackerHeroes, defenderHeroes] = await Promise.all([
     prisma.playerHero.findMany({ where: { pilotId: pilot.id, active: true } }),
