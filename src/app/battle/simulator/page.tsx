@@ -38,8 +38,38 @@ export default async function SimulatorPage() {
             <span className="text-[11px] text-amber-400">Combat Simulator</span>
           </div>
 
-          <div className="rounded-md border border-amber-900/40 bg-[#0f0d0a] px-4 py-3 text-center">
-            <h1 className="text-lg font-bold uppercase tracking-[0.2em] text-amber-300">Combat Simulator</h1>
+          {/* ── Simulator Banner ── */}
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/40 bg-gradient-to-r from-[#0f0d08] via-[#11100a] to-[#0f0d08]">
+            <div className="absolute inset-0 opacity-[0.06]" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(245,158,11,0.1) 30px, rgba(245,158,11,0.1) 31px)" }} />
+            <div className="relative flex items-center gap-4 p-5">
+              {/* Target Practice / Hologram SVG */}
+              <div className="shrink-0">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
+                  <rect x="8" y="8" width="32" height="32" rx="2" stroke="#f59e0b" strokeWidth="1" opacity="0.3" strokeDasharray="3 2" />
+                  <rect x="14" y="14" width="20" height="20" rx="1" stroke="#fbbf24" strokeWidth="1" opacity="0.4" />
+                  <circle cx="24" cy="24" r="8" stroke="#f59e0b" strokeWidth="1.5" opacity="0.6" />
+                  <circle cx="24" cy="24" r="3" stroke="#fbbf24" strokeWidth="1" opacity="0.7" />
+                  <circle cx="24" cy="24" r="1" fill="#f59e0b" opacity="0.9" />
+                  <line x1="24" y1="8" x2="24" y2="16" stroke="#f59e0b" strokeWidth="0.5" opacity="0.4" />
+                  <line x1="24" y1="32" x2="24" y2="40" stroke="#f59e0b" strokeWidth="0.5" opacity="0.4" />
+                  <line x1="8" y1="24" x2="16" y2="24" stroke="#f59e0b" strokeWidth="0.5" opacity="0.4" />
+                  <line x1="32" y1="24" x2="40" y2="24" stroke="#f59e0b" strokeWidth="0.5" opacity="0.4" />
+                  <path d="M12 12 L18 18" stroke="#fbbf24" strokeWidth="0.5" opacity="0.25" />
+                  <path d="M36 12 L30 18" stroke="#fbbf24" strokeWidth="0.5" opacity="0.25" />
+                  <path d="M12 36 L18 30" stroke="#fbbf24" strokeWidth="0.5" opacity="0.25" />
+                  <path d="M36 36 L30 30" stroke="#fbbf24" strokeWidth="0.5" opacity="0.25" />
+                  <text x="24" y="46" textAnchor="middle" fill="#f59e0b" fontSize="4" opacity="0.4" fontFamily="monospace">SIM</text>
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-black uppercase tracking-wider text-amber-300">Combat Simulator</h1>
+                <p className="text-[11px] text-slate-500">Holographic Training & Tactical Drill Chamber</p>
+              </div>
+              <div className="ml-auto hidden sm:block text-right">
+                <div className="text-[10px] uppercase tracking-widest text-slate-600">Sector</div>
+                <div className="text-sm font-bold text-amber-400">Training Bay</div>
+              </div>
+            </div>
           </div>
 
           <SimulatorClient
