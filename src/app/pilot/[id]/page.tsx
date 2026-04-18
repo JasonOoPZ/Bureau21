@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
+import { EngageButton } from "@/components/game/engage-button";
 import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap, getCombatBonuses } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
 import { getOrCreatePilotState } from "@/lib/game-state";
@@ -253,63 +254,12 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
 
               {/* ── Snoop Analysis ── */}
               {snoopAnalysis && (
-                <section className="rounded-md border border-amber-900/40 bg-[#0f0d0a] p-4">
-                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-amber-400 underline decoration-amber-800/40 underline-offset-4">
-                    ⚠ Snoop Analysis
-                  </p>
-                  <p className="mb-3 text-[11px] text-slate-500 leading-relaxed">
-                    Based on a combat simulation analysis comparing your current stats, equipment,
-                    and loadout against this pilot&apos;s known configuration:
-                  </p>
-
-                  {/* Win chance meter */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-slate-400">Estimated Victory Chance</span>
-                      <span className={`font-bold font-mono ${
-                        snoopAnalysis.winPct >= 70 ? "text-emerald-400" :
-                        snoopAnalysis.winPct >= 40 ? "text-amber-400" :
-                        "text-red-400"
-                      }`}>
-                        {snoopAnalysis.winPct}%
-                      </span>
-                    </div>
-                    <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden">
-                      <div
-                        className={`h-3 rounded-full transition-all ${
-                          snoopAnalysis.winPct >= 70 ? "bg-emerald-500" :
-                          snoopAnalysis.winPct >= 40 ? "bg-amber-500" :
-                          "bg-red-500"
-                        }`}
-                        style={{ width: `${snoopAnalysis.winPct}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="rounded border border-slate-800 bg-black/40 px-3 py-2">
-                      <span className="text-slate-500">Avg Rounds</span>
-                      <p className="text-slate-200 font-semibold">{snoopAnalysis.avgRounds}</p>
-                    </div>
-                    <div className="rounded border border-slate-800 bg-black/40 px-3 py-2">
-                      <span className="text-slate-500">Avg LF Remaining (Win)</span>
-                      <p className="text-emerald-300 font-semibold">{snoopAnalysis.avgLfRemaining}</p>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-[10px] text-slate-600 italic">
-                    Simulation based on 100 engagements at full health. Actual results may vary.
-                  </p>
-
-                  <div className="mt-3 text-center">
-                    <Link
-                      href={`/battle?target=${encodeURIComponent(pilot.callsign)}`}
-                      className="inline-block rounded border border-red-800 bg-red-950/50 px-5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-red-300 transition hover:bg-red-900/50"
-                    >
-                      Engage {pilot.callsign}
-                    </Link>
-                  </div>
-                </section>
+                <EngageButton
+                  targetCallsign={pilot.callsign}
+                  winPct={snoopAnalysis.winPct}
+                  avgRounds={snoopAnalysis.avgRounds}
+                  avgLfRemaining={snoopAnalysis.avgLfRemaining}
+                />
               )}
             </div>
           </div>
