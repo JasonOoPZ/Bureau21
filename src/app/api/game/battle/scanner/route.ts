@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   // Syndicate filters
   if (filters.syndicateFilter && filters.syndicateFilter !== "any") {
     if (filters.syndicateFilter === "none") {
-      where.syndicateMember = null;
+      where.syndicateMember = { is: null };
     } else if (filters.syndicateFilter === "not_mine") {
       const mySyndicate = await prisma.syndicateMember.findUnique({
         where: { pilotId: pilot.id },

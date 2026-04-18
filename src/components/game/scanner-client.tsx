@@ -47,22 +47,22 @@ interface ScanFilters {
 }
 
 const DEFAULT_FILTERS: ScanFilters = {
-  levelEnabled: true,
-  levelMin: 5,
-  levelMax: 5,
+  levelEnabled: false,
+  levelMin: 1,
+  levelMax: 500,
   killsEnabled: false,
   killsMin: 0,
   killsMax: 9999,
   minAgeDaysEnabled: false,
   minAgeDays: 0,
   gender: "",
-  excludeWatchlist: true,
+  excludeWatchlist: false,
   sameSector: false,
   onlineOnly: false,
-  excludeStaff: true,
-  attackableOnly: true,
+  excludeStaff: false,
+  attackableOnly: false,
   syndicateFilter: "any",
-  sortBy: "id",
+  sortBy: "level",
   cacheSearch: true,
 };
 
