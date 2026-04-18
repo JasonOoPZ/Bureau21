@@ -392,7 +392,7 @@ export function ScannerClient({ syndicates }: Props) {
                       href={`/pilot/${r.userId}`}
                       className="text-cyan-400 hover:text-cyan-300"
                     >
-                      Dossier
+                      Snoop
                     </Link>
                   </td>
                 </tr>
