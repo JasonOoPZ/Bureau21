@@ -23,6 +23,10 @@ const quicklinksSchema = z.object({
   ).max(5),
 });
 
+const callsignSchema = z.object({
+  callsign: z.string().min(2, "Callsign must be at least 2 characters.").max(24, "Callsign must be at most 24 characters.").regex(/^[a-zA-Z0-9 _\-]+$/, "Callsign may only contain letters, numbers, spaces, hyphens, and underscores."),
+});
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -57,6 +61,28 @@ export async function POST(request: Request) {
   }
 
   await getOrCreatePilotState(session.user.id, session.user.name);
+
+  // Callsign update
+  if ("callsign" in body) {
+    const parsed = callsignSchema.safeParse(body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "Invalid callsign.";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    await prisma.pilotState.update({
+      where: { userId: session.user.id },
+      data: { callsign: parsed.data.callsign.trim() },
+    });
+    // Also update User.name so session reflects new name
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { name: parsed.data.callsign.trim() },
+    });
+    return NextResponse.json({
+      callsign: parsed.data.callsign.trim(),
+      message: "Callsign updated.",
+    });
+  }
 
   // ATK split update
   if ("atkSplit" in body) {

@@ -14,12 +14,16 @@ interface QuickLink {
 interface SettingsClientProps {
   currentTheme: string;
   currentQuicklinks: QuickLink[];
+  currentCallsign: string;
   walletAddress: string | null;
 }
 
-export function SettingsClient({ currentTheme, currentQuicklinks, walletAddress }: SettingsClientProps) {
+export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsign, walletAddress }: SettingsClientProps) {
   const router = useRouter();
   const [activeTheme, setActiveTheme] = useState<string>(currentTheme);
+  const [callsign, setCallsign] = useState(currentCallsign);
+  const [callsignSaving, setCallsignSaving] = useState(false);
+  const [callsignMessage, setCallsignMessage] = useState("");
   const [quicklinks, setQuicklinks] = useState<(QuickLink | null)[]>(() => {
     const slots: (QuickLink | null)[] = [...currentQuicklinks];
     while (slots.length < 5) slots.push(null);
@@ -90,6 +94,62 @@ export function SettingsClient({ currentTheme, currentQuicklinks, walletAddress 
 
   return (
     <div className="space-y-4">
+      {/* Callsign / Username */}
+      <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
+        <p className="mb-1 text-[10px] uppercase tracking-[0.15em] text-slate-500">Pilot Callsign</p>
+        <p className="mb-3 text-[10px] text-slate-500">
+          Your display name across Bureau 21. 2–24 characters. Letters, numbers, spaces, hyphens, and underscores only.
+        </p>
+        <div className="flex items-end gap-3">
+          <label className="flex-1">
+            <input
+              type="text"
+              value={callsign}
+              onChange={(e) => { setCallsign(e.target.value); setCallsignMessage(""); }}
+              maxLength={24}
+              placeholder="Enter new callsign"
+              className="w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+            />
+            <p className="mt-1 text-[10px] text-slate-600">{callsign.length}/24 characters</p>
+          </label>
+          <button
+            onClick={async () => {
+              const trimmed = callsign.trim();
+              if (trimmed.length < 2) { setCallsignMessage("Callsign must be at least 2 characters."); return; }
+              if (trimmed === currentCallsign) { setCallsignMessage("That's already your callsign."); return; }
+              setCallsignSaving(true);
+              setCallsignMessage("");
+              try {
+                const res = await fetch("/api/game/settings", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ callsign: trimmed }),
+                });
+                const data = await res.json().catch(() => null);
+                if (res.ok) {
+                  setCallsignMessage("Callsign updated!");
+                  router.refresh();
+                } else {
+                  setCallsignMessage(data?.error ?? "Failed to update callsign.");
+                }
+              } catch {
+                setCallsignMessage("Network error.");
+              }
+              setCallsignSaving(false);
+            }}
+            disabled={callsignSaving || callsign.trim().length < 2}
+            className="shrink-0 rounded border border-cyan-700 bg-cyan-900/30 px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-cyan-200 transition hover:bg-cyan-900/50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {callsignSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+        {callsignMessage && (
+          <p className={`mt-2 text-[11px] font-semibold ${
+            callsignMessage.includes("updated") ? "text-emerald-400" : "text-red-400"
+          }`}>{callsignMessage}</p>
+        )}
+      </div>
+
       {/* Theme Picker */}
       <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
         <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-slate-500">Interface Theme</p>

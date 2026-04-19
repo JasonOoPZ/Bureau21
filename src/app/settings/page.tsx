@@ -45,6 +45,7 @@ export default async function SettingsPage() {
           <SettingsClient
             currentTheme={(pilotAny.theme as string) ?? "original"}
             currentQuicklinks={customQuicklinks}
+            currentCallsign={pilot.callsign}
             walletAddress={user?.walletAddress ?? null}
           />
         </div>

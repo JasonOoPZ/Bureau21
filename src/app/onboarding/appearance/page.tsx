@@ -30,7 +30,7 @@ export default async function AppearanceOnboardingPage() {
           currentSlug={pilot.characterSlug}
           initialCredits={pilot.credits}
           initialSelections={pilot.appearanceSelections}
-          initialCallsign={pilot.callsign}
+          initialCallsign=""
           setupMode
         />
       </section>
