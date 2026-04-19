@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function TattooParlor() {
   const session = await getServerSession(authOptions);
@@ -45,10 +46,7 @@ export default async function TattooParlor() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-pink-400">Tattoo Parlor</span>
           </div>
-          <div className="rounded-md border border-pink-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-pink-300">Social District</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-pink-200">Tattoo Parlor</h1>
-          </div>
+          <PixelBanner scene="tattoo-parlor" title="Tattoo Parlor" subtitle="Customize your pilot's appearance and flair." />
 
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
             <p className="text-[12px] text-slate-400">

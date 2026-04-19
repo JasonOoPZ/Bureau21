@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function PawnShopPage() {
   const session = await getServerSession(authOptions);
@@ -27,10 +28,7 @@ export default async function PawnShopPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-amber-300">Pawn Shop</span>
           </div>
-          <div className="rounded-md border border-amber-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300">Commerce Row</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-amber-200">Pawn Shop</h1>
-          </div>
+          <PixelBanner scene="pawn-shop" title="Pawn Shop" subtitle="Sell unwanted gear for quick credits." />
           <PawnShopClient
             credits={pilot.credits}
             items={unequippedItems.map((i) => ({

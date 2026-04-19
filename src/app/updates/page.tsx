@@ -3,6 +3,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 interface PatchNote {
   version: string;
@@ -111,12 +112,7 @@ export default async function UpdatesPage() {
           </div>
 
           {/* Header */}
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] px-4 py-3">
-            <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">Patch Notes</h1>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              Bureau 21 development changelog. All builds, balance changes, and content drops.
-            </p>
-          </div>
+          <PixelBanner scene="station" title="Patch Notes" subtitle="Bureau 21 development changelog. All builds, balance changes, and content drops." />
 
           {/* Notes */}
           <div className="space-y-2">

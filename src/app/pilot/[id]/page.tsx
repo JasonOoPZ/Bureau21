@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function PilotProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -107,13 +108,7 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
       <main className="min-h-screen bg-black px-3 py-4">
         <div className="mx-auto max-w-3xl space-y-3">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">
-              ← Hub
-            </Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-cyan-400">Pilot Profile</span>
-          </div>
+          <PixelBanner scene="house" title="Pilot Profile" subtitle={pilot.callsign} />
 
           {/* Profile card */}
           <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">

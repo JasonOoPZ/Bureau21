@@ -6,6 +6,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function UnderbellyPage() {
   const session = await getServerSession(authOptions);
@@ -26,17 +27,7 @@ export default async function UnderbellyPage() {
           <span className="text-slate-300">Underbelly</span>
         </div>
 
-        <div className="mb-8 rounded-xl border border-purple-900/40 bg-[#0d0816] p-6">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-purple-500">
-            High-Risk District
-          </div>
-          <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
-            The Underbelly
-          </h1>
-          <p className="mt-2 text-slate-400">
-            The station&apos;s illicit backrooms. Gamble your credits, push your luck, and walk away richer — or with nothing.
-          </p>
-        </div>
+        <PixelBanner scene="underbelly" title="The Underbelly" subtitle="The station's illicit backrooms. Gamble your credits, push your luck, and walk away richer — or with nothing." />
 
         <UnderbellyClient initialCredits={pilot.credits} pilotLevel={pilot.level} hasGodCard={godCard} />
       </main>

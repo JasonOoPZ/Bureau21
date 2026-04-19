@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const BOARD_NAMES: Record<string, string> = {
   announcements: "Announcements",
@@ -51,12 +52,7 @@ export default async function BoardCategoryPage({ params }: { params: Promise<{ 
             <span className="text-[11px] text-cyan-400">{boardName}</span>
           </div>
 
-          <div className="rounded-md border border-cyan-900/30 bg-[#0b0f14] p-4">
-            <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">{boardName}</h1>
-            <p className="mt-1 text-[11px] text-slate-500">
-              {posts.length} topic{posts.length !== 1 ? "s" : ""}
-            </p>
-          </div>
+          <PixelBanner scene="boards" title={boardName} subtitle={`${posts.length} topic${posts.length !== 1 ? "s" : ""}`} />
 
           <BoardsClient
             initialPosts={posts.map((p) => ({

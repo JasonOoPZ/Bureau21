@@ -5,6 +5,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 interface Location {
   name: string;
@@ -123,53 +124,12 @@ export default async function PrimarisPage() {
       <main className="min-h-screen bg-black px-3 py-4">
         <div className="mx-auto max-w-6xl">
           {/* Banner */}
-          <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md border border-slate-800 bg-[#060a0f] sm:h-56">
-            {/* CSS sci-fi station scene */}
-            <div className="absolute inset-0">
-              {/* Sky / stars */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#050810] via-[#0a1020] to-[#0d1418]" />
-              {/* Distant nebula glow */}
-              <div className="absolute left-1/4 top-4 h-20 w-40 rounded-full bg-purple-900/20 blur-3xl" />
-              <div className="absolute right-1/3 top-8 h-16 w-32 rounded-full bg-cyan-900/15 blur-3xl" />
-              {/* Stars */}
-              <div className="absolute left-[10%] top-[15%] h-[2px] w-[2px] rounded-full bg-white/70" />
-              <div className="absolute left-[25%] top-[8%] h-[1px] w-[1px] rounded-full bg-white/50" />
-              <div className="absolute left-[40%] top-[20%] h-[2px] w-[2px] rounded-full bg-cyan-300/60" />
-              <div className="absolute left-[55%] top-[5%] h-[1px] w-[1px] rounded-full bg-white/40" />
-              <div className="absolute left-[70%] top-[12%] h-[2px] w-[2px] rounded-full bg-white/60" />
-              <div className="absolute left-[85%] top-[18%] h-[1px] w-[1px] rounded-full bg-purple-300/50" />
-              <div className="absolute left-[15%] top-[25%] h-[1px] w-[1px] rounded-full bg-white/30" />
-              <div className="absolute left-[60%] top-[22%] h-[1px] w-[1px] rounded-full bg-white/50" />
-              <div className="absolute left-[92%] top-[7%] h-[2px] w-[2px] rounded-full bg-cyan-200/40" />
-              {/* Station structures */}
-              <div className="absolute bottom-0 left-[5%] h-32 w-16 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
-              <div className="absolute bottom-0 left-[5%] h-36 w-3 bg-gradient-to-t from-slate-700 to-slate-900 opacity-60" />
-              <div className="absolute bottom-0 left-[12%] h-24 w-20 bg-gradient-to-t from-slate-800 to-slate-900/80 opacity-70" />
-              <div className="absolute bottom-0 left-[22%] h-28 w-12 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
-              <div className="absolute bottom-0 left-[30%] h-20 w-40 bg-gradient-to-t from-slate-800 to-[#0d1418] opacity-60" />
-              <div className="absolute bottom-0 right-[5%] h-36 w-14 bg-gradient-to-t from-slate-800 to-slate-900 opacity-80" />
-              <div className="absolute bottom-0 right-[15%] h-28 w-18 bg-gradient-to-t from-slate-800 to-slate-900/80 opacity-70" />
-              <div className="absolute bottom-0 right-[25%] h-22 w-24 bg-gradient-to-t from-slate-800 to-[#0d1418] opacity-60" />
-              {/* Central dome */}
-              <div className="absolute bottom-0 left-1/2 h-40 w-48 -translate-x-1/2 rounded-t-full bg-gradient-to-t from-slate-700/50 to-slate-900/30 opacity-80" />
-              <div className="absolute bottom-0 left-1/2 h-20 w-60 -translate-x-1/2 bg-gradient-to-t from-slate-700 to-slate-800/50 opacity-60" />
-              {/* Glowing windows */}
-              <div className="absolute bottom-10 left-[8%] h-1 w-3 bg-cyan-400/60" />
-              <div className="absolute bottom-14 left-[9%] h-1 w-2 bg-cyan-500/40" />
-              <div className="absolute bottom-6 left-[24%] h-1 w-4 bg-amber-400/50" />
-              <div className="absolute bottom-8 right-[8%] h-1 w-3 bg-cyan-400/50" />
-              <div className="absolute bottom-16 right-[10%] h-1 w-2 bg-purple-400/40" />
-              <div className="absolute bottom-4 left-1/2 h-1 w-6 -translate-x-1/2 bg-cyan-300/40" />
-              <div className="absolute bottom-8 left-[46%] h-1 w-3 bg-amber-300/30" />
-              <div className="absolute bottom-12 left-[52%] h-1 w-2 bg-cyan-400/30" />
-              {/* Ground line */}
-              <div className="absolute bottom-0 left-0 h-[1px] w-full bg-gradient-to-r from-transparent via-cyan-800/30 to-transparent" />
-              {/* Station name overlay */}
-              <div className="absolute bottom-3 left-0 right-0 text-center">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-500/40">Primaris Core · Bureau 21</p>
-              </div>
+          <PixelBanner scene="primaris" title="Primaris Core" subtitle={`Bureau 21 — ${totalLive} active locations`}>
+            <div className="text-right text-[11px]">
+              <p className="text-slate-500">Account age</p>
+              <p className="font-bold text-cyan-300">{accountAgeDays}d</p>
             </div>
-          </div>
+          </PixelBanner>
 
           {/* Intro text */}
           <div className="mb-4 text-[12px] leading-relaxed text-slate-400">

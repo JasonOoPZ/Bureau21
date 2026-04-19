@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import HeroesClient from "@/components/game/heroes-client";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function HeroesPage() {
   const session = await getServerSession(authOptions);
@@ -37,14 +38,7 @@ export default async function HeroesPage() {
       <TopBar session={session} />
       <main className="min-h-screen bg-[#0a0d11] text-white">
         <div className="max-w-3xl mx-auto px-4 py-8 space-y-2">
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 mb-2">
-            <Link href="/lobby" className="hover:text-cyan-300 transition-colors">← Hub</Link>
-          </div>
-          <p className="text-xs text-slate-500 uppercase tracking-widest">Bureau 21</p>
-          <h1 className="text-2xl font-bold text-slate-100">Battle Support Corps</h1>
-        <p className="text-sm text-slate-400 pb-4">
-          AI souls bonded to combat hulls. Active mechas boost your stats every time you fight.
-        </p>
+          <PixelBanner scene="heroes" title="Battle Support Corps" subtitle="AI souls bonded to combat hulls. Active mechas boost your stats every time you fight." />
 
         <HeroesClient
           initialHeroes={heroes}

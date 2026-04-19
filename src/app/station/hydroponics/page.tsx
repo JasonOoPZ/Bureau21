@@ -4,6 +4,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function HydroponicsPage() {
   const session = await getServerSession(authOptions);
@@ -21,14 +22,7 @@ export default async function HydroponicsPage() {
           <span className="text-slate-300">Hydroponics Bay</span>
         </div>
 
-        <div className="mb-8 rounded-xl border border-emerald-900/40 bg-[#081410] p-6">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-emerald-500">
-            Resource Production
-          </div>
-          <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
-            Hydroponics Bay
-          </h1>
-        </div>
+        <PixelBanner scene="hydroponics" title="Hydroponics Bay" subtitle="Grow supplies, Blue Herbs, and consumables for revival and buff effects." />
 
         <HydroponicsOrchestrator />
       </main>

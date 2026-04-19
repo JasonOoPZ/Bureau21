@@ -4,6 +4,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function FabricationPage() {
   const session = await getServerSession(authOptions);
@@ -21,17 +22,7 @@ export default async function FabricationPage() {
           <span className="text-slate-300">Fabrication Deck</span>
         </div>
 
-        <div className="mb-8 rounded-xl border border-orange-900/40 bg-[#130d06] p-6">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">
-            Industrial District
-          </div>
-          <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
-            Fabrication Deck
-          </h1>
-          <p className="mt-2 text-slate-400">
-            Mine ore from nearby asteroid fields, then use the fabrication bays to forge weapons, shields, and engines from raw materials.
-          </p>
-        </div>
+        <PixelBanner scene="fabrication" title="Fabrication Deck" subtitle="Mine ore from nearby asteroid fields, then forge weapons, shields, and engines from raw materials." />
 
         <FabricationClient />
       </main>

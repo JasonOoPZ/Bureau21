@@ -3,6 +3,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const CAMPUS_LINKS = [
   { name: "Admissions Office", href: "/primaris/university", description: "Campus registration and enrollment.", status: "planned" },
@@ -30,56 +31,7 @@ export default async function UniversityCampusPage() {
             <span className="text-[11px] text-cyan-400">University</span>
           </div>
 
-          {/* University Visual */}
-          <div className="relative overflow-hidden rounded-md border border-cyan-900/30 bg-gradient-to-b from-[#0d1520] via-[#0b1018] to-[#080c12]">
-            {/* Architectural visual */}
-            <div className="flex items-end justify-center gap-0 pt-6">
-              {/* Left wing */}
-              <div className="flex flex-col items-center">
-                <div className="grid grid-cols-4 gap-1">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div key={`lw-${i}`} className="h-4 w-5 rounded-sm border border-amber-800/40 bg-amber-900/20" />
-                  ))}
-                </div>
-                <div className="mt-1 h-2 w-24 bg-slate-800" />
-              </div>
-              {/* Center dome */}
-              <div className="flex flex-col items-center px-4">
-                <div className="h-12 w-28 rounded-t-full border-2 border-b-0 border-cyan-800/40 bg-gradient-to-b from-cyan-900/20 to-transparent" />
-                <div className="grid grid-cols-5 gap-1">
-                  {Array.from({ length: 15 }).map((_, i) => (
-                    <div key={`cw-${i}`} className="h-5 w-5 rounded-sm border border-amber-700/50 bg-amber-900/30" />
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <div className="h-8 w-3 rounded-t bg-slate-700" />
-                  <div className="h-4 w-16 rounded-t bg-slate-800" />
-                  <div className="h-8 w-3 rounded-t bg-slate-700" />
-                </div>
-              </div>
-              {/* Right wing */}
-              <div className="flex flex-col items-center">
-                <div className="grid grid-cols-4 gap-1">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div key={`rw-${i}`} className="h-4 w-5 rounded-sm border border-amber-800/40 bg-amber-900/20" />
-                  ))}
-                </div>
-                <div className="mt-1 h-2 w-24 bg-slate-800" />
-              </div>
-            </div>
-            {/* Ground */}
-            <div className="mt-1 h-3 w-full bg-gradient-to-t from-emerald-950/40 to-transparent" />
-
-            {/* Title overlay */}
-            <div className="bg-black/60 px-6 py-4 text-center">
-              <h1 className="text-xl font-bold uppercase tracking-[0.25em] text-cyan-200">
-                Bureau 21 Institute of Applied Sciences
-              </h1>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">
-                Est. Cycle 4.217 — Sol Prime Campus
-              </p>
-            </div>
-          </div>
+          <PixelBanner scene="university" title="Bureau 21 Institute of Applied Sciences" subtitle="Est. Cycle 4.217 — Sol Prime Campus" />
 
           {/* Description */}
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function ChatPage() {
   const session = await getServerSession(authOptions);
@@ -27,12 +28,7 @@ export default async function ChatPage() {
             <span className="text-[11px] text-cyan-400">Town Hall</span>
           </div>
 
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Town Hall</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Open comms channel. Refreshes every 10 seconds.
-            </p>
-          </div>
+          <PixelBanner scene="chat" title="Town Hall" subtitle="Open comms channel. Refreshes every 10 seconds." />
 
           <ChatClient
             initialMessages={messages.map((m) => ({

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function SyndicateRowPage() {
   const session = await getServerSession(authOptions);
@@ -70,12 +71,7 @@ export default async function SyndicateRowPage() {
           </div>
 
           {/* Header */}
-          <div className="rounded-md border border-purple-900/50 bg-[#0e0a14] px-4 py-3">
-            <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">⬡ Syndicate Row</h1>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              Form alliances, pool treasury, and earn collective bonuses. Found a syndicate or join with a tag.
-            </p>
-          </div>
+          <PixelBanner scene="syndicate-row" title="Syndicate Row" subtitle="Form alliances, pool treasury, and earn collective bonuses. Found a syndicate or join with a tag." />
 
           <SyndicateClient
             pilotId={pilot.id}

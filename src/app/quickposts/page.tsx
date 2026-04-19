@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function QuickPostsPage() {
   const session = await getServerSession(authOptions);
@@ -48,21 +49,13 @@ export default async function QuickPostsPage() {
           </div>
 
           {/* Header */}
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">Quick Posts</h1>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  Private operator messages. 500 characters max.
-                </p>
-              </div>
-              {unread > 0 && (
-                <span className="rounded border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-[10px] text-amber-300">
-                  {unread} unread
-                </span>
-              )}
-            </div>
-          </div>
+          <PixelBanner scene="chat" title="Quick Posts" subtitle="Private operator messages. 500 characters max.">
+            {unread > 0 && (
+              <span className="rounded border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-[10px] text-amber-300">
+                {unread} unread
+              </span>
+            )}
+          </PixelBanner>
 
           <QuickPostClient
             initialReceived={received.map(toJson)}

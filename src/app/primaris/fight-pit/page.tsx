@@ -6,6 +6,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function FightPitPage() {
   const session = await getServerSession(authOptions);
@@ -27,10 +28,7 @@ export default async function FightPitPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-red-400">Fight Pit</span>
           </div>
-          <div className="rounded-md border border-red-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-red-300">The Underbelly</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-red-200">Fight Pit</h1>
-          </div>
+          <PixelBanner scene="fight-pit" title="Fight Pit" subtitle="Underground bare-knuckle brawls. No rules." />
           <FightPitClient
             motivation={currentMotivation}
             lifeForce={pilot.lifeForce}

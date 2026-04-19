@@ -5,6 +5,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function InfoBrokerPage() {
   const session = await getServerSession(authOptions);
@@ -21,10 +22,7 @@ export default async function InfoBrokerPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-purple-400">Info Broker</span>
           </div>
-          <div className="rounded-md border border-purple-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-purple-300">The Underbelly</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-purple-200">Info Broker</h1>
-          </div>
+          <PixelBanner scene="info-broker" title="Info Broker" subtitle="Buy intel on other pilots and syndicates." />
           <InfoBrokerClient credits={pilot.credits} />
         </div>
       </main>

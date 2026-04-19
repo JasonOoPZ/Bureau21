@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function BattlePage({
   searchParams,
@@ -55,35 +56,7 @@ export default async function BattlePage({
           </div>
 
           {/* ── Combat Arena Banner ── */}
-          <div className="relative overflow-hidden rounded-xl border border-red-900/40 bg-gradient-to-r from-[#0f0808] via-[#110a0a] to-[#0f0808]">
-            <div className="absolute inset-0 opacity-[0.06]" style={{ background: "repeating-linear-gradient(135deg, transparent, transparent 40px, rgba(239,68,68,0.12) 40px, rgba(239,68,68,0.12) 41px)" }} />
-            <div className="relative flex items-center gap-4 p-5">
-              {/* Crosshairs SVG */}
-              <div className="shrink-0">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
-                  <circle cx="24" cy="24" r="18" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.4" />
-                  <circle cx="24" cy="24" r="10" stroke="#f87171" strokeWidth="1" opacity="0.6" />
-                  <circle cx="24" cy="24" r="3" fill="#ef4444" opacity="0.8" />
-                  <line x1="24" y1="2" x2="24" y2="14" stroke="#ef4444" strokeWidth="1" opacity="0.5" />
-                  <line x1="24" y1="34" x2="24" y2="46" stroke="#ef4444" strokeWidth="1" opacity="0.5" />
-                  <line x1="2" y1="24" x2="14" y2="24" stroke="#ef4444" strokeWidth="1" opacity="0.5" />
-                  <line x1="34" y1="24" x2="46" y2="24" stroke="#ef4444" strokeWidth="1" opacity="0.5" />
-                  <path d="M10 10 L16 16" stroke="#f87171" strokeWidth="0.5" opacity="0.3" />
-                  <path d="M38 10 L32 16" stroke="#f87171" strokeWidth="0.5" opacity="0.3" />
-                  <path d="M10 38 L16 32" stroke="#f87171" strokeWidth="0.5" opacity="0.3" />
-                  <path d="M38 38 L32 32" stroke="#f87171" strokeWidth="0.5" opacity="0.3" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-lg font-black uppercase tracking-wider text-red-300">Combat Arena</h1>
-                <p className="text-[11px] text-slate-500">Tactical Engagement & Target Acquisition Hub</p>
-              </div>
-              <div className="ml-auto hidden sm:block text-right">
-                <div className="text-[10px] uppercase tracking-widest text-slate-600">Sector</div>
-                <div className="text-sm font-bold text-red-400">War Room</div>
-              </div>
-            </div>
-          </div>
+          <PixelBanner scene="battle" title="Combat Arena" subtitle="Tactical Engagement & Target Acquisition Hub" />
 
           {/* Stat Allocation */}
           {pilot.unspentPoints > 0 && (

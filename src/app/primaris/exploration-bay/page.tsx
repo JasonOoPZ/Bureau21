@@ -6,6 +6,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function ExplorationBayPage() {
   const session = await getServerSession(authOptions);
@@ -27,10 +28,7 @@ export default async function ExplorationBayPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-emerald-300">Exploration Bay</span>
           </div>
-          <div className="rounded-md border border-emerald-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Frontier</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-emerald-200">Exploration Bay</h1>
-          </div>
+          <PixelBanner scene="exploration-bay" title="Exploration Bay" subtitle="Chart unknown sectors and discover anomalies." />
           <ExplorationClient motivation={currentMotivation} fuel={pilot.fuel} />
         </div>
       </main>

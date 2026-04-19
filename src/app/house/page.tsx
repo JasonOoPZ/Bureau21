@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const TIER_COLORS: Record<number, string> = {
   1: "text-slate-300",
@@ -149,13 +150,7 @@ export default async function HousePage() {
       <main className="min-h-screen bg-black px-3 py-4">
         <div className="mx-auto max-w-5xl space-y-3">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
-            <Link href="/lobby" className="text-[11px] text-slate-500 hover:text-cyan-300">
-              ← Hub
-            </Link>
-            <span className="text-slate-700">/</span>
-            <span className="text-[11px] text-cyan-400">Character Sheet</span>
-          </div>
+          <PixelBanner scene="house" title="Character Sheet" subtitle={pilot.callsign} />
 
           {/* Main grid */}
           <div className="grid gap-3 md:grid-cols-[260px_minmax(0,1fr)]">

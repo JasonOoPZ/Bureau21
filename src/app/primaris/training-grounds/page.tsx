@@ -3,6 +3,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function TrainingGroundsPage() {
   const session = await getServerSession(authOptions);
@@ -18,10 +19,7 @@ export default async function TrainingGroundsPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-red-400">Training Grounds</span>
           </div>
-          <div className="rounded-md border border-red-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-red-300">Combat Quarter</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-red-200">Training Grounds</h1>
-          </div>
+          <PixelBanner scene="training-grounds" title="Training Grounds" subtitle="Controlled sparring environment. Test your build against training dummies." />
 
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
             <p className="text-[12px] text-slate-400">

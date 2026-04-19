@@ -6,6 +6,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function OuterRingPage() {
   const session = await getServerSession(authOptions);
@@ -26,24 +27,15 @@ export default async function OuterRingPage() {
           <span className="text-slate-300">Outer Ring</span>
         </div>
 
-        <div className="mb-8 rounded-xl border border-red-900/40 bg-[#0f0808] p-6">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-500">
-            Late-Game Combat Zone
-          </div>
-          <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
-            Outer Ring
-          </h1>
-          <p className="mt-2 text-slate-400">
-            The station&apos;s most dangerous frontier. Ancient war machines, elite marauders, and legendary threats await pilots strong enough to enter.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm">
+        <PixelBanner scene="outer-ring" title="Outer Ring" subtitle="The station's most dangerous frontier. Ancient war machines and legendary threats await.">
+          <div className="flex items-center gap-3 text-[11px]">
             <span className="text-slate-400">Level <span className="text-cyan-300 font-semibold">{pilot.level}</span></span>
             <span className="text-slate-600">|</span>
             <span className="text-slate-400">LF <span className="text-rose-400 font-semibold">{pilot.lifeForce}</span></span>
             <span className="text-slate-600">|</span>
             <span className="text-slate-400">Credits <span className="text-amber-300 font-semibold">{pilot.credits.toLocaleString()}</span></span>
           </div>
-        </div>
+        </PixelBanner>
 
         <OuterRingClient
           pilotLevel={pilot.level}

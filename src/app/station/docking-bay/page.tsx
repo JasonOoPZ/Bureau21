@@ -4,6 +4,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function DockingBayPage() {
   const session = await getServerSession(authOptions);
@@ -21,17 +22,7 @@ export default async function DockingBayPage() {
           <span className="text-slate-300">Docking Bay</span>
         </div>
 
-        <div className="mb-8 rounded-xl border border-cyan-900/40 bg-[#08111a] p-6">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-cyan-500">
-            Contract Hub
-          </div>
-          <h1 className="font-[family-name:var(--font-orbitron)] text-3xl font-black text-slate-100">
-            Docking Bay
-          </h1>
-          <p className="mt-2 text-slate-400">
-            Accept cargo contracts, courier jobs, and classified retrieval assignments. Deploy your vessel and collect payment on return.
-          </p>
-        </div>
+        <PixelBanner scene="docking-bay" title="Docking Bay" subtitle="Accept cargo contracts, courier jobs, and classified retrieval assignments. Deploy your vessel and collect payment on return." />
 
         <DockingBayClient />
       </main>

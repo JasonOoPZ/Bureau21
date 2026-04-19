@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const TIER_LABELS: Record<number, string> = { 1: "Common", 2: "Rare", 3: "Legendary" };
 const TIER_COLORS: Record<number, string> = {
@@ -43,12 +44,7 @@ export default async function BazaarPage() {
             <span className="text-[11px] text-cyan-400">Bazaar</span>
           </div>
 
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Bazaar</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              The network marketplace. Browse loot carried by active pilots. Full P2P trading arrives in a future update.
-            </p>
-          </div>
+          <PixelBanner scene="bazaar" title="Bazaar" subtitle="The network marketplace. Browse loot carried by active pilots. Full P2P trading arrives in a future update." />
 
           {/* Sell your items */}
           <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">

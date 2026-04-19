@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const BOARD_SECTIONS = [
   {
@@ -60,12 +61,7 @@ export default async function BoardsPage() {
             <span className="text-[11px] text-cyan-400">Message Boards</span>
           </div>
 
-          <div className="rounded-md border border-cyan-900/30 bg-[#0b0f14] p-4 text-center">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Message Boards</h1>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Bureau 21 network communications hub
-            </p>
-          </div>
+          <PixelBanner scene="boards" title="Message Boards" subtitle="Bureau 21 network communications hub" />
 
           {BOARD_SECTIONS.map((section) => (
             <div key={section.header} className="rounded-lg border border-slate-800 bg-[#0a0d11] overflow-hidden">

@@ -8,6 +8,7 @@ import { getVendorCatalog } from "@/lib/equipment-data";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 const ITEM_PRICES: Record<number, number> = { 1: 120, 2: 300, 3: 750 };
 
@@ -43,12 +44,7 @@ export default async function ArmoryPage() {
             <span className="text-[11px] text-cyan-400">Armory</span>
           </div>
 
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Armory</h1>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Purchase weapons, armor, shields, and engines. Equipped items boost your combat and field performance.
-            </p>
-          </div>
+          <PixelBanner scene="armory" title="Armory" subtitle="Purchase weapons, armor, shields, and engines. Equipped items boost your combat and field performance." />
 
           {/* ── Equipment Vendor (Weapons & Armor) ── */}
           <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">

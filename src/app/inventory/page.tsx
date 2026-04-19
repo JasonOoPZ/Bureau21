@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function InventoryPage() {
   const session = await getServerSession(authOptions);
@@ -40,22 +41,14 @@ export default async function InventoryPage() {
           </div>
 
           {/* Header */}
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg font-bold uppercase tracking-widest text-slate-100">Gear Room</h1>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  Equip one weapon, one shield, and one engine. Slots: {items.length}/20.
-                </p>
-              </div>
-              <Link
-                href="/station/armory"
-                className="rounded border border-cyan-800/60 bg-cyan-900/20 px-3 py-1.5 text-[10px] text-cyan-300 hover:border-cyan-600 transition"
-              >
-                Visit Armory →
-              </Link>
-            </div>
-          </div>
+          <PixelBanner scene="inventory" title="Gear Room" subtitle={`Equip one weapon, one shield, and one engine. Slots: ${items.length}/20.`}>
+            <Link
+              href="/station/armory"
+              className="rounded border border-cyan-800/60 bg-cyan-900/20 px-3 py-1.5 text-[10px] text-cyan-300 hover:border-cyan-600 transition"
+            >
+              Visit Armory →
+            </Link>
+          </PixelBanner>
 
           <InventoryClient initialItems={serialized} slotMax={20} pilotCallsign={pilot.callsign} pilotId={pilot.id} />
         </div>

@@ -5,6 +5,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function OutpostPage() {
   const session = await getServerSession(authOptions);
@@ -31,10 +32,7 @@ export default async function OutpostPage() {
             <span className="text-slate-700">/</span>
             <span className="text-[11px] text-emerald-300">Outpost</span>
           </div>
-          <div className="rounded-md border border-emerald-900/30 bg-[#0b0f14] p-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Frontier</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-[0.2em] text-emerald-200">Outpost</h1>
-          </div>
+          <PixelBanner scene="outpost" title="Outpost" subtitle="Establish forward bases in remote sectors." />
           <OutpostClient credits={pilot.credits} level={pilot.level} canClaim={canClaim} hoursLeft={hoursLeft} />
         </div>
       </main>

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
@@ -39,12 +40,7 @@ export default async function SettingsPage() {
           </div>
 
           {/* Page heading */}
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <h1 className="font-display text-lg uppercase tracking-wide text-slate-100">Settings</h1>
-            <p className="mt-1 text-[12px] text-slate-400">
-              Customize your Bureau 21 interface theme and navigation quicklinks.
-            </p>
-          </div>
+          <PixelBanner scene="station" title="Settings" subtitle="Customize your Bureau 21 interface theme and navigation quicklinks." />
 
           <SettingsClient
             currentTheme={(pilotAny.theme as string) ?? "original"}

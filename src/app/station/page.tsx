@@ -5,6 +5,7 @@ import { getOrCreatePilotState } from "@/lib/game-state";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PixelBanner } from "@/components/layout/pixel-banner";
 
 interface District {
   name: string;
@@ -141,22 +142,14 @@ export default async function StationPage() {
           </div>
 
           {/* Header + pilot context */}
-          <div className="rounded-md border border-slate-700 bg-[#0b0f14] p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-bold uppercase tracking-widest text-slate-100">Null Station</h1>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  The main trading and operations hub. Districts unlock as your account ages and your level rises.
-                </p>
-              </div>
-              <div className="shrink-0 text-right text-[11px]">
-                <p className="text-slate-500">Account age</p>
-                <p className="font-bold text-cyan-300">{accountAgeDays}d</p>
-                <p className="mt-1 text-slate-500">Pilot level</p>
-                <p className="font-bold text-cyan-300">{pilot.level}</p>
-              </div>
+          <PixelBanner scene="station" title="Null Station" subtitle="The main trading and operations hub. Districts unlock as your account ages.">
+            <div className="text-right text-[11px]">
+              <p className="text-slate-500">Account age</p>
+              <p className="font-bold text-cyan-300">{accountAgeDays}d</p>
+              <p className="mt-1 text-slate-500">Pilot level</p>
+              <p className="font-bold text-cyan-300">{pilot.level}</p>
             </div>
-          </div>
+          </PixelBanner>
 
           {/* District grid */}
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
