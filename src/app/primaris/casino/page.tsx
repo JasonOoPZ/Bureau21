@@ -9,10 +9,10 @@ import { redirect } from "next/navigation";
 const GAMES = [
   {
     href: "/primaris/casino/crash",
-    name: "Crash",
-    tagline: "Ride the rocket. Cash out before it explodes.",
-    badge: "DEGEN",
-    badgeColor: "bg-red-600",
+    name: "Void Runner",
+    tagline: "Flap through gates. Cash out before you crash.",
+    badge: "SKILL",
+    badgeColor: "bg-cyan-600",
     odds: "Up to 100x",
     iconColor: "#ef4444",
   },
@@ -81,7 +81,7 @@ export default async function CasinoPage() {
   })();
 
   const GAME_LABELS: Record<string, string> = {
-    slots: "Slots", dice: "Dice Pit", coinflip: "Coin Flip", blackjack: "Blackjack", crash: "Crash",
+    slots: "Slots", dice: "Dice Pit", coinflip: "Coin Flip", blackjack: "Blackjack", crash: "Void Runner",
   };
 
   // ── Public leaderboard data ────────────────────────────────────────
