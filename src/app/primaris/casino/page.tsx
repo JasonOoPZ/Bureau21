@@ -129,92 +129,363 @@ export default async function CasinoPage() {
             <span className="text-[11px] text-red-400">Casino</span>
           </div>
 
-          {/* ── Hero Banner ──────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-xl border border-red-900/60 bg-gradient-to-r from-[#12080a] via-[#140a0c] to-[#12080a]">
-            {/* Background grid lines */}
-            <div className="absolute inset-0 opacity-[0.04]" style={{ background: "repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(239,68,68,0.15) 40px, rgba(239,68,68,0.15) 41px), repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(239,68,68,0.08) 40px, rgba(239,68,68,0.08) 41px)" }} />
-            {/* Diagonal hazard stripes */}
-            <div className="absolute inset-0 opacity-[0.03]" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(245,158,11,0.12) 20px, rgba(245,158,11,0.12) 21px)" }} />
-            {/* Roulette Wheel SVG */}
-            <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-32 h-32 opacity-[0.07]" viewBox="0 0 128 128" fill="none">
-              <circle cx="64" cy="64" r="60" stroke="#ef4444" strokeWidth="2" />
-              <circle cx="64" cy="64" r="50" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="8 6" />
-              <circle cx="64" cy="64" r="38" stroke="#f59e0b" strokeWidth="1" strokeDasharray="4 8" />
-              <circle cx="64" cy="64" r="24" stroke="#ef4444" strokeWidth="1" />
-              <circle cx="64" cy="64" r="10" fill="#ef4444" fillOpacity="0.15" stroke="#ef4444" strokeWidth="1.5" />
-              <circle cx="64" cy="64" r="4" fill="#ef4444" fillOpacity="0.4" />
-              {/* Spokes */}
-              <line x1="64" y1="4" x2="64" y2="26" stroke="#ef4444" strokeWidth="0.8" opacity="0.4" />
-              <line x1="64" y1="102" x2="64" y2="124" stroke="#ef4444" strokeWidth="0.8" opacity="0.4" />
-              <line x1="4" y1="64" x2="26" y2="64" stroke="#ef4444" strokeWidth="0.8" opacity="0.4" />
-              <line x1="102" y1="64" x2="124" y2="64" stroke="#ef4444" strokeWidth="0.8" opacity="0.4" />
-              <line x1="21" y1="21" x2="36" y2="36" stroke="#ef4444" strokeWidth="0.6" opacity="0.3" />
-              <line x1="107" y1="21" x2="92" y2="36" stroke="#ef4444" strokeWidth="0.6" opacity="0.3" />
-              <line x1="21" y1="107" x2="36" y2="92" stroke="#ef4444" strokeWidth="0.6" opacity="0.3" />
-              <line x1="107" y1="107" x2="92" y2="92" stroke="#ef4444" strokeWidth="0.6" opacity="0.3" />
-              {/* Pips around the edge */}
-              <circle cx="64" cy="8" r="2" fill="#ef4444" opacity="0.3" />
-              <circle cx="64" cy="120" r="2" fill="#10b981" opacity="0.3" />
-              <circle cx="8" cy="64" r="2" fill="#ef4444" opacity="0.3" />
-              <circle cx="120" cy="64" r="2" fill="#10b981" opacity="0.3" />
-              <circle cx="24" cy="24" r="1.5" fill="#f59e0b" opacity="0.25" />
-              <circle cx="104" cy="24" r="1.5" fill="#ef4444" opacity="0.25" />
-              <circle cx="24" cy="104" r="1.5" fill="#ef4444" opacity="0.25" />
-              <circle cx="104" cy="104" r="1.5" fill="#f59e0b" opacity="0.25" />
+          {/* ── Hero Banner ── Pixel-Art Casino Cityscape ────────── */}
+          <div className="relative overflow-hidden rounded-xl border border-purple-900/60">
+            <svg viewBox="0 0 640 220" className="w-full h-auto block" shapeRendering="crispEdges">
+              <defs>
+                <linearGradient id="pxSky" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#08010f"/>
+                  <stop offset="45%" stopColor="#150830"/>
+                  <stop offset="75%" stopColor="#2a1050"/>
+                  <stop offset="100%" stopColor="#180828"/>
+                </linearGradient>
+                <clipPath id="sunClip2">
+                  <circle cx="320" cy="148" r="68"/>
+                </clipPath>
+                <linearGradient id="groundGlow" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ff2d7b" stopOpacity="0.18"/>
+                  <stop offset="100%" stopColor="#ff2d7b" stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+
+              {/* Sky */}
+              <rect width="640" height="220" fill="url(#pxSky)"/>
+
+              {/* Stars */}
+              <g>
+                <rect x="45" y="10" width="2" height="2" fill="#fff" opacity="0.6"/>
+                <rect x="92" y="25" width="2" height="2" fill="#ff6b9d" opacity="0.5"/>
+                <rect x="148" y="6" width="2" height="2" fill="#fff" opacity="0.7"/>
+                <rect x="195" y="38" width="1" height="1" fill="#c084fc" opacity="0.5"/>
+                <rect x="265" y="14" width="2" height="2" fill="#fff" opacity="0.5"/>
+                <rect x="358" y="22" width="1" height="1" fill="#ff6b9d" opacity="0.4"/>
+                <rect x="405" y="8" width="2" height="2" fill="#c084fc" opacity="0.6"/>
+                <rect x="462" y="28" width="2" height="2" fill="#fff" opacity="0.5"/>
+                <rect x="510" y="12" width="1" height="1" fill="#fff" opacity="0.6"/>
+                <rect x="555" y="32" width="2" height="2" fill="#ff6b9d" opacity="0.4"/>
+                <rect x="588" y="6" width="2" height="2" fill="#fff" opacity="0.7"/>
+                <rect x="625" y="18" width="1" height="1" fill="#c084fc" opacity="0.4"/>
+                <rect x="30" y="45" width="1" height="1" fill="#c084fc" opacity="0.3"/>
+                <rect x="490" y="48" width="1" height="1" fill="#c084fc" opacity="0.3"/>
+                {/* Cross sparkle stars */}
+                <rect x="330" y="3" width="6" height="1" fill="#fff" opacity="0.9"/>
+                <rect x="332" y="1" width="1" height="6" fill="#fff" opacity="0.9"/>
+                <rect x="148" y="4" width="4" height="1" fill="#fff" opacity="0.6"/>
+                <rect x="149" y="3" width="1" height="4" fill="#fff" opacity="0.6"/>
+              </g>
+
+              {/* Synthwave Sun — striped */}
+              <g clipPath="url(#sunClip2)">
+                <rect x="252" y="80" width="136" height="9" fill="#ff1a6d" opacity="0.95"/>
+                <rect x="252" y="93" width="136" height="8" fill="#ff3580" opacity="0.9"/>
+                <rect x="252" y="105" width="136" height="7" fill="#ff5494" opacity="0.85"/>
+                <rect x="252" y="116" width="136" height="6" fill="#ff73a8" opacity="0.8"/>
+                <rect x="252" y="126" width="136" height="5" fill="#ff8fba" opacity="0.72"/>
+                <rect x="252" y="135" width="136" height="5" fill="#ffaacc" opacity="0.65"/>
+                <rect x="252" y="144" width="136" height="4" fill="#ffc2db" opacity="0.55"/>
+                <rect x="252" y="152" width="136" height="4" fill="#ffd4e6" opacity="0.45"/>
+                <rect x="252" y="160" width="136" height="3" fill="#ffe4ef" opacity="0.38"/>
+                <rect x="252" y="167" width="136" height="3" fill="#fff0f5" opacity="0.3"/>
+                <rect x="252" y="174" width="136" height="3" fill="#fff5fa" opacity="0.22"/>
+                <rect x="252" y="181" width="136" height="4" fill="#fff8fc" opacity="0.15"/>
+              </g>
+
+              {/* Atmospheric haze */}
+              <rect x="0" y="132" width="640" height="2" fill="#3d1565" opacity="0.35"/>
+              <rect x="80" y="142" width="220" height="2" fill="#3d1565" opacity="0.3"/>
+              <rect x="380" y="139" width="200" height="2" fill="#3d1565" opacity="0.25"/>
+              <rect x="0" y="155" width="150" height="2" fill="#3d1565" opacity="0.2"/>
+              <rect x="500" y="152" width="140" height="2" fill="#3d1565" opacity="0.2"/>
+
+              {/* ═══ BUILDINGS — back layer ════════════════════════ */}
+              <g fill="#1a0838">
+                <rect x="58" y="100" width="36" height="120"/>
+                <rect x="158" y="95" width="32" height="125"/>
+                <rect x="248" y="88" width="26" height="132"/>
+                <rect x="362" y="95" width="30" height="125"/>
+                <rect x="443" y="100" width="32" height="120"/>
+                <rect x="558" y="105" width="26" height="115"/>
+              </g>
+
+              {/* ═══ BUILDINGS — mid layer ═════════════════════════ */}
+              <g fill="#130628">
+                {/* Far left cluster */}
+                <rect x="0" y="128" width="50" height="92"/>
+                <rect x="28" y="112" width="36" height="108"/>
+                <rect x="68" y="106" width="30" height="114"/>
+                {/* Left-centre */}
+                <rect x="102" y="88" width="34" height="132"/>
+                <rect x="138" y="110" width="26" height="110"/>
+                <rect x="168" y="96" width="36" height="124"/>
+                {/* Centre (in front of sun) */}
+                <rect x="208" y="82" width="30" height="138"/>
+                <rect x="240" y="92" width="32" height="128"/>
+                <rect x="274" y="78" width="26" height="142"/>
+                <rect x="302" y="88" width="34" height="132"/>
+                <rect x="338" y="82" width="30" height="138"/>
+                <rect x="370" y="94" width="26" height="126"/>
+                <rect x="398" y="86" width="32" height="134"/>
+                {/* Right cluster */}
+                <rect x="434" y="98" width="34" height="122"/>
+                <rect x="470" y="90" width="28" height="130"/>
+                <rect x="500" y="104" width="32" height="116"/>
+                <rect x="534" y="96" width="36" height="124"/>
+                <rect x="574" y="110" width="28" height="110"/>
+                <rect x="604" y="118" width="36" height="102"/>
+              </g>
+
+              {/* ═══ BUILDINGS — foreground spires ═════════════════ */}
+              <g fill="#0a0418">
+                <rect x="0" y="142" width="42" height="78"/>
+                <rect x="96" y="102" width="14" height="118"/>
+                <rect x="193" y="96" width="18" height="124"/>
+                <rect x="283" y="74" width="16" height="146"/>
+                <rect x="348" y="90" width="14" height="130"/>
+                <rect x="478" y="96" width="16" height="124"/>
+                <rect x="598" y="132" width="42" height="88"/>
+              </g>
+
+              {/* Antennas & rooftop details */}
+              <g fill="#0a0418">
+                <rect x="101" y="88" width="2" height="14"/>
+                <rect x="200" y="82" width="2" height="14"/>
+                <rect x="289" y="58" width="3" height="16"/>
+                <rect x="290" y="54" width="1" height="4"/>
+                <rect x="354" y="78" width="2" height="12"/>
+                <rect x="484" y="84" width="2" height="12"/>
+                <rect x="214" y="80" width="8" height="2"/>
+                <rect x="306" y="86" width="10" height="2"/>
+                <rect x="438" y="96" width="8" height="2"/>
+                <rect x="538" y="94" width="6" height="2"/>
+              </g>
+
+              {/* ═══ WINDOWS ═════════════════════════════════════ */}
+              <g>
+                {/* Left buildings */}
+                <rect x="8" y="148" width="3" height="3" fill="#7b2fff" opacity="0.7"/>
+                <rect x="16" y="148" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="24" y="155" width="3" height="3" fill="#7b2fff" opacity="0.6"/>
+                <rect x="8" y="162" width="3" height="3" fill="#ff2d7b" opacity="0.4"/>
+                <rect x="16" y="162" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="32" y="132" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="40" y="120" width="3" height="3" fill="#7b2fff" opacity="0.7"/>
+                <rect x="48" y="126" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="36" y="145" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="48" y="140" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="74" y="114" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="82" y="120" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="74" y="126" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="82" y="134" width="3" height="3" fill="#00e5ff" opacity="0.4"/>
+                {/* Tall tower windows */}
+                <rect x="112" y="96" width="3" height="3" fill="#ff2d7b" opacity="0.7"/>
+                <rect x="120" y="102" width="3" height="3" fill="#7b2fff" opacity="0.6"/>
+                <rect x="112" y="110" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="120" y="118" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="112" y="128" width="3" height="3" fill="#7b2fff" opacity="0.4"/>
+                <rect x="120" y="135" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="112" y="142" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="145" y="118" width="3" height="3" fill="#7b2fff" opacity="0.6"/>
+                <rect x="152" y="128" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="175" y="104" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="183" y="110" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="175" y="120" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="183" y="130" width="3" height="3" fill="#00e5ff" opacity="0.4"/>
+                <rect x="175" y="140" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                {/* Centre cluster (against sun) */}
+                <rect x="216" y="92" width="3" height="3" fill="#ff2d7b" opacity="0.8"/>
+                <rect x="224" y="100" width="3" height="3" fill="#00e5ff" opacity="0.7"/>
+                <rect x="216" y="110" width="3" height="3" fill="#7b2fff" opacity="0.6"/>
+                <rect x="248" y="102" width="3" height="3" fill="#ff2d7b" opacity="0.7"/>
+                <rect x="256" y="110" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="248" y="120" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="310" y="98" width="3" height="3" fill="#ff2d7b" opacity="0.7"/>
+                <rect x="318" y="108" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="310" y="118" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="344" y="92" width="3" height="3" fill="#ff2d7b" opacity="0.7"/>
+                <rect x="352" y="102" width="3" height="3" fill="#00e5ff" opacity="0.6"/>
+                <rect x="344" y="114" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                {/* Right side */}
+                <rect x="378" y="102" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="386" y="112" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="406" y="94" width="3" height="3" fill="#7b2fff" opacity="0.7"/>
+                <rect x="414" y="104" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="406" y="114" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="414" y="124" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="442" y="108" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="450" y="118" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="442" y="128" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="476" y="100" width="3" height="3" fill="#ff2d7b" opacity="0.7"/>
+                <rect x="484" y="110" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="508" y="112" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="516" y="122" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="540" y="104" width="3" height="3" fill="#7b2fff" opacity="0.6"/>
+                <rect x="548" y="114" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+                <rect x="540" y="124" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="580" y="118" width="3" height="3" fill="#ff2d7b" opacity="0.6"/>
+                <rect x="588" y="128" width="3" height="3" fill="#7b2fff" opacity="0.5"/>
+                <rect x="612" y="124" width="3" height="3" fill="#00e5ff" opacity="0.5"/>
+                <rect x="620" y="138" width="3" height="3" fill="#ff2d7b" opacity="0.5"/>
+              </g>
+
+              {/* ═══ NEON SIGNS ══════════════════════════════════ */}
+              {/* "CASINO" — left side */}
+              <rect x="30" y="115" width="32" height="11" fill="#ff2d7b" opacity="0.12"/>
+              <rect x="30" y="115" width="32" height="11" stroke="#ff2d7b" strokeWidth="1" fill="none" opacity="0.6"/>
+              <text x="46" y="124" textAnchor="middle" fill="#ff2d7b" fontSize="7" fontFamily="monospace" fontWeight="bold" opacity="0.9" shapeRendering="auto">CASINO</text>
+
+              {/* "21" — centre-left */}
+              <rect x="213" y="84" width="16" height="9" fill="#00e5ff" opacity="0.1"/>
+              <rect x="213" y="84" width="16" height="9" stroke="#00e5ff" strokeWidth="1" fill="none" opacity="0.5"/>
+              <text x="221" y="91" textAnchor="middle" fill="#00e5ff" fontSize="7" fontFamily="monospace" fontWeight="bold" opacity="0.8" shapeRendering="auto">21</text>
+
+              {/* "SLOTS" — right side */}
+              <rect x="498" y="106" width="28" height="11" fill="#f59e0b" opacity="0.1"/>
+              <rect x="498" y="106" width="28" height="11" stroke="#f59e0b" strokeWidth="1" fill="none" opacity="0.5"/>
+              <text x="512" y="115" textAnchor="middle" fill="#f59e0b" fontSize="7" fontFamily="monospace" fontWeight="bold" opacity="0.85" shapeRendering="auto">SLOTS</text>
+
+              {/* Heart suit — far left */}
+              <rect x="4" y="132" width="11" height="11" fill="#ff2d7b" opacity="0.08"/>
+              <rect x="4" y="132" width="11" height="11" stroke="#ff2d7b" strokeWidth="1" fill="none" opacity="0.4"/>
+              <text x="9" y="141" textAnchor="middle" fill="#ff2d7b" fontSize="8" opacity="0.7" shapeRendering="auto">♥</text>
+
+              {/* Spade suit */}
+              <rect x="438" y="97" width="10" height="8" fill="#c084fc" opacity="0.08"/>
+              <text x="443" y="104" textAnchor="middle" fill="#c084fc" fontSize="7" opacity="0.6" shapeRendering="auto">♠</text>
+
+              {/* "DICE" — far right */}
+              <rect x="606" y="120" width="24" height="9" fill="#00e5ff" opacity="0.08"/>
+              <rect x="606" y="120" width="24" height="9" stroke="#00e5ff" strokeWidth="1" fill="none" opacity="0.4"/>
+              <text x="618" y="127" textAnchor="middle" fill="#00e5ff" fontSize="6" fontFamily="monospace" fontWeight="bold" opacity="0.75" shapeRendering="auto">DICE</text>
+
+              {/* Equaliser bars — left (like reference) */}
+              <g opacity="0.35">
+                <rect x="6" y="146" width="2" height="4" fill="#ff2d7b"/>
+                <rect x="10" y="144" width="2" height="6" fill="#ff2d7b"/>
+                <rect x="14" y="142" width="2" height="8" fill="#ff2d7b"/>
+                <rect x="18" y="145" width="2" height="5" fill="#ff2d7b"/>
+                <rect x="22" y="143" width="2" height="7" fill="#ff2d7b"/>
+                <rect x="26" y="146" width="2" height="4" fill="#ff2d7b"/>
+              </g>
+
+              {/* Chevron arrows — right building (like reference) */}
+              <g opacity="0.3" shapeRendering="auto">
+                <path d="M585 142l4-4 4 4" stroke="#f59e0b" strokeWidth="1.5" fill="none"/>
+                <path d="M585 148l4-4 4 4" stroke="#f59e0b" strokeWidth="1.5" fill="none"/>
+                <path d="M585 154l4-4 4 4" stroke="#f59e0b" strokeWidth="1.5" fill="none"/>
+              </g>
+
+              {/* ═══ GROUND GLOW + STOREFRONTS ═══════════════════ */}
+              <rect x="0" y="192" width="640" height="28" fill="url(#groundGlow)"/>
+              <rect x="0" y="192" width="640" height="2" fill="#2a1050" opacity="0.5"/>
+
+              {/* Lit storefronts at street level */}
+              <g opacity="0.5">
+                <rect x="10" y="180" width="22" height="10" fill="#ff2d7b" opacity="0.07"/>
+                <rect x="10" y="180" width="22" height="10" stroke="#ff2d7b" strokeWidth="0.5" fill="none" opacity="0.3"/>
+                <rect x="50" y="178" width="16" height="12" fill="#7b2fff" opacity="0.07"/>
+                <rect x="50" y="178" width="16" height="12" stroke="#7b2fff" strokeWidth="0.5" fill="none" opacity="0.25"/>
+                <rect x="130" y="180" width="18" height="10" fill="#00e5ff" opacity="0.06"/>
+                <rect x="130" y="180" width="18" height="10" stroke="#00e5ff" strokeWidth="0.5" fill="none" opacity="0.2"/>
+                <rect x="418" y="178" width="22" height="12" fill="#ff2d7b" opacity="0.07"/>
+                <rect x="418" y="178" width="22" height="12" stroke="#ff2d7b" strokeWidth="0.5" fill="none" opacity="0.3"/>
+                <rect x="558" y="180" width="24" height="10" fill="#f59e0b" opacity="0.06"/>
+                <rect x="558" y="180" width="24" height="10" stroke="#f59e0b" strokeWidth="0.5" fill="none" opacity="0.2"/>
+              </g>
+
+              {/* ═══ RAILING ═════════════════════════════════════ */}
+              <g>
+                {/* Top rail */}
+                <rect x="0" y="194" width="640" height="3" fill="#0a0418"/>
+                <rect x="0" y="194" width="640" height="1" fill="#2a1050" opacity="0.4"/>
+                {/* Posts */}
+                <rect x="0" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="40" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="80" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="120" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="160" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="200" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="240" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="280" y="194" width="3" height="26" fill="#0a0418"/>
+                {/* Gap where figure stands */}
+                <rect x="355" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="395" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="435" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="475" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="515" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="555" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="595" y="194" width="3" height="26" fill="#0a0418"/>
+                <rect x="637" y="194" width="3" height="26" fill="#0a0418"/>
+                {/* Bottom rail */}
+                <rect x="0" y="216" width="640" height="4" fill="#0a0418"/>
+                {/* Panels between posts — translucent grid */}
+                <g opacity="0.2">
+                  <rect x="3" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="43" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="83" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="123" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="163" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="203" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="243" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="283" y="197" width="37" height="19" fill="#0a0418" opacity="0.3"/>
+                  <rect x="358" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="398" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="438" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="478" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="518" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                  <rect x="558" y="197" width="37" height="19" fill="#0a0418" opacity="0.6"/>
+                  <rect x="598" y="197" width="37" height="19" fill="#0a0418" opacity="0.5"/>
+                </g>
+                {/* Reflected neon colour on railing panels */}
+                <g opacity="0.15">
+                  <rect x="4" y="200" width="12" height="3" fill="#ff2d7b"/>
+                  <rect x="52" y="202" width="8" height="2" fill="#7b2fff"/>
+                  <rect x="132" y="200" width="10" height="3" fill="#00e5ff"/>
+                  <rect x="252" y="201" width="6" height="2" fill="#ff2d7b"/>
+                  <rect x="368" y="200" width="8" height="3" fill="#f59e0b"/>
+                  <rect x="442" y="202" width="10" height="2" fill="#7b2fff"/>
+                  <rect x="522" y="200" width="12" height="3" fill="#ff2d7b"/>
+                  <rect x="602" y="201" width="8" height="2" fill="#00e5ff"/>
+                </g>
+              </g>
+
+              {/* ═══ FIGURE SILHOUETTE ═══════════════════════════ */}
+              <g>
+                {/* Head */}
+                <rect x="316" y="170" width="8" height="8" fill="#0d0520"/>
+                <rect x="318" y="168" width="4" height="2" fill="#0d0520"/>
+                {/* Body */}
+                <rect x="316" y="178" width="8" height="12" fill="#0a0418"/>
+                {/* Arms resting on railing */}
+                <rect x="312" y="180" width="4" height="3" fill="#0a0418"/>
+                <rect x="324" y="180" width="4" height="3" fill="#0a0418"/>
+                {/* Legs */}
+                <rect x="316" y="190" width="3" height="8" fill="#0a0418"/>
+                <rect x="321" y="190" width="3" height="8" fill="#0a0418"/>
+                {/* Jacket detail */}
+                <rect x="314" y="184" width="12" height="2" fill="#150830"/>
+              </g>
             </svg>
-            {/* Left-side card fan */}
-            <svg className="absolute left-3 bottom-2 w-16 h-16 opacity-[0.06]" viewBox="0 0 64 64" fill="none">
-              <rect x="8" y="12" width="24" height="36" rx="3" stroke="#f59e0b" strokeWidth="1" transform="rotate(-15 20 30)" />
-              <rect x="18" y="10" width="24" height="36" rx="3" stroke="#ef4444" strokeWidth="1" transform="rotate(0 30 28)" />
-              <rect x="28" y="12" width="24" height="36" rx="3" stroke="#f59e0b" strokeWidth="1" transform="rotate(15 40 30)" />
-              <text x="30" y="33" textAnchor="middle" fill="#ef4444" fontSize="14" fontWeight="bold" opacity="0.5">A</text>
-            </svg>
-            <div className="relative flex items-center gap-4 p-5">
-              {/* Casino chip SVG icon */}
-              <div className="shrink-0">
-                <svg width="52" height="52" viewBox="0 0 52 52" fill="none" className="opacity-90">
-                  <circle cx="26" cy="26" r="22" fill="url(#chipGrad)" stroke="#ef4444" strokeWidth="2" />
-                  <circle cx="26" cy="26" r="17" stroke="#fca5a5" strokeWidth="1" strokeDasharray="5 3" opacity="0.5" />
-                  <circle cx="26" cy="26" r="11" stroke="#ef4444" strokeWidth="1.5" opacity="0.7" />
-                  <circle cx="26" cy="26" r="6" fill="#ef4444" fillOpacity="0.2" stroke="#fca5a5" strokeWidth="1" />
-                  <text x="26" y="30" textAnchor="middle" fill="#fca5a5" fontSize="9" fontWeight="bold">₡</text>
-                  {/* Chip edge notches */}
-                  <rect x="24.5" y="2" width="3" height="5" rx="1" fill="#ef4444" opacity="0.5" />
-                  <rect x="24.5" y="45" width="3" height="5" rx="1" fill="#ef4444" opacity="0.5" />
-                  <rect x="2" y="24.5" width="5" height="3" rx="1" fill="#ef4444" opacity="0.5" />
-                  <rect x="45" y="24.5" width="5" height="3" rx="1" fill="#ef4444" opacity="0.5" />
-                  <rect x="8" y="8" width="4" height="2.5" rx="1" fill="#ef4444" opacity="0.35" transform="rotate(45 10 9.25)" />
-                  <rect x="40" y="8" width="4" height="2.5" rx="1" fill="#ef4444" opacity="0.35" transform="rotate(-45 42 9.25)" />
-                  <rect x="8" y="41.5" width="4" height="2.5" rx="1" fill="#ef4444" opacity="0.35" transform="rotate(-45 10 42.75)" />
-                  <rect x="40" y="41.5" width="4" height="2.5" rx="1" fill="#ef4444" opacity="0.35" transform="rotate(45 42 42.75)" />
-                  <defs>
-                    <radialGradient id="chipGrad" cx="50%" cy="40%" r="55%">
-                      <stop offset="0%" stopColor="#450a0a" />
-                      <stop offset="100%" stopColor="#1c0505" />
-                    </radialGradient>
-                  </defs>
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-black uppercase tracking-[0.15em] text-red-300">The Underbelly</h1>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  No corp oversight. No limits. All credits. Enter at your own risk.
-                </p>
-              </div>
-              <div className="ml-auto hidden sm:block text-right">
-                <div className="text-[10px] uppercase tracking-widest text-slate-600">Credits</div>
-                <div className="text-lg font-black text-amber-400 font-mono">{pilot.credits.toLocaleString()} ₡</div>
+
+            {/* Overlay text */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-5 pb-4 pt-10">
+              <div className="flex items-end justify-between">
+                <div>
+                  <h1 className="text-xl font-black uppercase tracking-[0.15em] text-red-300 drop-shadow-lg" style={{ textShadow: "0 0 20px rgba(255,45,123,0.4)" }}>The Underbelly</h1>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    No corp oversight. No limits. All credits. Enter at your own risk.
+                  </p>
+                </div>
+                <div className="hidden sm:block text-right">
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500">Credits</div>
+                  <div className="text-lg font-black text-amber-400 font-mono drop-shadow-lg" style={{ textShadow: "0 0 12px rgba(245,158,11,0.4)" }}>{pilot.credits.toLocaleString()} ₡</div>
+                </div>
               </div>
             </div>
-            {/* Bottom circuit line decoration */}
-            <svg className="absolute bottom-0 left-0 w-full h-3 opacity-[0.08]" viewBox="0 0 400 12" preserveAspectRatio="none">
-              <path d="M0 6h50l3-3h20l3 3h30l3-4h15l3 4h40l3-3h30l3 3h197" stroke="#ef4444" strokeWidth="0.7" fill="none" />
-            </svg>
           </div>
 
           {/* Credits display for mobile */}
-          <div className="sm:hidden rounded-md border border-amber-900/30 bg-[#0b0f14] px-4 py-2.5 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-widest text-slate-600">Credits</span>
+          <div className="sm:hidden rounded-md border border-purple-900/30 bg-[#0b0f14] px-4 py-2.5 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">Credits</span>
             <span className="text-lg font-black text-amber-400 font-mono">{pilot.credits.toLocaleString()} ₡</span>
           </div>
 
