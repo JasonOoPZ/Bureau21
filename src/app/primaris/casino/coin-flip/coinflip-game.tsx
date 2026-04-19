@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
-const QUICK_BETS = [50, 100, 250, 500, 1000];
+const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 
 function CoinFace({ side }: { side: "heads" | "tails" }) {
   const isHeads = side === "heads";
@@ -83,7 +83,7 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
           setCoin(winner);
           setLanded(true);
           setTimeout(() => {
-            setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
+            setResult({ label: data.label ?? data.error, payout: (data.payout ?? 0) > 0 ? data.payout : (data.net_change ?? 0) });
             if (data.new_credits != null) {
               setCredits(data.new_credits);
               setCreditsBump(true);

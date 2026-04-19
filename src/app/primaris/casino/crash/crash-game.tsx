@@ -15,7 +15,7 @@ const PIPE_WIDTH = 50;
 const PIPE_SPEED_START = 2.5;
 const PIPE_SPEED_MAX = 6;
 const PIPE_SPACING = 220;
-const QUICK_BETS = [50, 100, 250, 500, 1000];
+const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 
 /* ── geometry helpers ──────────────────────────────────── */
 type Pipe = { x: number; gapY: number; gapH: number; scored: boolean };

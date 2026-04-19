@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const QUICK_BETS = [50, 100, 250, 500, 1000];
+const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 const DIE_FACES: Record<number, string> = { 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅" };
 
 export function DiceGame({ initialCredits }: { initialCredits: number }) {
@@ -45,7 +45,7 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
       setRolling(false);
       setLanded(true);
       setTimeout(() => {
-        setResult({ label: data.label ?? data.error, payout: data.net_change ?? 0 });
+        setResult({ label: data.label ?? data.error, payout: (data.payout ?? 0) > 0 ? data.payout : (data.net_change ?? 0) });
         if (data.new_credits != null) {
           setCredits(data.new_credits);
           setCreditsBump(true);

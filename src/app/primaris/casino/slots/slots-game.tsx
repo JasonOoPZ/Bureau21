@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
-const QUICK_BETS = [50, 100, 250, 500, 1000];
+const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 
 export function SlotsGame({ initialCredits }: { initialCredits: number }) {
   const [credits, setCredits] = useState(initialCredits);
@@ -62,8 +62,9 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
           setReels(finalReels);
           setReelsStopped([true, true, true]);
           setSpinning(false);
-          const payout = data.net_change ?? 0;
-          setResult({ label: data.label ?? data.error, payout });
+          const payout = data.payout ?? 0;
+          const net = data.net_change ?? 0;
+          setResult({ label: data.label ?? data.error, payout: payout > 0 ? payout : net });
           if (payout >= bet * 10) setIsJackpot(true);
           if (data.new_credits != null) {
             setCredits(data.new_credits);

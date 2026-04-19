@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const QUICK_BETS = [50, 100, 250, 500, 1000];
+const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 
 interface HandState {
   cards: string[];
