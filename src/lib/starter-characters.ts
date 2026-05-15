@@ -22,7 +22,7 @@ export const starterCharacters: StarterCharacter[] = [
   {
     slug: "base-red",
     name: "Unit 754",
-    title: "Faultborn Oracle",
+    title: "Faultborn OOPZ Labs",
     summary: "Obsidian shell threaded with molten fractures and a live reactor core.",
     image: "/characters/Bureau21BaseRed.png",
     glow: "#ff4937",
