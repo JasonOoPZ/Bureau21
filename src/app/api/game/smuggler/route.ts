@@ -1,7 +1,7 @@
 import { authOptions } from "@/auth";
 import { guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -16,12 +16,9 @@ export async function POST() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
+  const spend = planMotivationSpend(pilot, RUN_MOTIVATION_COST);
 
-  if (currentMotivation < RUN_MOTIVATION_COST) {
+  if (spend.available < RUN_MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 25 motivation for a smuggling run." }, { status: 400 });
   }
 
@@ -70,14 +67,12 @@ export async function POST() {
     prisma,
     session.user.id,
     {
-      motivation: pilot.motivation,
-      lastMotivationAt: pilot.lastMotivationAt,
+      ...spend.guard,
       // a fine may never push the balance below zero
       ...(creditsGained < 0 ? { credits: { gte: -creditsGained } } : {}),
     },
     {
-      motivation: currentMotivation - RUN_MOTIVATION_COST,
-      lastMotivationAt: now,
+      ...spend.data,
       credits: { increment: creditsGained },
     }
   );

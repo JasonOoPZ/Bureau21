@@ -1,9 +1,12 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { guardedPilotUpdate } from "@/lib/economy";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
+const MOTIVATION_COST = 15;
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -13,12 +16,9 @@ export async function POST() {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
+  const spend = planMotivationSpend(pilot, MOTIVATION_COST);
 
-  if (currentMotivation < 15) {
+  if (spend.available < MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 15 motivation to mine." }, { status: 400 });
   }
 
@@ -39,19 +39,23 @@ export async function POST() {
 
   const totalOre = baseYield + bonus;
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - 15,
-      lastMotivationAt: now,
-      ore: { increment: totalOre },
-    },
+  // Compare-and-swap on the motivation snapshot: N parallel digs computed
+  // from the same snapshot pay for, and yield, exactly one.
+  const updated = await guardedPilotUpdate(prisma, session.user.id, spend.guard, {
+    ...spend.data,
+    ore: { increment: totalOre },
   });
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Another action is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({
     oreGained: totalOre,
     find,
-    totalOre: pilot.ore + totalOre,
-    motivationLeft: currentMotivation - 15,
+    totalOre: updated.ore,
+    motivationLeft: updated.motivation,
   });
 }

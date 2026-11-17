@@ -1,7 +1,7 @@
 import { authOptions } from "@/auth";
 import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -24,12 +24,9 @@ export async function POST() {
     return NextResponse.json({ error: `Need ${cost} credits to salvage.` }, { status: 400 });
   }
 
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
+  const spend = planMotivationSpend(pilot, SALVAGE_MOTIVATION_COST);
 
-  if (currentMotivation < SALVAGE_MOTIVATION_COST) {
+  if (spend.available < SALVAGE_MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 10 motivation to salvage." }, { status: 400 });
   }
 
@@ -64,13 +61,11 @@ export async function POST() {
   // one roll; the rest are rejected.
   const chargeGuard: Prisma.PilotStateWhereInput = {
     credits: { gte: cost },
-    motivation: pilot.motivation,
-    lastMotivationAt: pilot.lastMotivationAt,
+    ...spend.guard,
   };
   const charge: Prisma.PilotStateUpdateManyMutationInput = {
     credits: { decrement: cost },
-    motivation: currentMotivation - SALVAGE_MOTIVATION_COST,
-    lastMotivationAt: now,
+    ...spend.data,
   };
 
   if (foundItem) {

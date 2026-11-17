@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PvpTarget, BattleOutcome } from "@/lib/battle-engine";
+import { displayMaxLifeForce } from "@/lib/vitals";
 
 interface PilotInfo {
   level: number;
@@ -50,7 +51,7 @@ export function BattleConsole({ initialTargets, initialPilot, initialLogs }: Pro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const maxLF = Math.max(15, pilot.level * 5);
+  const maxLF = displayMaxLifeForce(pilot);
 
   async function fight() {
     if (!selected || loading) return;

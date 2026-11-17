@@ -1,3 +1,5 @@
+import { hktYearMonth } from "./hkt";
+
 export const GAME_CONSTANTS = {
   MOTIVATION_REGEN_MINUTES: 15,
   MOTIVATION_DAILY_GAIN: 96,
@@ -23,6 +25,16 @@ export const GAME_CONSTANTS = {
   BATTLE_GAUGE_OTHERS_MINUTES: 3,
   BATTLE_VILLAGE_TRAINS_PER_DAY: 15,
   BATTLE_VILLAGE_MAX_TRAINS: 25,
+  /** A defender can never be attacked more often than this, whatever they set. */
+  PVP_MIN_DEFENDER_COOLDOWN_MINUTES: 5,
+  /** Battles allowed between the same two pilots per rolling 24h (either direction). */
+  PVP_PAIR_DAILY_CAP: 5,
+  /** Life Force needed to attack or be attacked: the larger of these two. */
+  PVP_MIN_LIFE_FORCE: 5,
+  PVP_MIN_LIFE_FORCE_RATIO: 0.2,
+  /** Ceiling on the bonus XP for beating a higher-level pilot. */
+  PVP_UNDERDOG_MAX_MULTIPLIER: 2,
+  XP_PER_LEVEL: 100,
   ATK_DEF_SPLIT_DEFAULT: 50,
   BOT_XP_MULTIPLIER: 1.5,
   BOT_BATTLE_GAUGE_SECONDS: 30,
@@ -68,8 +80,12 @@ export function hpPerPoint(_level: number): number {
   return 1;
 }
 
+/**
+ * XP needed to advance from `level` to `level + 1`. The single source of truth:
+ * level progression and every XP bar must use this, never their own curve.
+ */
 export function xpForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(1.15, level - 1));
+  return Math.max(1, level) * GAME_CONSTANTS.XP_PER_LEVEL;
 }
 
 export function getConfidenceCap(characterSlug?: string | null): number {
@@ -108,11 +124,9 @@ export function lfFromAP(level: number): number {
   return GAME_CONSTANTS.LF_PER_AP_MULTIPLIER * level;
 }
 
-export function getCurrentSeason(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
+/** Current season id ("YYYY-MM"), rolling over at midnight HKT on the 1st. */
+export function getCurrentSeason(now: Date = new Date()): string {
+  return hktYearMonth(now);
 }
 
 export function isNewbieProtected(ageDays: number, level: number): boolean {
@@ -123,6 +137,7 @@ export function calculateMotivationRegen(lastCheckTime: Date, currentMotivation:
   const now = new Date();
   const minutesElapsed = Math.floor((now.getTime() - lastCheckTime.getTime()) / (1000 * 60));
   const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
+  if (currentMotivation >= maxMotivation) return currentMotivation;
   return Math.min(currentMotivation + regenAmount, maxMotivation);
 }
 

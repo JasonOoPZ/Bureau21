@@ -3,6 +3,7 @@ import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { GAME_CONSTANTS, xpForLevel } from "@/lib/constants";
+import { maxLifeForce } from "@/lib/vitals";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -97,7 +98,6 @@ export async function POST(request: Request) {
       ...(leveledUp
         ? {
             level: { increment: 1 },
-            lifeForce: Math.max(15, (pilot.level + 1) * 5),
             unspentPoints: { increment: GAME_CONSTANTS.POINTS_PER_LEVEL },
           }
         : {}),
@@ -112,6 +112,13 @@ export async function POST(request: Request) {
       { error: "Another training session is still resolving. Try again." },
       { status: 409 }
     );
+  }
+
+  if (leveledUp) {
+    // Level-up refill: raise LF to the new max, but never lower LF that is
+    // already above it (allocated HP).
+    const newMax = maxLifeForce({ level: claimed.level });
+    await guardedPilotUpdate(prisma, session.user.id, { lifeForce: { lt: newMax } }, { lifeForce: newMax });
   }
 
   const settled = type === "xp" ? await settleLevelProgression(prisma, session.user.id) : null;
