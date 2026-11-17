@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -97,17 +98,21 @@ export async function POST(request: Request) {
   }
 
   const netChange = result.payout - bet;
-  const newCredits = pilot.credits + netChange;
 
-  await prisma.$transaction([
-    prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { credits: newCredits },
-    }),
-    prisma.casinoBet.create({
-      data: { pilotId: pilot.id, game, bet, payout: result.payout, net: netChange },
-    }),
-  ]);
+  // Settle as one relative, guarded write: the stake must still be covered at
+  // write time, and the net result is applied as a delta so concurrent debits
+  // elsewhere are never overwritten by a stale balance.
+  const settled = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { credits: { gte: bet } },
+    { credits: { increment: netChange } }
+  );
+  if (!settled) return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
 
-  return NextResponse.json({ ...result, bet, net_change: netChange, new_credits: newCredits });
+  await prisma.casinoBet.create({
+    data: { pilotId: pilot.id, game, bet, payout: result.payout, net: netChange },
+  });
+
+  return NextResponse.json({ ...result, bet, net_change: netChange, new_credits: settled.credits });
 }

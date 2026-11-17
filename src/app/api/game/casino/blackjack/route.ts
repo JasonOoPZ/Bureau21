@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -21,6 +22,8 @@ const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 const NUM_DECKS = 6;
 const RESHUFFLE_THRESHOLD = 75;
 const MAX_SPLIT_HANDS = 4;
+/** A live hand untouched for this long counts as abandoned and may be replaced by a new deal. */
+const ABANDONED_HAND_MS = 60_000;
 
 function buildShoe(): string[] {
   const shoe: string[] = [];
@@ -84,6 +87,9 @@ interface GameState {
   insuranceBet: number;
   phase: "player_turn" | "resolving" | "done";
   pilotId: string;
+  /** Insurance is offered once, before the first move. */
+  insuranceDecided: boolean;
+  lastActivityAt: number;
 }
 
 async function logBlackjackBet(game: GameState, totalPayout: number) {
@@ -100,6 +106,34 @@ async function logBlackjackBet(game: GameState, totalPayout: number) {
 }
 
 const activeGames = new Map<string, GameState>();
+
+/**
+ * Users with a request currently being processed. Game state lives in memory
+ * and every action awaits the database between validating and mutating it, so
+ * two concurrent requests for one user must never interleave. A second request
+ * is rejected while the first is in flight.
+ */
+const inFlight = new Set<string>();
+
+/**
+ * Charge an extra wager (double / split) with the balance check in the WHERE
+ * clause. The phase leaves "player_turn" synchronously, before the await, so
+ * the hand cannot be acted on while the charge is pending.
+ */
+async function chargeExtraWager(game: GameState, uid: string, amount: number): Promise<boolean> {
+  game.phase = "resolving";
+  try {
+    const charged = await guardedPilotUpdate(
+      prisma,
+      uid,
+      { credits: { gte: amount } },
+      { credits: { decrement: amount } }
+    );
+    return charged !== null;
+  } finally {
+    game.phase = "player_turn";
+  }
+}
 
 function draw(shoe: string[]): string {
   if (shoe.length === 0) {
@@ -220,25 +254,53 @@ function serializeState(game: GameState, hideDealer = true) {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const uid = session.user.id;
 
+  // has() + add() run without an await in between, so this check is atomic.
+  if (inFlight.has(uid)) {
+    return NextResponse.json({ error: "Previous action is still resolving." }, { status: 429 });
+  }
+  inFlight.add(uid);
+  try {
+    return await handleAction(request, uid);
+  } finally {
+    const game = activeGames.get(uid);
+    if (game) game.lastActivityAt = Date.now();
+    inFlight.delete(uid);
+  }
+}
+
+async function handleAction(request: Request, uid: string) {
   const body = await request.json() as { action: string; bet?: number; choice?: string };
   const { action, bet, choice } = body;
-  const uid = session.user.id;
 
   /* ── DEAL ────────────────────────────────────────────────────────────── */
   if (action === "deal") {
     if (!bet || !Number.isInteger(bet) || bet < 10 || bet > 1_000_000)
       return NextResponse.json({ error: "Invalid bet." }, { status: 400 });
 
-    const pilot = await prisma.pilotState.findUnique({ where: { userId: uid } });
-    if (!pilot) return NextResponse.json({ error: "Pilot not found." }, { status: 404 });
-    if (pilot.credits < bet) return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
+    // A live hand is never silently overwritten (that forfeited its wager on a
+    // double-click). It must be played out, unless it has been abandoned.
+    const prev = activeGames.get(uid);
+    if (prev && prev.phase !== "done") {
+      if (Date.now() - prev.lastActivityAt < ABANDONED_HAND_MS) {
+        return NextResponse.json({ error: "Finish your current hand first." }, { status: 409 });
+      }
+      prev.phase = "done";
+      activeGames.delete(uid);
+      await logBlackjackBet(prev, 0); // abandoned hand is forfeited
+    }
 
-    await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { decrement: bet } } });
+    const pilot = await guardedPilotUpdate(
+      prisma,
+      uid,
+      { credits: { gte: bet } },
+      { credits: { decrement: bet } }
+    );
+    if (!pilot) return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
 
     // Build or reuse shoe
     let shoe: string[];
-    const prev = activeGames.get(uid);
     if (prev && prev.shoe.length >= RESHUFFLE_THRESHOLD) {
       shoe = prev.shoe;
     } else {
@@ -257,6 +319,8 @@ export async function POST(request: Request) {
       insuranceBet: 0,
       phase: "player_turn",
       pilotId: pilot.id,
+      insuranceDecided: false,
+      lastActivityAt: Date.now(),
     };
 
     const dealerUpAce = cardRank(dealerCards[0]) === "A";
@@ -301,14 +365,36 @@ export async function POST(request: Request) {
     const game = activeGames.get(uid);
     if (!game) return NextResponse.json({ error: "No active game." }, { status: 400 });
 
+    // Insurance exists only against a dealer ace, once, before the first move.
+    const openingHand = game.hands[0];
+    const insuranceAvailable =
+      game.phase === "player_turn" &&
+      !game.insuranceDecided &&
+      cardRank(game.dealer[0]) === "A" &&
+      game.hands.length === 1 &&
+      openingHand.cards.length === 2 &&
+      !openingHand.doubled;
+    if (!insuranceAvailable) {
+      return NextResponse.json({ error: "Insurance is not available." }, { status: 400 });
+    }
+
     const accept = choice === "yes";
     const insuranceCost = Math.floor(game.baseBet / 2);
 
+    // Decided synchronously, before any await.
+    game.insuranceDecided = true;
+
     if (accept) {
-      const pilot = await prisma.pilotState.findUnique({ where: { userId: uid } });
-      if (!pilot || pilot.credits < insuranceCost)
+      const charged = await guardedPilotUpdate(
+        prisma,
+        uid,
+        { credits: { gte: insuranceCost } },
+        { credits: { decrement: insuranceCost } }
+      );
+      if (!charged) {
+        game.insuranceDecided = false;
         return NextResponse.json({ error: "Not enough credits for insurance." }, { status: 400 });
-      await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { decrement: insuranceCost } } });
+      }
       game.insuranceBet = insuranceCost;
     }
 
@@ -327,11 +413,11 @@ export async function POST(request: Request) {
         payout += game.baseBet; // push on main bet
         label = "Both Blackjack! " + (accept ? "Insurance pays." : "Push.");
       }
+      game.phase = "done";
       if (payout > 0) {
         await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
       }
       await logBlackjackBet(game, payout);
-      game.phase = "done";
       activeGames.delete(uid);
       return NextResponse.json({
         status: "done",
@@ -348,9 +434,9 @@ export async function POST(request: Request) {
     if (playerBJ) {
       // Player BJ, no dealer BJ
       const payout = game.baseBet + Math.floor(game.baseBet * 1.5);
+      game.phase = "done";
       await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { increment: payout } } });
       await logBlackjackBet(game, payout);
-      game.phase = "done";
       activeGames.delete(uid);
       return NextResponse.json({
         status: "blackjack",
@@ -491,11 +577,9 @@ export async function POST(request: Request) {
     if (!hand || hand.cards.length !== 2 || hand.fromSplitAces)
       return NextResponse.json({ error: "Cannot double." }, { status: 400 });
 
-    const pilot = await prisma.pilotState.findUnique({ where: { userId: uid } });
-    if (!pilot || pilot.credits < hand.bet)
+    if (!(await chargeExtraWager(game, uid, hand.bet)))
       return NextResponse.json({ error: "Not enough credits to double." }, { status: 400 });
 
-    await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { decrement: hand.bet } } });
     hand.bet *= 2;
     hand.doubled = true;
     hand.cards.push(draw(game.shoe));
@@ -541,11 +625,8 @@ export async function POST(request: Request) {
     if (!hand || !canSplitHand(hand.cards) || game.hands.length >= MAX_SPLIT_HANDS)
       return NextResponse.json({ error: "Cannot split." }, { status: 400 });
 
-    const pilot = await prisma.pilotState.findUnique({ where: { userId: uid } });
-    if (!pilot || pilot.credits < hand.bet)
+    if (!(await chargeExtraWager(game, uid, hand.bet)))
       return NextResponse.json({ error: "Not enough credits to split." }, { status: 400 });
-
-    await prisma.pilotState.update({ where: { userId: uid }, data: { credits: { decrement: hand.bet } } });
 
     const splitCard = hand.cards.pop()!;
     const isSplitAces = cardRank(hand.cards[0]) === "A";
