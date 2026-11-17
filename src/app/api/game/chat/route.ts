@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+const CHAT_HISTORY_SIZE = 60;
+
 const messageSchema = z.object({
   body: z.string().min(1).max(500),
 });
@@ -45,11 +47,18 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const messages = await prisma.chatMessage.findMany({
-    orderBy: { createdAt: "asc" },
-    take: 60,
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  // Newest 60, returned oldest-first for display.
+  const newest = await prisma.chatMessage.findMany({
+    orderBy: { createdAt: "desc" },
+    take: CHAT_HISTORY_SIZE,
     include: { author: { select: { id: true, name: true } } },
   });
+  const messages = newest.reverse();
 
   // Count pilots active in the last 5 minutes
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);

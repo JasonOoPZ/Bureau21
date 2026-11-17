@@ -11,11 +11,13 @@ export default async function ChatPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const messages = await prisma.chatMessage.findMany({
-    orderBy: { createdAt: "asc" },
+  // Newest 60, shown oldest-first.
+  const newest = await prisma.chatMessage.findMany({
+    orderBy: { createdAt: "desc" },
     take: 60,
     include: { author: { select: { id: true, name: true } } },
   });
+  const messages = newest.reverse();
 
   return (
     <>
