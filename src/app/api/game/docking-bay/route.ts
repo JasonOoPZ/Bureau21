@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
-import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
+import { getOrCreatePilotState } from "@/lib/game-state";
 import { pilotHasGodCard } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -81,18 +82,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const progressed = applyLevelProgression(pilot.xp + job.xpReward, pilot.level);
-
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
+  // Claim the cooldown and pay the contract in one statement: of N parallel
+  // requests only the one that still sees an expired cooldown is paid.
+  const now = new Date();
+  const paid = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { lastDockAt: { lte: new Date(now.getTime() - COOLDOWN_MINUTES * 60_000) } },
+    {
       credits: { increment: job.creditReward },
-      xp: progressed.xp,
-      level: progressed.level,
-      unspentPoints: { increment: progressed.pointsEarned },
-      lastDockAt: new Date(),
-    },
-  });
+      xp: { increment: job.xpReward },
+      lastDockAt: now,
+    }
+  );
+  if (!paid) {
+    return NextResponse.json(
+      { error: "You are already on assignment." },
+      { status: 429 }
+    );
+  }
+
+  // Level-ups (and their stat points) are awarded by a compare-and-swap on level.
+  const settled = await settleLevelProgression(prisma, session.user.id);
+  const progressed = { level: settled?.level ?? paid.level };
 
   return NextResponse.json({
     job,

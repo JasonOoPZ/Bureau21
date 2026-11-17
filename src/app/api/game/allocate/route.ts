@@ -1,7 +1,9 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { GAME_CONSTANTS } from "@/lib/constants";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -10,6 +12,35 @@ const schema = z.object({
   stat: z.enum(["hp", "strength", "speed", "endurance", "panic", "confidence"]),
   points: z.number().int().min(1).max(100),
 });
+
+type Stat = z.infer<typeof schema>["stat"];
+
+const STAT_LABELS: Record<Stat, string> = {
+  hp: "Life Force",
+  strength: "Strength",
+  speed: "Speed",
+  endurance: "Endurance",
+  panic: "Panic",
+  confidence: "Confidence",
+};
+
+/** Relative stat gain — never an absolute value computed from an earlier read. */
+function statIncrement(stat: Stat, amount: number): Prisma.PilotStateUpdateManyMutationInput {
+  switch (stat) {
+    case "hp":
+      return { lifeForce: { increment: amount } };
+    case "strength":
+      return { strength: { increment: amount } };
+    case "speed":
+      return { speed: { increment: amount } };
+    case "endurance":
+      return { endurance: { increment: amount } };
+    case "panic":
+      return { panic: { increment: amount } };
+    case "confidence":
+      return { confidence: { increment: amount } };
+  }
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -34,74 +65,53 @@ export async function POST(request: Request) {
     );
   }
 
-  // Confidence cap check
-  if (stat === "confidence" && pilot.confidence >= GAME_CONSTANTS.CONFIDENCE_CAP) {
+  // Confidence is capped: only spend the whole points that actually raise it.
+  const spend =
+    stat === "confidence"
+      ? Math.min(points, Math.floor(GAME_CONSTANTS.CONFIDENCE_CAP - pilot.confidence))
+      : points;
+
+  if (spend < 1) {
+    return NextResponse.json({ error: "Max confidence reached." }, { status: 400 });
+  }
+
+  // One statement spends the points and grants the stat. The points check is in
+  // the WHERE clause, so five parallel requests (one per stat) can only spend
+  // what is really there.
+  const guard: Prisma.PilotStateWhereInput = {
+    unspentPoints: { gte: spend },
+    ...(stat === "confidence"
+      ? { confidence: { lte: GAME_CONSTANTS.CONFIDENCE_CAP - spend } }
+      : {}),
+  };
+
+  const updated = await guardedPilotUpdate(prisma, session.user.id, guard, {
+    unspentPoints: { decrement: spend },
+    ...statIncrement(stat, spend),
+  });
+
+  if (!updated) {
+    const fresh = await prisma.pilotState.findUnique({
+      where: { userId: session.user.id },
+      select: { unspentPoints: true },
+    });
+    const available = fresh?.unspentPoints ?? 0;
     return NextResponse.json(
-      { error: "Max confidence reached." },
+      {
+        error:
+          available < spend
+            ? `Not enough points. You have ${available} available.`
+            : "Max confidence reached.",
+      },
       { status: 400 }
     );
   }
-
-  // Calculate stat gains — 1 point per allocation
-  const data: Record<string, unknown> = {
-    unspentPoints: { decrement: points },
-  };
-
-  let gainDescription = "";
-
-  switch (stat) {
-    case "hp": {
-      data.lifeForce = pilot.lifeForce + points;
-      gainDescription = `+${points} Life Force`;
-      break;
-    }
-    case "strength": {
-      data.strength = pilot.strength + points;
-      gainDescription = `+${points} Strength`;
-      break;
-    }
-    case "speed": {
-      data.speed = pilot.speed + points;
-      gainDescription = `+${points} Speed`;
-      break;
-    }
-    case "endurance": {
-      data.endurance = pilot.endurance + points;
-      gainDescription = `+${points} Endurance`;
-      break;
-    }
-    case "panic": {
-      data.panic = pilot.panic + points;
-      gainDescription = `+${points} Panic`;
-      break;
-    }
-    case "confidence": {
-      const newConf = Math.min(pilot.confidence + points, GAME_CONSTANTS.CONFIDENCE_CAP);
-      const actualGain = newConf - pilot.confidence;
-      if (actualGain <= 0) {
-        return NextResponse.json(
-          { error: "Max confidence reached." },
-          { status: 400 }
-        );
-      }
-      // Only spend the points that actually raise confidence
-      data.confidence = newConf;
-      data.unspentPoints = { decrement: actualGain };
-      gainDescription = `+${actualGain} Confidence`;
-      break;
-    }
-  }
-
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data,
-  });
 
   return NextResponse.json({
     ok: true,
     stat,
     points,
-    gain: gainDescription,
-    remaining: pilot.unspentPoints - points,
+    gain: `+${spend} ${STAT_LABELS[stat]}`,
+    remaining: updated.unspentPoints,
   });
 }
