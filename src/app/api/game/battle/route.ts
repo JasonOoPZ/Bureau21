@@ -1,11 +1,27 @@
 import { authOptions } from "@/auth";
-import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
+import {
+  economyErrorResponse,
+  EconomyError,
+  economyTx,
+  guardedPilotUpdate,
+  settleLevelProgression,
+  type Db,
+} from "@/lib/economy";
+import { getOrCreatePilotState } from "@/lib/game-state";
 import { resolvePvpBattle } from "@/lib/battle-engine";
-import type { PvpTarget } from "@/lib/battle-engine";
+import type { BattleOutcome, PvpPilotInput, PvpTarget } from "@/lib/battle-engine";
 import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
+import { loadPilotForPlay, syncVitals } from "@/lib/pilot-sync";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { GAME_CONSTANTS, getConfidenceCap } from "@/lib/constants";
+import {
+  applyBattleConfidence,
+  maxLifeForce,
+  pvpMinLifeForce,
+  resolveDailyConfidence,
+} from "@/lib/vitals";
+import type { InventoryItem, PilotState, PlayerHero } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,19 +31,248 @@ const schema = z.object({
   targetCallsign: z.string().min(1).max(40).optional(),
 }).refine((d) => d.targetUserId || d.targetCallsign, { message: "Target required" });
 
-/** Check if midnight HKT (UTC+8) has passed since last reset, return reset confidence if so */
-function resolveConfidenceReset(confidence: number, lastResetAt: Date): { confidence: number; didReset: boolean } {
-  const now = new Date();
-  // Midnight HKT = 16:00 UTC previous day
-  const hktNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  const hktReset = new Date(lastResetAt.getTime() + 8 * 60 * 60 * 1000);
-  // Compare HKT dates (year-month-day)
-  const nowDay = `${hktNow.getUTCFullYear()}-${hktNow.getUTCMonth()}-${hktNow.getUTCDate()}`;
-  const resetDay = `${hktReset.getUTCFullYear()}-${hktReset.getUTCMonth()}-${hktReset.getUTCDate()}`;
-  if (nowDay !== resetDay) {
-    return { confidence: GAME_CONSTANTS.CONFIDENCE_FLOOR, didReset: true };
+const MS_PER_MINUTE = 60_000;
+const PAIR_WINDOW_MS = 24 * 60 * MS_PER_MINUTE;
+const HERO_XP_WIN = 20;
+const HERO_XP_LOSS = 5;
+
+type Combatant = PilotState & { inventory: InventoryItem[] };
+
+/**
+ * Row-lock both pilots for the rest of the transaction. Locks are always taken
+ * in userId order, so A attacking B while B attacks A cannot deadlock. Every
+ * check and write below then runs against rows nobody else can change, which
+ * is what makes the cooldown / daily-cap checks atomic with the battle itself.
+ */
+async function lockCombatants(tx: Db, attackerUserId: string, defenderUserId: string) {
+  for (const userId of [attackerUserId, defenderUserId].sort()) {
+    await tx.$queryRaw`SELECT "id" FROM "PilotState" WHERE "userId" = ${userId} FOR UPDATE`;
   }
-  return { confidence, didReset: false };
+}
+
+async function loadCombatant(tx: Db, userId: string, now: Date): Promise<Combatant | null> {
+  const pilot = await tx.pilotState.findUnique({ where: { userId }, include: { inventory: true } });
+  if (!pilot) return null;
+
+  // Regeneration first, so an offline defender fights with the LF they have
+  // earned back, then the midnight-HKT confidence reset.
+  const synced = await syncVitals(tx, pilot, now);
+  const daily = resolveDailyConfidence(synced.confidence, synced.lastConfidenceResetAt, now);
+  if (!daily.didReset) return synced;
+
+  await tx.pilotState.update({
+    where: { userId },
+    data: { confidence: daily.confidence, lastConfidenceResetAt: now },
+  });
+  return { ...synced, confidence: daily.confidence, lastConfidenceResetAt: now };
+}
+
+async function assertNotSuspended(tx: Db, attackerUserId: string, defenderUserId: string) {
+  const users = await tx.user.findMany({
+    where: { id: { in: [attackerUserId, defenderUserId] } },
+    select: { id: true, suspended: true },
+  });
+  if (users.find((u) => u.id === attackerUserId)?.suspended) {
+    throw new EconomyError("Your account is suspended.", 403);
+  }
+  if (users.find((u) => u.id === defenderUserId)?.suspended) {
+    throw new EconomyError("That pilot cannot be attacked.", 403);
+  }
+}
+
+async function assertBattleAllowed(tx: Db, attacker: Combatant, defender: Combatant, now: Date) {
+  // Level-based attack restriction: level 6+ cannot attack level 5 or below
+  if (attacker.level >= 6 && defender.level <= 5) {
+    throw new EconomyError("You cannot attack pilots level 5 or below.", 403);
+  }
+
+  const attackerMinLf = pvpMinLifeForce(attacker);
+  if (attacker.lifeForce < attackerMinLf) {
+    throw new EconomyError(
+      `Too injured to fight. You need at least ${attackerMinLf} Life Force to attack.`
+    );
+  }
+  if (defender.lifeForce < pvpMinLifeForce(defender)) {
+    throw new EconomyError("That pilot is recovering and cannot be attacked right now.", 409);
+  }
+
+  // The defender's own cooldown, never shorter than the global minimum.
+  if (defender.lastAttackedAt) {
+    const cooldownMs =
+      Math.max(GAME_CONSTANTS.PVP_MIN_DEFENDER_COOLDOWN_MINUTES, defender.battleCooldown) *
+      MS_PER_MINUTE;
+    const elapsed = now.getTime() - defender.lastAttackedAt.getTime();
+    if (elapsed < cooldownMs) {
+      const remaining = Math.ceil((cooldownMs - elapsed) / MS_PER_MINUTE);
+      throw new EconomyError(
+        `That pilot was attacked recently. Try again in ~${remaining} minute(s).`,
+        429
+      );
+    }
+  }
+
+  // Per-pair daily cap. BattleLog stores the opponent by callsign only, and
+  // each battle writes one row per side, so this counts battles between the
+  // two pilots in either direction.
+  const recentBetweenPair = await tx.battleLog.count({
+    where: {
+      pilotId: attacker.id,
+      opponentName: defender.callsign,
+      createdAt: { gte: new Date(now.getTime() - PAIR_WINDOW_MS) },
+    },
+  });
+  if (recentBetweenPair >= GAME_CONSTANTS.PVP_PAIR_DAILY_CAP) {
+    throw new EconomyError(
+      `You have already fought ${defender.callsign} ${GAME_CONSTANTS.PVP_PAIR_DAILY_CAP} times in the last 24 hours.`,
+      429
+    );
+  }
+}
+
+function toBattleInput(pilot: Combatant): PvpPilotInput {
+  return {
+    callsign: pilot.callsign,
+    level: pilot.level,
+    lifeForce: pilot.lifeForce,
+    strength: pilot.strength,
+    speed: pilot.speed,
+    confidence: pilot.confidence,
+    atkSplit: pilot.atkSplit,
+    characterSlug: pilot.characterSlug,
+    credits: pilot.credits,
+    inventory: pilot.inventory,
+  };
+}
+
+interface SideResult {
+  won: boolean;
+  xp: number;
+  credits: number;
+  lifeForceAfter: number;
+}
+
+/**
+ * Apply one side's result. Both rows are locked, so `pilot` is current; even
+ * so every stat is written as a delta, and a loser's payment is guarded so
+ * credits can never go negative.
+ */
+async function applySideResult(tx: Db, pilot: Combatant, side: SideResult, now: Date, attacked: boolean) {
+  const confidence = applyBattleConfidence(
+    pilot.confidence,
+    side.won,
+    getConfidenceCap(pilot.characterSlug)
+  );
+
+  const updated = await guardedPilotUpdate(
+    tx,
+    pilot.userId,
+    side.credits < 0 ? { credits: { gte: -side.credits } } : {},
+    {
+      xp: { increment: side.xp },
+      credits: { increment: side.credits },
+      lifeForce: { increment: side.lifeForceAfter - pilot.lifeForce },
+      confidence: { increment: confidence - pilot.confidence },
+      kills: { increment: side.won ? 1 : 0 },
+      ...(attacked ? { lastAttackedAt: now } : { lastActionAt: now }),
+    }
+  );
+  if (!updated) throw new EconomyError("Battle could not be settled. Try again.", 409);
+}
+
+async function grantHeroXp(tx: Db, heroes: PlayerHero[], won: boolean) {
+  const gain = won ? HERO_XP_WIN : HERO_XP_LOSS;
+  for (const hero of heroes) {
+    const progressed = applyHeroXpProgression(hero.xp + gain, hero.level);
+    await tx.playerHero.update({
+      where: { id: hero.id },
+      data: { xp: progressed.xp, level: progressed.level },
+    });
+  }
+}
+
+async function runBattle(tx: Db, attackerUserId: string, defenderUserId: string): Promise<BattleOutcome> {
+  const now = new Date();
+  await lockCombatants(tx, attackerUserId, defenderUserId);
+  await assertNotSuspended(tx, attackerUserId, defenderUserId);
+
+  const attacker = await loadCombatant(tx, attackerUserId, now);
+  const defender = await loadCombatant(tx, defenderUserId, now);
+  if (!attacker) throw new EconomyError("Pilot not found.", 404);
+  if (!defender) throw new EconomyError("Opponent not found.", 404);
+
+  await assertBattleAllowed(tx, attacker, defender, now);
+
+  // Fetch active heroes for both players (read under the pilot locks)
+  const [attackerHeroes, defenderHeroes] = await Promise.all([
+    tx.playerHero.findMany({ where: { pilotId: attacker.id, active: true } }),
+    tx.playerHero.findMany({ where: { pilotId: defender.id, active: true } }),
+  ]);
+
+  const outcome = resolvePvpBattle(
+    toBattleInput(attacker),
+    toBattleInput(defender),
+    computeHeroBonuses(attackerHeroes),
+    computeHeroBonuses(defenderHeroes)
+  );
+  const attackerWon = outcome.winner === "attacker";
+
+  await applySideResult(tx, attacker, {
+    won: attackerWon,
+    xp: outcome.attackerXp,
+    credits: outcome.attackerCredits,
+    lifeForceAfter: outcome.attackerLfAfter,
+  }, now, false);
+  await applySideResult(tx, defender, {
+    won: !attackerWon,
+    xp: outcome.defenderXp,
+    credits: outcome.defenderCredits,
+    lifeForceAfter: outcome.defenderLfAfter,
+  }, now, true);
+
+  const attackerLevel = (await settleLevelProgression(tx, attackerUserId))?.level ?? attacker.level;
+  await settleLevelProgression(tx, defenderUserId);
+
+  await grantHeroXp(tx, attackerHeroes, attackerWon);
+  await grantHeroXp(tx, defenderHeroes, !attackerWon);
+
+  // Auto-herbs: top the attacker back up to their natural max. Guarded so a
+  // herb is only spent when it actually heals, and LF is never lowered.
+  const attackerMaxLf = maxLifeForce({ level: attackerLevel });
+  if (attacker.autoHerbs && outcome.attackerLfAfter < attackerMaxLf) {
+    await guardedPilotUpdate(
+      tx,
+      attackerUserId,
+      { herbs: { gte: 1 }, lifeForce: { lt: attackerMaxLf } },
+      { lifeForce: attackerMaxLf, herbs: { decrement: 1 } }
+    );
+  }
+
+  // Battle logs for both players
+  const defenderLogText = attacker.hideBattleLogs ? "[Battle log hidden by attacker]" : outcome.logText;
+  await tx.battleLog.createMany({
+    data: [
+      {
+        pilotId: attacker.id,
+        opponentName: defender.callsign,
+        result: attackerWon ? "win" : "loss",
+        xpGained: outcome.attackerXp,
+        creditsGained: outcome.attackerCredits,
+        roundsCount: outcome.totalRounds,
+        logText: outcome.logText,
+      },
+      {
+        pilotId: defender.id,
+        opponentName: attacker.callsign,
+        result: attackerWon ? "loss" : "win",
+        xpGained: outcome.defenderXp,
+        creditsGained: outcome.defenderCredits,
+        roundsCount: outcome.totalRounds,
+        logText: defenderLogText,
+      },
+    ],
+  });
+
+  return outcome;
 }
 
 export async function POST(request: Request) {
@@ -35,8 +280,9 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const attackerUserId = session.user.id;
 
-  const rl = rateLimit(`battle:${session.user.id}`, 10, 60_000);
+  const rl = rateLimit(`battle:${attackerUserId}`, 10, 60_000);
   if (rl.limited) {
     return NextResponse.json(
       { error: "Too many battles. Try again shortly." },
@@ -50,11 +296,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (parsed.data.targetUserId === session.user.id) {
+  if (parsed.data.targetUserId === attackerUserId) {
     return NextResponse.json({ error: "You cannot fight yourself." }, { status: 400 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  await getOrCreatePilotState(attackerUserId, session.user.name);
 
   // Resolve target: by userId or callsign lookup
   let resolvedTargetUserId = parsed.data.targetUserId;
@@ -67,209 +313,18 @@ export async function POST(request: Request) {
     resolvedTargetUserId = found.userId;
   }
   if (!resolvedTargetUserId) return NextResponse.json({ error: "Target required." }, { status: 400 });
-  if (resolvedTargetUserId === session.user.id) return NextResponse.json({ error: "You cannot fight yourself." }, { status: 400 });
+  if (resolvedTargetUserId === attackerUserId) return NextResponse.json({ error: "You cannot fight yourself." }, { status: 400 });
+  const defenderUserId = resolvedTargetUserId;
 
-  // Daily confidence reset at midnight HKT for attacker
-  const { confidence: atkConfidence, didReset: atkConfReset } = resolveConfidenceReset(
-    pilot.confidence, pilot.lastConfidenceResetAt
-  );
-  if (atkConfReset) {
-    pilot.confidence = atkConfidence;
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { confidence: atkConfidence, lastConfidenceResetAt: new Date() },
-    });
+  let outcome: BattleOutcome;
+  try {
+    outcome = await economyTx((tx) => runBattle(tx, attackerUserId, defenderUserId));
+  } catch (error) {
+    return economyErrorResponse(error);
   }
-
-  // Fetch defender
-  const defenderPilot = await prisma.pilotState.findUnique({
-    where: { userId: resolvedTargetUserId },
-    include: { inventory: true },
-  });
-  if (!defenderPilot) {
-    return NextResponse.json({ error: "Opponent not found." }, { status: 404 });
-  }
-
-  // Check defender's attack cooldown setting
-  const defAny = defenderPilot as unknown as Record<string, unknown>;
-  if (defAny.lastAttackedAt) {
-    const cooldownMs = ((defAny.battleCooldown as number) ?? 5) * 60 * 1000;
-    const elapsed = Date.now() - (defAny.lastAttackedAt as Date).getTime();
-    if (elapsed < cooldownMs) {
-      const remaining = Math.ceil((cooldownMs - elapsed) / 60000);
-      return NextResponse.json(
-        { error: `That pilot was attacked recently. Try again in ~${remaining} minute(s).` },
-        { status: 429 }
-      );
-    }
-  }
-
-  // Daily confidence reset at midnight HKT for defender
-  const { confidence: defConfidence, didReset: defConfReset } = resolveConfidenceReset(
-    defenderPilot.confidence, defenderPilot.lastConfidenceResetAt
-  );
-  if (defConfReset) {
-    defenderPilot.confidence = defConfidence;
-    await prisma.pilotState.update({
-      where: { userId: defenderPilot.userId },
-      data: { confidence: defConfidence, lastConfidenceResetAt: new Date() },
-    });
-  }
-
-  // Level-based attack restriction: level 6+ cannot attack level 5 or below
-  if (pilot.level >= 6 && defenderPilot.level <= 5) {
-    return NextResponse.json(
-      { error: "You cannot attack pilots level 5 or below." },
-      { status: 403 }
-    );
-  }
-
-  // Fetch active heroes for both players
-  const [attackerHeroes, defenderHeroes] = await Promise.all([
-    prisma.playerHero.findMany({ where: { pilotId: pilot.id, active: true } }),
-    prisma.playerHero.findMany({ where: { pilotId: defenderPilot.id, active: true } }),
-  ]);
-  const atkBonuses = computeHeroBonuses(attackerHeroes);
-  const defBonuses = computeHeroBonuses(defenderHeroes);
-
-  const outcome = resolvePvpBattle(
-    {
-      callsign: pilot.callsign,
-      level: pilot.level,
-      lifeForce: pilot.lifeForce,
-      strength: pilot.strength,
-      speed: pilot.speed,
-      confidence: pilot.confidence,
-      atkSplit: pilot.atkSplit,
-      characterSlug: pilot.characterSlug,
-      inventory: pilot.inventory,
-    },
-    {
-      callsign: defenderPilot.callsign,
-      level: defenderPilot.level,
-      lifeForce: defenderPilot.lifeForce,
-      strength: defenderPilot.strength,
-      speed: defenderPilot.speed,
-      confidence: defenderPilot.confidence,
-      atkSplit: defenderPilot.atkSplit,
-      characterSlug: defenderPilot.characterSlug,
-      inventory: defenderPilot.inventory,
-    },
-    atkBonuses,
-    defBonuses
-  );
-
-  // Update attacker
-  const atkProgressed = applyLevelProgression(
-    pilot.xp + outcome.attackerXp,
-    pilot.level
-  );
-  const atkNewConf = Math.max(GAME_CONSTANTS.CONFIDENCE_FLOOR, Math.min(getConfidenceCap(pilot.characterSlug), pilot.confidence + outcome.attackerConfDelta));
-
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      xp: atkProgressed.xp,
-      level: atkProgressed.level,
-      credits: { increment: outcome.attackerCredits },
-      lifeForce: outcome.attackerLfAfter,
-      confidence: atkNewConf,
-      kills: outcome.winner === "attacker" ? { increment: 1 } : undefined,
-      unspentPoints: { increment: atkProgressed.pointsEarned },
-      lastActionAt: new Date(),
-    },
-  });
-
-  // Update defender (including lastAttackedAt)
-  const defProgressed = applyLevelProgression(
-    defenderPilot.xp + outcome.defenderXp,
-    defenderPilot.level
-  );
-  const defNewConf = Math.max(GAME_CONSTANTS.CONFIDENCE_FLOOR, Math.min(getConfidenceCap(defenderPilot.characterSlug), defenderPilot.confidence + outcome.defenderConfDelta));
-
-  await prisma.pilotState.update({
-    where: { userId: defenderPilot.userId },
-    data: {
-      xp: defProgressed.xp,
-      level: defProgressed.level,
-      credits: { increment: outcome.defenderCredits },
-      lifeForce: outcome.defenderLfAfter,
-      confidence: defNewConf,
-      kills: outcome.winner === "defender" ? { increment: 1 } : undefined,
-      unspentPoints: { increment: defProgressed.pointsEarned },
-      lastAttackedAt: new Date(),
-    },
-  });
-
-  // Hero XP for attacker's heroes
-  if (attackerHeroes.length > 0) {
-    const heroXpGain = outcome.winner === "attacker" ? 20 : 5;
-    await Promise.all(
-      attackerHeroes.map(async (hero) => {
-        const progressed = applyHeroXpProgression(hero.xp + heroXpGain, hero.level);
-        await prisma.playerHero.update({
-          where: { id: hero.id },
-          data: { xp: progressed.xp, level: progressed.level },
-        });
-      })
-    );
-  }
-
-  // Hero XP for defender's heroes
-  if (defenderHeroes.length > 0) {
-    const heroXpGain = outcome.winner === "defender" ? 20 : 5;
-    await Promise.all(
-      defenderHeroes.map(async (hero) => {
-        const progressed = applyHeroXpProgression(hero.xp + heroXpGain, hero.level);
-        await prisma.playerHero.update({
-          where: { id: hero.id },
-          data: { xp: progressed.xp, level: progressed.level },
-        });
-      })
-    );
-  }
-
-  // Auto-herbs: if attacker has autoHerbs and herbs > 0 and LF is below max, heal
-  const pilotAny = pilot as Record<string, unknown>;
-  if (pilotAny.autoHerbs && pilot.herbs > 0) {
-    const maxLf = Math.max(15, atkProgressed.level * 5);
-    if (outcome.attackerLfAfter < maxLf) {
-      await prisma.pilotState.update({
-        where: { userId: session.user.id },
-        data: { lifeForce: maxLf, herbs: { decrement: 1 } },
-      });
-    }
-  }
-
-  // Battle logs for both players
-  const logText = pilotAny.hideBattleLogs ? "[Battle log hidden by attacker]" : outcome.logText;
-  await Promise.all([
-    prisma.battleLog.create({
-      data: {
-        pilotId: pilot.id,
-        opponentName: defenderPilot.callsign,
-        result: outcome.winner === "attacker" ? "win" : "loss",
-        xpGained: outcome.attackerXp,
-        creditsGained: outcome.attackerCredits,
-        roundsCount: outcome.totalRounds,
-        logText: outcome.logText,
-      },
-    }),
-    prisma.battleLog.create({
-      data: {
-        pilotId: defenderPilot.id,
-        opponentName: pilot.callsign,
-        result: outcome.winner === "defender" ? "win" : "loss",
-        xpGained: outcome.defenderXp,
-        creditsGained: outcome.defenderCredits,
-        roundsCount: outcome.totalRounds,
-        logText,
-      },
-    }),
-  ]);
 
   const finalState = await prisma.pilotState.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: attackerUserId },
     include: { inventory: true, missions: true },
   });
 
@@ -282,13 +337,15 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
 
-  // Fetch all other pilots as potential PVP targets (exclude self + newbies)
+  // Fetch all other pilots as potential PVP targets (exclude self, newbies and
+  // suspended accounts)
   const targets = await prisma.pilotState.findMany({
     where: {
       userId: { not: session.user.id },
       level: { gte: GAME_CONSTANTS.NEWBIE_PROTECTION_LEVEL },
+      user: { suspended: false },
     },
     select: {
       id: true,
