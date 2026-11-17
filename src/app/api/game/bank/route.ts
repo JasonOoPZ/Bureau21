@@ -1,10 +1,10 @@
-import { authOptions } from "@/auth";
+import { AMBIGUOUS_CALLSIGN_MESSAGE, findPilotByCallsign } from "@/lib/callsign";
 import { GAME_CONSTANTS } from "@/lib/constants";
 import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate, type Db } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireUser } from "@/lib/require-user";
 import type { PilotState } from "@prisma/client";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 const BOND_RATES: Record<number, number> = { 7: 1, 14: 2.25, 30: 5, 45: 7.5, 60: 11, 90: 15, 180: 20, 365: 25 };
@@ -59,9 +59,9 @@ async function addToTreasury(db: Db, amount: number) {
  * as the balance really covers.
  */
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return json({ error: "Unauthorized." }, 401);
-  const userId = session.user.id;
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+  const userId = auth.userId;
 
   const rl = rateLimit(`bank:${userId}`, 30, 60_000);
   if (rl.limited) return json({ error: "Too many transactions." }, 429);
@@ -120,9 +120,12 @@ export async function POST(request: Request) {
     // ── Transfer ──────────────────────────────────────────────────────────
     if (action === "transfer") {
       if (amt < 1 || amt > pilot.credits) return json({ error: "Insufficient credits." }, 400);
-      if (!recipientCallsign?.trim()) return json({ error: "Recipient callsign required." }, 400);
-      const recipient = await prisma.pilotState.findFirst({ where: { callsign: { equals: recipientCallsign.trim(), mode: "insensitive" } } });
-      if (!recipient) return json({ error: `Pilot "${recipientCallsign}" not found.` }, 404);
+      if (typeof recipientCallsign !== "string" || !recipientCallsign.trim()) return json({ error: "Recipient callsign required." }, 400);
+      // Never guess between pilots: credits sent to the wrong one are gone.
+      const lookup = await findPilotByCallsign(prisma, recipientCallsign);
+      if (lookup.status === "ambiguous") return json({ error: AMBIGUOUS_CALLSIGN_MESSAGE }, 409);
+      if (lookup.status === "not_found") return json({ error: "Pilot not found." }, 404);
+      const recipient = lookup.pilot;
       if (recipient.userId === userId) return json({ error: "Cannot transfer to yourself." }, 400);
 
       const updated = await economyTx(async (tx) => {
@@ -300,10 +303,10 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return json({ error: "Unauthorized." }, 401);
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
 
-  const pilot = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
+  const pilot = await prisma.pilotState.findUnique({ where: { userId: auth.userId } });
   if (!pilot) return json({ error: "Pilot not found." }, 404);
 
   const global = await prisma.gameGlobal.findUnique({ where: { id: "singleton" } });
