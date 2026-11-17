@@ -11,7 +11,8 @@ export default async function LoungePage() {
   if (!session?.user) redirect("/");
 
   // Find pilots active in the last 30 minutes
-  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+  const now = Date.now();
+  const thirtyMinAgo = new Date(now - 30 * 60 * 1000);
   const recentPilots = await prisma.pilotState.findMany({
     where: { updatedAt: { gte: thirtyMinAgo } },
     select: { callsign: true, level: true, characterSlug: true, currentSector: true, updatedAt: true },
@@ -62,7 +63,7 @@ export default async function LoungePage() {
                 </thead>
                 <tbody>
                   {recentPilots.map((p) => {
-                    const mins = Math.floor((Date.now() - new Date(p.updatedAt).getTime()) / 60000);
+                    const mins = Math.floor((now - new Date(p.updatedAt).getTime()) / 60000);
                     return (
                       <tr key={p.callsign} className="border-b border-slate-800/50 hover:bg-slate-900/30">
                         <td className="px-3 py-1.5 font-semibold text-cyan-300">{p.callsign}</td>

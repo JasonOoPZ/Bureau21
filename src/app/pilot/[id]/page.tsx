@@ -47,12 +47,13 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
   const totalLosses = battleLogs.filter((l) => l.result === "loss").length;
   const totalStalemates = battleLogs.filter((l) => l.result === "stalemate").length;
 
+  const now = Date.now();
   const accountAgeDays = Math.floor(
-    (Date.now() - new Date(pilot.user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    (now - new Date(pilot.user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
 
   const isOnline =
-    (Date.now() - new Date(pilot.lastActionAt).getTime()) / 1000 < 300;
+    (now - new Date(pilot.lastActionAt).getTime()) / 1000 < 300;
 
   // ── Snoop Analysis: simulate win chance ──
   const isOwnProfile = pilot.userId === session.user.id;

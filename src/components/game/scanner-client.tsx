@@ -100,7 +100,6 @@ export function ScannerClient({ syndicates }: Props) {
     setError(null);
 
     // Build API body
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body: any = { page };
     if (filters.levelEnabled) {
       body.levelMin = filters.levelMin;

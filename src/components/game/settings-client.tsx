@@ -18,6 +18,14 @@ interface SettingsClientProps {
   walletAddress: string | null;
 }
 
+const THEME_COOKIE = "bureau21-theme";
+const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+// Read by the root layout on the next request so the theme survives reloads.
+function persistThemeCookie(themeId: ThemeId) {
+  document.cookie = `${THEME_COOKIE}=${themeId};path=/;max-age=${THEME_COOKIE_MAX_AGE_SECONDS};samesite=lax`;
+}
+
 export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsign, walletAddress }: SettingsClientProps) {
   const router = useRouter();
   const [activeTheme, setActiveTheme] = useState<string>(currentTheme);
@@ -42,7 +50,7 @@ export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsig
     } else {
       document.documentElement.setAttribute("data-theme", themeId);
     }
-    document.cookie = `bureau21-theme=${themeId};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+    persistThemeCookie(themeId);
 
     // Persist to DB in background
     setSaving(true);
