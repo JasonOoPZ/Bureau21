@@ -1,8 +1,10 @@
-import { authOptions } from "@/auth";
+import { CallsignTakenError, callsignSchema as callsignField, claimCallsign } from "@/lib/callsign";
+import { economyErrorResponse, economyTx } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
+import { requireUser } from "@/lib/require-user";
 import { themeIds } from "@/lib/themes";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -14,33 +16,51 @@ const themeSchema = z.object({
   theme: z.enum(themeIds as [string, ...string[]]),
 });
 
+/**
+ * Quicklinks are rendered as <a href>. Only same-site paths are allowed: one
+ * leading "/", then URL path/query characters. That rules out schemes
+ * ("javascript:", "https:"), protocol-relative "//host" and the "/\\host"
+ * form some browsers treat the same way (no ":" or "\\" can appear at all).
+ */
+const INTERNAL_PATH_PATTERN = /^\/(?!\/)[A-Za-z0-9\-._~/?#=&%+]*$/;
+
+const quicklinkSchema = z.object({
+  href: z.string().min(1).max(100).regex(INTERNAL_PATH_PATTERN),
+  label: z.string().trim().min(1).max(30),
+});
+
 const quicklinksSchema = z.object({
-  customQuicklinks: z.array(
-    z.object({
-      href: z.string().min(1).max(100),
-      label: z.string().min(1).max(30),
-    })
-  ).max(5),
+  customQuicklinks: z.array(quicklinkSchema).max(5),
 });
 
 const callsignSchema = z.object({
-  callsign: z.string().min(2, "Callsign must be at least 2 characters.").max(24, "Callsign must be at most 24 characters.").regex(/^[a-zA-Z0-9 _\-]+$/, "Callsign may only contain letters, numbers, spaces, hyphens, and underscores."),
+  callsign: callsignField,
 });
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+const RENAME_WINDOW_MS = 60_000;
+const RENAME_MAX_PER_WINDOW = 5;
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
-
-  let customQuicklinks: { href: string; label: string }[] = [];
+/** Stored quicklinks predate the href check, so they are re-validated on read. */
+function parseStoredQuicklinks(raw: string | null | undefined): { href: string; label: string }[] {
   try {
-    customQuicklinks = JSON.parse(pilot.customQuicklinks ?? "[]");
+    const parsed = z.array(z.unknown()).safeParse(JSON.parse(raw ?? "[]"));
+    if (!parsed.success) return [];
+    return parsed.data.flatMap((entry) => {
+      const link = quicklinkSchema.safeParse(entry);
+      return link.success ? [link.data] : [];
+    });
   } catch {
-    customQuicklinks = [];
+    return [];
   }
+}
+
+export async function GET() {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
+  const pilot = await getOrCreatePilotState(auth.userId, auth.name);
+
+  const customQuicklinks = parseStoredQuicklinks(pilot.customQuicklinks);
 
   return NextResponse.json({
     theme: pilot.theme ?? "original",
@@ -50,17 +70,16 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+  const userId = auth.userId;
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  await getOrCreatePilotState(session.user.id, session.user.name);
+  await getOrCreatePilotState(userId, auth.name);
 
   // Callsign update
   if ("callsign" in body) {
@@ -69,19 +88,27 @@ export async function POST(request: Request) {
       const msg = parsed.error.issues[0]?.message ?? "Invalid callsign.";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { callsign: parsed.data.callsign.trim() },
-    });
-    // Also update User.name so session reflects new name
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { name: parsed.data.callsign.trim() },
-    });
-    return NextResponse.json({
-      callsign: parsed.data.callsign.trim(),
-      message: "Callsign updated.",
-    });
+    if (rateLimit(`rename:${userId}`, RENAME_MAX_PER_WINDOW, RENAME_WINDOW_MS).limited) {
+      return NextResponse.json({ error: "Too many rename attempts. Try again shortly." }, { status: 429 });
+    }
+
+    const callsign = parsed.data.callsign;
+    try {
+      // One transaction: reserve the name, then write it to both places
+      // other players resolve it from (PilotState.callsign and User.name).
+      await economyTx(async (tx) => {
+        await claimCallsign(tx, callsign, userId);
+        await tx.pilotState.update({ where: { userId }, data: { callsign } });
+        await tx.user.update({ where: { id: userId }, data: { name: callsign } });
+      });
+    } catch (error) {
+      if (error instanceof CallsignTakenError) {
+        return NextResponse.json({ error: error.message }, { status: 409 });
+      }
+      return economyErrorResponse(error);
+    }
+
+    return NextResponse.json({ callsign, message: "Callsign updated." });
   }
 
   // ATK split update
@@ -91,7 +118,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ATK split must be between 10 and 90." }, { status: 400 });
     }
     await prisma.pilotState.update({
-      where: { userId: session.user.id },
+      where: { userId },
       data: { atkSplit: parsed.data.atkSplit },
     });
     return NextResponse.json({
@@ -107,7 +134,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid theme." }, { status: 400 });
     }
     await prisma.pilotState.update({
-      where: { userId: session.user.id },
+      where: { userId },
       data: { theme: parsed.data.theme },
     });
 
@@ -124,10 +151,13 @@ export async function POST(request: Request) {
   if ("customQuicklinks" in body) {
     const parsed = quicklinksSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid quicklinks. Max 5 links." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid quicklinks. Max 5 links, each an internal path starting with \"/\"." },
+        { status: 400 }
+      );
     }
     await prisma.pilotState.update({
-      where: { userId: session.user.id },
+      where: { userId },
       data: { customQuicklinks: JSON.stringify(parsed.data.customQuicklinks) },
     });
     return NextResponse.json({
