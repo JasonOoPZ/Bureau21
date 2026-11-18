@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import {
   HERO_MAX_ROSTER,
@@ -12,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+const DUPLICATE_XP_GAIN = 30;
 
 const packSchema = z.object({
   type: z.enum(["free", "credit"]),
@@ -29,11 +32,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const userId = session.user.id;
+  const pilot = await getOrCreatePilotState(userId, session.user.name);
+  const isFree = parsed.data.type === "free";
+  const cooldownMs = PACK_FREE_COOLDOWN_HOURS * 60 * 60 * 1000;
+  const insufficientCredits = `Not enough credits. Need ${PACK_CREDIT_COST} cr.`;
+  const rosterFull = `Roster full (${HERO_MAX_ROSTER} max). Release a hero first.`;
 
-  if (parsed.data.type === "free") {
+  // Friendly early exits; the authoritative checks run inside the transaction below.
+  if (isFree) {
     if (pilot.lastPackAt) {
-      const cooldownMs = PACK_FREE_COOLDOWN_HOURS * 60 * 60 * 1000;
       const elapsedMs = Date.now() - pilot.lastPackAt.getTime();
       if (elapsedMs < cooldownMs) {
         const remainingMs = cooldownMs - elapsedMs;
@@ -46,10 +54,7 @@ export async function POST(req: Request) {
   } else {
     // credit pack
     if (pilot.credits < PACK_CREDIT_COST) {
-      return NextResponse.json(
-        { error: `Not enough credits. Need ${PACK_CREDIT_COST} cr.` },
-        { status: 402 }
-      );
+      return NextResponse.json({ error: insufficientCredits }, { status: 402 });
     }
   }
 
@@ -58,63 +63,77 @@ export async function POST(req: Request) {
     where: { pilotId: pilot.id },
   });
   if (rosterCount >= HERO_MAX_ROSTER) {
-    return NextResponse.json(
-      { error: `Roster full (${HERO_MAX_ROSTER} max). Release a hero first.` },
-      { status: 409 }
-    );
+    return NextResponse.json({ error: rosterFull }, { status: 409 });
   }
 
   // Roll the hero
   const template = rollHeroPack();
 
-  // Check for duplicate
-  const existing = await prisma.playerHero.findFirst({
-    where: { pilotId: pilot.id, heroSlug: template.slug },
-  });
+  try {
+    const { heroRecord, isNew } = await economyTx(async (tx) => {
+      // Pay first: claim the free-pack cooldown or debit the credits, guarded.
+      // This also row-locks the pilot, so parallel opens queue up and the
+      // roster / duplicate checks below see every hero granted before them.
+      const now = new Date();
+      const paid = isFree
+        ? await guardedPilotUpdate(
+            tx,
+            userId,
+            { OR: [{ lastPackAt: null }, { lastPackAt: { lte: new Date(now.getTime() - cooldownMs) } }] },
+            { lastPackAt: now }
+          )
+        : await guardedPilotUpdate(
+            tx,
+            userId,
+            { credits: { gte: PACK_CREDIT_COST } },
+            { credits: { decrement: PACK_CREDIT_COST } }
+          );
 
-  let heroRecord;
-  let isNew: boolean;
-  let xpGain = 0;
+      if (!paid) {
+        if (!isFree) throw new EconomyError(insufficientCredits, 402);
+        const elapsedMs = pilot.lastPackAt ? now.getTime() - pilot.lastPackAt.getTime() : 0;
+        throw new EconomyError("Free pack not ready yet.", 429, {
+          remainingMs: Math.max(0, cooldownMs - elapsedMs),
+        });
+      }
 
-  if (existing) {
-    // Duplicate: give +30 XP to existing hero
-    xpGain = 30;
-    const progressed = applyHeroXpProgression(existing.xp + xpGain, existing.level);
-    heroRecord = await prisma.playerHero.update({
-      where: { id: existing.id },
-      data: { xp: progressed.xp, level: progressed.level },
+      const roster = await tx.playerHero.count({ where: { pilotId: pilot.id } });
+      if (roster >= HERO_MAX_ROSTER) throw new EconomyError(rosterFull, 409);
+
+      // Check for duplicate
+      const existing = await tx.playerHero.findFirst({
+        where: { pilotId: pilot.id, heroSlug: template.slug },
+      });
+
+      if (existing) {
+        // Duplicate: give +30 XP to existing hero
+        const progressed = applyHeroXpProgression(existing.xp + DUPLICATE_XP_GAIN, existing.level);
+        const updatedHero = await tx.playerHero.update({
+          where: { id: existing.id },
+          data: { xp: progressed.xp, level: progressed.level },
+        });
+        return { heroRecord: updatedHero, isNew: false };
+      }
+
+      const createdHero = await tx.playerHero.create({
+        data: {
+          pilotId: pilot.id,
+          heroSlug: template.slug,
+          level: 1,
+          xp: 0,
+          active: false,
+        },
+      });
+      return { heroRecord: createdHero, isNew: true };
     });
-    isNew = false;
-  } else {
-    heroRecord = await prisma.playerHero.create({
-      data: {
-        pilotId: pilot.id,
-        heroSlug: template.slug,
-        level: 1,
-        xp: 0,
-        active: false,
-      },
+
+    return NextResponse.json({
+      hero: { ...heroRecord, createdAt: heroRecord.createdAt.toISOString() },
+      template,
+      isNew,
+      xpGain: isNew ? 0 : DUPLICATE_XP_GAIN,
     });
-    isNew = true;
+  } catch (error) {
+    return economyErrorResponse(error);
   }
-
-  // Deduct cost / record free pack usage
-  if (parsed.data.type === "free") {
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { lastPackAt: new Date() },
-    });
-  } else {
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { credits: { decrement: PACK_CREDIT_COST } },
-    });
-  }
-
-  return NextResponse.json({
-    hero: { ...heroRecord, createdAt: heroRecord.createdAt.toISOString() },
-    template,
-    isNew,
-    xpGain: isNew ? 0 : xpGain,
-  });
 }

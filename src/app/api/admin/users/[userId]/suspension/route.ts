@@ -1,6 +1,6 @@
-import { authOptions } from "@/auth";
+import { ADMIN_ROLE } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { requireAdmin } from "@/lib/require-user";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -15,11 +15,8 @@ interface RouteContext {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
 
   try {
     const body = await request.json();
@@ -35,21 +32,50 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "User id is required." }, { status: 400 });
     }
 
-    if (userId === session.user.id && parsed.data.suspended) {
+    if (userId === auth.userId && parsed.data.suspended) {
       return NextResponse.json(
         { error: "You cannot suspend your own account." },
         { status: 400 }
       );
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { suspended: parsed.data.suspended },
+    if (!parsed.data.suspended) {
+      const restored = await prisma.user.updateManyAndReturn({
+        where: { id: userId },
+        data: { suspended: false },
+        select: { id: true, suspended: true },
+      });
+      if (restored.length === 0) {
+        return NextResponse.json({ error: "User not found." }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, user: restored[0] });
+    }
+
+    // Admins are exempt from suspension (see isAccessBlocked), so suspending
+    // one would silently do nothing. The role guard is part of the write, so
+    // a concurrent promotion cannot slip a suspended admin through.
+    const suspended = await prisma.user.updateManyAndReturn({
+      where: { id: userId, role: { not: ADMIN_ROLE } },
+      data: { suspended: true },
       select: { id: true, suspended: true },
     });
 
-    return NextResponse.json({ ok: true, user: updated });
-  } catch {
+    if (suspended.length === 0) {
+      const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!target) {
+        return NextResponse.json({ error: "User not found." }, { status: 404 });
+      }
+      return NextResponse.json(
+        { error: "Admins cannot be suspended. Remove the admin role first." },
+        { status: 409 }
+      );
+    }
+
+    // No session bookkeeping needed: the jwt callback re-reads `suspended`
+    // on the user's next request.
+    return NextResponse.json({ ok: true, user: suspended[0] });
+  } catch (error) {
+    console.error("[admin] failed to update suspension state", error);
     return NextResponse.json({ error: "Failed to update suspension state." }, { status: 500 });
   }
 }

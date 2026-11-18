@@ -1,47 +1,73 @@
-import { defaultStarterCharacter } from "@/lib/starter-characters";
-import { rateLimit } from "@/lib/rate-limit";
-import { generateWalletAddress } from "@/lib/wallet";
-import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { CallsignTakenError, callsignSchema, claimCallsign } from "@/lib/callsign";
+import { economyTx } from "@/lib/economy";
+import { clientIp, durableRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { defaultStarterCharacter, starterCharacters } from "@/lib/starter-characters";
+import { generateWalletAddress } from "@/lib/wallet";
+
+const REGISTER_WINDOW_MS = 15 * 60_000;
+const REGISTER_MAX_PER_IP = 5;
+const REGISTER_MAX_PER_EMAIL = 3;
+
+const STARTER_SLUGS = starterCharacters.map((character) => character.slug) as [string, ...string[]];
 
 const registerSchema = z.object({
-  pilotName: z.string().min(2).max(32),
-  email: z.string().email(),
+  pilotName: callsignSchema,
+  email: z.string().trim().email().max(254),
   password: z.string().min(8).max(128),
-  starterCharacter: z.string().min(2).max(64).optional(),
+  starterCharacter: z.enum(STARTER_SLUGS).optional(),
 });
 
+/**
+ * One message for "email already registered" and for unexpected failures, so
+ * the response does not confirm that an address has an account. (A fully
+ * silent flow needs email verification; until then the rate limit below caps
+ * how fast addresses can be probed.)
+ */
+const GENERIC_FAILURE =
+  "Registration could not be completed. If you already have an account, sign in or reset your password.";
+
+class EmailInUseError extends Error {}
+
+function genericFailure() {
+  return NextResponse.json({ error: GENERIC_FAILURE }, { status: 400 });
+}
+
 export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rl = rateLimit(`register:${ip}`, 5, 900_000);
-  if (rl.limited) {
+  const ip = clientIp(request.headers);
+  const ipLimit = await durableRateLimit(`register:ip:${ip}`, REGISTER_MAX_PER_IP, REGISTER_WINDOW_MS);
+  if (ipLimit.limited) {
+    return tooManyRequests("Too many registration attempts. Try again later.", ipLimit.retryAfterMs);
+  }
+
+  const body = await request.json().catch(() => null);
+  const parsed = registerSchema.safeParse(body);
+
+  if (!parsed.success) {
+    const pilotNameIssue = parsed.error.issues.find((issue) => issue.path[0] === "pilotName");
     return NextResponse.json(
-      { error: "Too many registration attempts. Try again later." },
-      { status: 429 }
+      { error: pilotNameIssue?.message ?? "Invalid registration payload." },
+      { status: 400 }
     );
   }
 
+  const { pilotName, email, password, starterCharacter } = parsed.data;
+
+  const emailLimit = await durableRateLimit(
+    `register:ip-email:${ip}:${email.toLowerCase()}`,
+    REGISTER_MAX_PER_EMAIL,
+    REGISTER_WINDOW_MS
+  );
+  if (emailLimit.limited) {
+    return tooManyRequests("Too many registration attempts. Try again later.", emailLimit.retryAfterMs);
+  }
+
   try {
-    const body = await request.json();
-    const parsed = registerSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid registration payload." }, { status: 400 });
-    }
-
-    const { pilotName, email, password, starterCharacter } = parsed.data;
-
-    const existing = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
-    }
-
+    // Hash before any lookup so the response time does not depend on
+    // whether the email is already registered.
     const hashedPassword = await bcrypt.hash(password, 12);
 
     let walletAddress: string | undefined;
@@ -51,25 +77,47 @@ export async function POST(request: Request) {
       // Wallet generation is non-critical
     }
 
-    await prisma.user.create({
-      data: {
-        name: pilotName,
-        email,
-        hashedPassword,
-        ...(walletAddress ? { walletAddress } : {}),
-        pilotState: {
-          create: {
-            callsign: pilotName,
-            characterSlug: starterCharacter ?? defaultStarterCharacter,
-            appearanceNeedsSetup: true,
+    await economyTx(async (tx) => {
+      // Callsigns are public, so reporting a clash leaks nothing. Checked
+      // before the email so that answer never depends on the email either.
+      await claimCallsign(tx, pilotName);
+
+      const existing = await tx.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existing) throw new EmailInUseError();
+
+      await tx.user.create({
+        data: {
+          name: pilotName,
+          email,
+          hashedPassword,
+          ...(walletAddress ? { walletAddress } : {}),
+          pilotState: {
+            create: {
+              callsign: pilotName,
+              characterSlug: starterCharacter ?? defaultStarterCharacter,
+              appearanceNeedsSetup: true,
+            },
           },
         },
-      },
+      });
     });
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("Registration error:", err);
-    return NextResponse.json({ error: `Failed to create account: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
+  } catch (error) {
+    if (error instanceof CallsignTakenError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    if (error instanceof EmailInUseError) {
+      return genericFailure();
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      // Lost a race on the unique email index.
+      return genericFailure();
+    }
+    console.error("[register] failed to create account", error);
+    return genericFailure();
   }
 }

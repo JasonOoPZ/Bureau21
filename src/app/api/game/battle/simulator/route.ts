@@ -1,7 +1,9 @@
 import { authOptions } from "@/auth";
-import { applyLevelProgression, getOrCreatePilotState } from "@/lib/game-state";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
+import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { GAME_CONSTANTS, xpForLevel } from "@/lib/constants";
+import { maxLifeForce } from "@/lib/vitals";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -81,28 +83,46 @@ export async function POST(request: Request) {
     }
   }
 
-  // Apply results
-  const progressed = type === "xp"
-    ? applyLevelProgression(pilot.xp + xpGain, pilot.level)
-    : type === "level" && leveledUp
-    ? { level: pilot.level + 1, xp: 0, pointsEarned: GAME_CONSTANTS.POINTS_PER_LEVEL }
-    : type === "level"
-    ? { level: pilot.level, xp: 0, pointsEarned: 0 }
-    : { level: pilot.level, xp: pilot.xp, pointsEarned: 0 };
-
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
+  // Apply results. The daily counter is claimed with a compare-and-swap on
+  // (simTrainsToday, lastSimTrainAt): of N parallel sessions computed from the
+  // same snapshot exactly one is counted and rewarded. Rewards are relative.
+  const now = new Date();
+  const claimed = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { simTrainsToday: pilot.simTrainsToday, lastSimTrainAt: pilot.lastSimTrainAt },
+    {
       credits: { increment: creditsGain },
-      xp: progressed.xp,
-      level: progressed.level,
-      lifeForce: type === "level" && leveledUp ? Math.max(15, progressed.level * 5) : undefined,
-      unspentPoints: { increment: progressed.pointsEarned },
+      // the level gamble consumes all XP, win or lose
+      xp: type === "level" ? 0 : { increment: xpGain },
+      ...(leveledUp
+        ? {
+            level: { increment: 1 },
+            unspentPoints: { increment: GAME_CONSTANTS.POINTS_PER_LEVEL },
+          }
+        : {}),
       simTrainsToday: newTrainCount,
-      lastSimTrainAt: new Date(),
-      lastActionAt: new Date(),
-    },
-  });
+      lastSimTrainAt: now,
+      lastActionAt: now,
+    }
+  );
+
+  if (!claimed) {
+    return NextResponse.json(
+      { error: "Another training session is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
+
+  if (leveledUp) {
+    // Level-up refill: raise LF to the new max, but never lower LF that is
+    // already above it (allocated HP).
+    const newMax = maxLifeForce({ level: claimed.level });
+    await guardedPilotUpdate(prisma, session.user.id, { lifeForce: { lt: newMax } }, { lifeForce: newMax });
+  }
+
+  const settled = type === "xp" ? await settleLevelProgression(prisma, session.user.id) : null;
+  const progressed = { level: settled?.level ?? claimed.level, xp: settled?.xp ?? claimed.xp };
 
   const remaining = Math.max(0, GAME_CONSTANTS.BATTLE_VILLAGE_TRAINS_PER_DAY - newTrainCount);
 
@@ -116,6 +136,6 @@ export async function POST(request: Request) {
     level: progressed.level,
     xp: progressed.xp,
     xpNeeded: xpForLevel(progressed.level),
-    credits: pilot.credits + creditsGain,
+    credits: claimed.credits,
   });
 }

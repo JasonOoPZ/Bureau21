@@ -59,7 +59,9 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
           })
         );
         setMessages((prev) => {
-          const newMsgCount = fetched.length - prev.length;
+          // Count by id: the window is a fixed 60, so its length stops growing.
+          const known = new Set(prev.map((m) => m.id));
+          const newMsgCount = fetched.filter((m) => !known.has(m.id)).length;
           if (newMsgCount > 0 && !atBottom) {
             setUnread((u) => u + newMsgCount);
           }

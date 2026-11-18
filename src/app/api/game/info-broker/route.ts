@@ -1,8 +1,11 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+const INTEL_COST = 150;
 
 const schema = z.object({ targetCallsign: z.string().min(1).max(50) });
 
@@ -23,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pilot not found." }, { status: 400 });
   }
 
-  const cost = 150;
+  const cost = INTEL_COST;
   if (buyer.credits < cost) {
     return NextResponse.json({ error: `Intel costs ${cost} credits.` }, { status: 400 });
   }
@@ -45,14 +48,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You already know your own stats, pilot." }, { status: 400 });
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: { credits: { decrement: cost } },
-  });
+  // Charge first, with the balance check in the WHERE clause. Intel is only
+  // released to a request whose charge actually applied.
+  const charged = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { credits: { gte: cost } },
+    { credits: { decrement: cost } }
+  );
+  if (!charged) {
+    return NextResponse.json({ error: `Intel costs ${cost} credits.` }, { status: 400 });
+  }
 
   return NextResponse.json({
     cost,
-    credits: buyer.credits - cost,
+    credits: charged.credits,
     intel: {
       callsign: target.callsign,
       level: target.level,

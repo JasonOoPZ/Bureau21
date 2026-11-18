@@ -1,7 +1,10 @@
-import { GAME_CONSTANTS } from "@/lib/constants";
+import type { Mission } from "@prisma/client";
+import { GAME_CONSTANTS, xpForLevel } from "@/lib/constants";
 import { defaultStarterCharacter } from "@/lib/starter-characters";
 import { rollItemDrop } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
+
+export { applyPassiveRegeneration } from "@/lib/vitals";
 
 export async function getOrCreatePilotState(userId: string, displayName?: string | null) {
   const callsign = (displayName?.trim() || "Rookie Pilot").slice(0, 24);
@@ -24,50 +27,13 @@ export function applyLevelProgression(xp: number, level: number) {
   let currentLevel = level;
   let pointsEarned = 0;
 
-  while (currentXp >= currentLevel * 100) {
-    currentXp -= currentLevel * 100;
+  while (currentXp >= xpForLevel(currentLevel)) {
+    currentXp -= xpForLevel(currentLevel);
     currentLevel += 1;
     pointsEarned += GAME_CONSTANTS.POINTS_PER_LEVEL;
   }
 
   return { xp: currentXp, level: currentLevel, pointsEarned };
-}
-
-export function applyPassiveRegeneration(state: {
-  fuel: number;
-  hull: number;
-  lifeForce: number;
-  level: number;
-  lastFuelRegen: Date;
-}) {
-  let fuel = state.fuel;
-  let hull = state.hull;
-  let lifeForce = state.lifeForce;
-
-  const now = new Date();
-  const secondsElapsed = (now.getTime() - state.lastFuelRegen.getTime()) / 1000;
-
-  // Regenerate 1 fuel every 30 seconds, max 10
-  const fuelGain = Math.floor(secondsElapsed / 30);
-  fuel = Math.min(10, fuel + fuelGain);
-
-  // Regenerate 1 hull every 60 seconds, max 100
-  const hullGain = Math.floor(secondsElapsed / 60);
-  hull = Math.min(100, hull + hullGain);
-
-  // Regenerate 1 Life Force every 2 minutes, capped at level * 5 (min 15)
-  const maxLF = Math.max(15, state.level * 5);
-  const lfGain = Math.floor(secondsElapsed / 120);
-  lifeForce = Math.min(maxLF, lifeForce + lfGain);
-
-  const hasRegen = fuelGain > 0 || hullGain > 0 || lfGain > 0;
-
-  return {
-    fuel,
-    hull,
-    lifeForce,
-    lastFuelRegen: hasRegen ? now : state.lastFuelRegen,
-  };
 }
 
 export const COOLDOWN_SECONDS = 2;
@@ -84,31 +50,69 @@ const MISSION_CONFIGS = [
   { title: "Patrol Duty", description: "Complete 10 patrols", action: "patrol", count: 10, xp: 200, credits: 160 },
 ];
 
-export async function getOrCreateMissions(pilotId: string) {
-  const existingMissions = await prisma.mission.findMany({
-    where: { pilotId },
-  });
+/** The pilot action that advances a mission, or null for an unknown mission. */
+export function missionAction(title: string): string | null {
+  return MISSION_CONFIGS.find((config) => config.title === title)?.action ?? null;
+}
 
-  if (existingMissions.length >= 3) {
-    return existingMissions;
+/** Ranks duplicates of one mission: completed first, then most progress, then oldest. */
+function isBetterMission(candidate: Mission, incumbent: Mission): boolean {
+  if (candidate.completed !== incumbent.completed) return candidate.completed;
+  if (candidate.currentCount !== incumbent.currentCount) {
+    return candidate.currentCount > incumbent.currentCount;
   }
+  return candidate.createdAt.getTime() < incumbent.createdAt.getTime();
+}
 
-  const newMissions = await Promise.all(
-    MISSION_CONFIGS.slice(existingMissions.length).map((config) =>
-      prisma.mission.create({
-        data: {
-          pilotId,
-          title: config.title,
-          description: config.description,
-          targetCount: config.count,
-          rewardXp: config.xp,
-          rewardCredits: config.credits,
-        },
-      })
-    )
-  );
+/**
+ * One mission per title. Rows duplicated by the old check-then-insert race are
+ * collapsed to a single canonical row (a completed copy wins, so a mission
+ * that already paid out can never be progressed and paid a second time).
+ */
+export function canonicalMissions(missions: Mission[]): Mission[] {
+  const byTitle = new Map<string, Mission>();
+  for (const mission of missions) {
+    const incumbent = byTitle.get(mission.title);
+    if (!incumbent || isBetterMission(mission, incumbent)) byTitle.set(mission.title, mission);
+  }
+  return [...byTitle.values()];
+}
 
-  return [...existingMissions, ...newMissions];
+function missingMissionConfigs(missions: Mission[]) {
+  const titles = new Set(missions.map((mission) => mission.title));
+  return MISSION_CONFIGS.filter((config) => !titles.has(config.title));
+}
+
+/**
+ * Idempotent mission setup. There is no unique constraint on (pilotId, title),
+ * so creation runs in a transaction that first row-locks the pilot: concurrent
+ * callers queue on the lock and each re-reads the missions the previous one
+ * created, so a mission is inserted at most once.
+ */
+export async function getOrCreateMissions(pilotId: string): Promise<Mission[]> {
+  const existing = await prisma.mission.findMany({ where: { pilotId } });
+  if (missingMissionConfigs(existing).length === 0) return canonicalMissions(existing);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "PilotState" WHERE "id" = ${pilotId} FOR UPDATE`;
+
+    const current = await tx.mission.findMany({ where: { pilotId } });
+    const missing = missingMissionConfigs(current);
+    if (missing.length === 0) return canonicalMissions(current);
+
+    await tx.mission.createMany({
+      data: missing.map((config) => ({
+        pilotId,
+        title: config.title,
+        description: config.description,
+        targetCount: config.count,
+        rewardXp: config.xp,
+        rewardCredits: config.credits,
+      })),
+    });
+
+    return canonicalMissions(await tx.mission.findMany({ where: { pilotId } }));
+  });
 }
 
 export async function tryDropItem(pilotId: string, action: string): Promise<{ name: string; type: string; tier: number } | null> {

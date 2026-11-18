@@ -7,6 +7,7 @@ import { getStarterCharacter } from "@/lib/starter-characters";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { simulateWinChance } from "@/lib/battle-engine";
 import { prisma } from "@/lib/prisma";
+import { displayMaxLifeForce } from "@/lib/vitals";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
@@ -37,7 +38,7 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
   const atk = calculateATK(pilot.strength, pilot.atkSplit, weaponBonus);
   const def = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const maxXp = xpForLevel(pilot.level);
-  const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
+  const maxLF = displayMaxLifeForce(pilot);
 
   const battleLogs = await prisma.battleLog.findMany({
     where: { pilotId: pilot.id },
@@ -47,12 +48,13 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
   const totalLosses = battleLogs.filter((l) => l.result === "loss").length;
   const totalStalemates = battleLogs.filter((l) => l.result === "stalemate").length;
 
+  const now = Date.now();
   const accountAgeDays = Math.floor(
-    (Date.now() - new Date(pilot.user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    (now - new Date(pilot.user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
 
   const isOnline =
-    (Date.now() - new Date(pilot.lastActionAt).getTime()) / 1000 < 300;
+    (now - new Date(pilot.lastActionAt).getTime()) / 1000 < 300;
 
   // ── Snoop Analysis: simulate win chance ──
   const isOwnProfile = pilot.userId === session.user.id;

@@ -1,16 +1,19 @@
 import { authOptions } from "@/auth";
+import { economyTx, guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
 import {
   applyEquipmentBonuses,
-  applyLevelProgression,
-  applyPassiveRegeneration,
   checkCooldown,
   COOLDOWN_SECONDS,
   getOrCreateMissions,
   getOrCreatePilotState,
+  missionAction,
   tryDropItem,
 } from "@/lib/game-state";
 import { GAME_CONSTANTS } from "@/lib/constants";
+import { syncVitals } from "@/lib/pilot-sync";
 import { prisma } from "@/lib/prisma";
+import { HULL_CAP, maxLifeForce } from "@/lib/vitals";
+import type { Mission } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -19,12 +22,63 @@ const schema = z.object({
   action: z.enum(["scan", "mine", "patrol", "repair", "jump", "use_herb"]),
 });
 
+type Action = z.infer<typeof schema>["action"];
+
+const RECHARGING_ERROR = "Recharging... try again in a moment.";
+const REPAIR_COST = 20;
+const REPAIR_HULL = 22;
+const SECTORS = ["Fringe Expanse", "Void Corridor", "Meridian Rift", "Bastion Hub"];
+
+const BASE_ACTIONS: Record<
+  Exclude<Action, "repair" | "use_herb">,
+  { credits: number; xp: number; hullDamage: number; fuelCost: number }
+> = {
+  scan: { credits: 8, xp: 12, hullDamage: 0, fuelCost: 0 },
+  mine: { credits: 24, xp: 18, hullDamage: 0, fuelCost: 1 },
+  patrol: { credits: 16, xp: 30, hullDamage: 6, fuelCost: 2 },
+  jump: { credits: 35, xp: 42, hullDamage: 0, fuelCost: 3 },
+};
+
+function loadFinalState(userId: string) {
+  return prisma.pilotState.findUnique({
+    where: { userId },
+    include: { missions: true, inventory: { orderBy: { createdAt: "desc" } } },
+  });
+}
+
+/**
+ * Advance one mission and, if that completes it, pay the reward. The progress
+ * write is a compare-and-swap on (completed = false, currentCount), and the
+ * payout shares its transaction, so a mission pays exactly once.
+ */
+async function progressMission(userId: string, mission: Mission): Promise<boolean> {
+  const isCompleted = mission.currentCount + 1 >= mission.targetCount;
+
+  return economyTx(async (tx) => {
+    const progressed = await tx.mission.updateMany({
+      where: { id: mission.id, completed: false, currentCount: mission.currentCount },
+      data: { currentCount: { increment: 1 }, completed: isCompleted },
+    });
+    if (progressed.count !== 1 || !isCompleted) return false;
+
+    await tx.pilotState.update({
+      where: { userId },
+      data: {
+        xp: { increment: mission.rewardXp },
+        credits: { increment: mission.rewardCredits },
+      },
+    });
+    return true;
+  });
+}
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const userId = session.user.id;
 
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -34,12 +88,12 @@ export async function POST(request: Request) {
   }
 
   const action = parsed.data.action;
-  const current = await getOrCreatePilotState(session.user.id, session.user.name);
+  const loaded = await getOrCreatePilotState(userId, session.user.name);
 
   // Check cooldown
-  if (!checkCooldown(current.lastActionAt, COOLDOWN_SECONDS)) {
+  if (!checkCooldown(loaded.lastActionAt, COOLDOWN_SECONDS)) {
     const remaining = Math.ceil(
-      COOLDOWN_SECONDS - (new Date().getTime() - current.lastActionAt.getTime()) / 1000
+      COOLDOWN_SECONDS - (new Date().getTime() - loaded.lastActionAt.getTime()) / 1000
     );
     return NextResponse.json(
       { error: `Recharging... ${remaining}s remaining.` },
@@ -47,171 +101,129 @@ export async function POST(request: Request) {
     );
   }
 
-  // Apply passive regeneration
-  const regen = applyPassiveRegeneration({
-    fuel: current.fuel,
-    hull: current.hull,
-    lifeForce: current.lifeForce,
-    level: current.level,
-    lastFuelRegen: current.lastFuelRegen,
-  });
+  // Passive regeneration is persisted (with its timer) before anything is
+  // spent, so the checks below see current fuel / hull / Life Force.
+  const current = await syncVitals(prisma, loaded);
 
-  let credits = current.credits;
-  let fuel = regen.fuel;
-  let hull = regen.hull;
-  let lifeForce = regen.lifeForce;
-  let xp = current.xp;
-  let level = current.level;
-  let currentSector = current.currentSector;
-  let kills = current.kills;
-  let message = "";
-
-  // Base deltas before equipment bonuses
-  let baseCredits = 0;
-  let baseXp = 0;
-  let baseHullDamage = 0;
-  let baseFuelCost = 0;
-
-  if (action === "scan") {
-    baseCredits = 8;
-    baseXp = 12;
-  } else if (action === "mine") {
-    if (fuel < 1) return NextResponse.json({ error: "Not enough fuel." }, { status: 400 });
-    baseFuelCost = 1;
-    baseCredits = 24;
-    baseXp = 18;
-  } else if (action === "patrol") {
-    if (fuel < 2) return NextResponse.json({ error: "Not enough fuel." }, { status: 400 });
-    baseFuelCost = 2;
-    baseCredits = 16;
-    baseXp = 30;
-    baseHullDamage = 6;
-    kills += 1;
-  } else if (action === "repair") {
-    if (credits < 20) return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
-    credits -= 20;
-    hull = Math.min(100, hull + 22);
-    baseXp = 6;
-    message = "Dockside repair complete: hull integrity restored.";
-  } else if (action === "jump") {
-    if (fuel < 3) return NextResponse.json({ error: "Not enough fuel." }, { status: 400 });
-    const sectors = ["Fringe Expanse", "Void Corridor", "Meridian Rift", "Bastion Hub"];
-    const nextIndex = (sectors.indexOf(currentSector) + 1) % sectors.length;
-    baseFuelCost = 3;
-    baseCredits = 35;
-    baseXp = 42;
-    currentSector = sectors[nextIndex] ?? "Fringe Expanse";
-  } else if (action === "use_herb") {
+  if (action === "use_herb") {
     if ((current.herbs ?? 0) < 1) {
       return NextResponse.json({ error: "No Blue Herbs in inventory." }, { status: 400 });
     }
-    const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, current.level * 5);
-    if (lifeForce >= maxLF) {
+    const maxLF = maxLifeForce(current);
+    if (current.lifeForce >= maxLF) {
       return NextResponse.json({ error: "Life Force is already at maximum." }, { status: 400 });
     }
-    const restored = Math.min(GAME_CONSTANTS.BLUE_HERB_REVIVE_LF, maxLF - lifeForce);
-    lifeForce = Math.min(maxLF, lifeForce + GAME_CONSTANTS.BLUE_HERB_REVIVE_LF);
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: {
-        lifeForce,
-        herbs: { decrement: 1 },
-        lastActionAt: new Date(),
+    const restored = Math.min(GAME_CONSTANTS.BLUE_HERB_REVIVE_LF, maxLF - current.lifeForce);
+    // Compare-and-swap on lastActionAt claims the action slot; the herb check
+    // is in the same WHERE clause so one herb is never used twice, and the
+    // heal is an increment that may not overshoot the maximum.
+    const used = await guardedPilotUpdate(
+      prisma,
+      userId,
+      {
+        lastActionAt: current.lastActionAt,
+        herbs: { gte: 1 },
+        lifeForce: { lte: maxLF - restored },
       },
-    });
-    const finalState = await prisma.pilotState.findUnique({
-      where: { userId: session.user.id },
-      include: { missions: true, inventory: { orderBy: { createdAt: "desc" } } },
-    });
+      { lifeForce: { increment: restored }, herbs: { decrement: 1 }, lastActionAt: new Date() }
+    );
+    if (!used) {
+      return NextResponse.json({ error: RECHARGING_ERROR }, { status: 429 });
+    }
     return NextResponse.json({
-      state: finalState,
+      state: await loadFinalState(userId),
       message: `Blue Herb consumed. Life Force restored by ${restored}.`,
     });
   }
 
-  // Apply equipment bonuses to all non-repair actions
-  if (action !== "repair") {
-    const bonused = applyEquipmentBonuses(current.inventory, {
-      credits: baseCredits,
-      xp: baseXp,
-      hullDamage: baseHullDamage,
-      fuelCost: baseFuelCost,
-    });
-    fuel = Math.max(0, fuel - bonused.fuelCost);
-    credits += bonused.credits;
-    xp += bonused.xp;
-    hull = Math.max(1, hull - bonused.hullDamage);
+  // Everything this action earns or spends, as deltas against the fresh row.
+  let creditsDelta = 0;
+  let xpGain = 0;
+  let fuelCost = 0;
+  let hullDelta = 0;
+  let currentSector = current.currentSector;
+  let message = "";
+
+  if (action === "repair") {
+    if (current.credits < REPAIR_COST) {
+      return NextResponse.json({ error: "Not enough credits." }, { status: 400 });
+    }
+    creditsDelta = -REPAIR_COST;
+    hullDelta = Math.max(0, Math.min(HULL_CAP, current.hull + REPAIR_HULL) - current.hull);
+    xpGain = 6;
+    message = "Dockside repair complete: hull integrity restored.";
+  } else {
+    const base = BASE_ACTIONS[action];
+    if (current.fuel < base.fuelCost) {
+      return NextResponse.json({ error: "Not enough fuel." }, { status: 400 });
+    }
+    if (action === "jump") {
+      const nextIndex = (SECTORS.indexOf(currentSector) + 1) % SECTORS.length;
+      currentSector = SECTORS[nextIndex] ?? "Fringe Expanse";
+    }
+
+    const bonused = applyEquipmentBonuses(current.inventory, base);
+    creditsDelta = bonused.credits;
+    xpGain = bonused.xp;
+    fuelCost = Math.min(current.fuel, bonused.fuelCost);
+    hullDelta = Math.max(1, current.hull - bonused.hullDamage) - current.hull;
 
     if (action === "scan") message = `Long-range scan: +${bonused.credits} credits, +${bonused.xp} xp.`;
     else if (action === "mine") message = `Asteroid harvest: +${bonused.credits} credits, -${bonused.fuelCost} fuel.`;
     else if (action === "patrol") message = `Patrol run: +${bonused.credits} credits, hull took ${bonused.hullDamage} damage.`;
-    else if (action === "jump") message = `Warp jump: arrived at ${currentSector}.`;
-  } else {
-    xp += baseXp;
+    else message = `Warp jump: arrived at ${currentSector}.`;
   }
 
-  const progressed = applyLevelProgression(xp, level);
-  xp = progressed.xp;
-  level = progressed.level;
+  // Persist with a compare-and-swap on lastActionAt, which enforces the
+  // cooldown atomically (N parallel actions => one applies). Every stat is a
+  // delta, and each spend must still be covered at write time, so a battle or
+  // expedition that lands between the read and this write is never overwritten.
+  const applied = await guardedPilotUpdate(
+    prisma,
+    userId,
+    {
+      lastActionAt: current.lastActionAt,
+      ...(creditsDelta < 0 ? { credits: { gte: -creditsDelta } } : {}),
+      ...(fuelCost > 0 ? { fuel: { gte: fuelCost } } : {}),
+      ...(hullDelta < 0 ? { hull: { gte: -hullDelta } } : {}),
+    },
+    {
+      credits: { increment: creditsDelta },
+      fuel: { decrement: fuelCost },
+      hull: { increment: hullDelta },
+      xp: { increment: xpGain },
+      currentSector,
+      kills: { increment: action === "patrol" ? 1 : 0 },
+      lastActionAt: new Date(),
+    }
+  );
+  if (!applied) {
+    return NextResponse.json({ error: RECHARGING_ERROR }, { status: 429 });
+  }
 
-  // Try item drop
+  // Try item drop (only for the request that actually claimed the action)
   const drop = await tryDropItem(current.id, action);
   if (drop) {
     const tierLabel = drop.tier === 3 ? "LEGENDARY" : drop.tier === 2 ? "RARE" : "Common";
     message += ` [LOOT: ${tierLabel} — ${drop.name}!]`;
   }
 
-  // Persist pilot state update
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      credits: Math.max(0, credits),
-      fuel: Math.max(0, fuel),
-      hull: Math.max(0, hull),
-      lifeForce,
-      xp,
-      level,
-      unspentPoints: { increment: progressed.pointsEarned },
-      currentSector,
-      kills,
-      lastActionAt: new Date(),
-      lastFuelRegen: regen.lastFuelRegen,
-    },
-  });
-
-  // Track mission progress
+  // Track mission progress (one canonical mission per title)
   const missions = await getOrCreateMissions(current.id);
-  const activeMissions = missions.filter((m) => !m.completed).filter((m) => {
-    if (m.title === "Mining Novice") return action === "mine";
-    if (m.title === "Explorer") return action === "jump";
-    if (m.title === "Patrol Duty") return action === "patrol";
-    return false;
-  });
-
-  for (const mission of activeMissions) {
-    const newCount = mission.currentCount + 1;
-    const isCompleted = newCount >= mission.targetCount;
-    await prisma.mission.update({
-      where: { id: mission.id },
-      data: { currentCount: newCount, completed: isCompleted },
-    });
-    if (isCompleted) {
+  for (const mission of missions) {
+    if (mission.completed || missionAction(mission.title) !== action) continue;
+    if (await progressMission(userId, mission)) {
       message += ` [MISSION COMPLETE: ${mission.title}! +${mission.rewardXp} XP, +${mission.rewardCredits} credits]`;
-      await prisma.pilotState.update({
-        where: { userId: session.user.id },
-        data: {
-          xp: { increment: mission.rewardXp },
-          credits: { increment: mission.rewardCredits },
-        },
-      });
     }
   }
 
-  // Fetch final state with inventory and missions
-  const finalState = await prisma.pilotState.findUnique({
-    where: { userId: session.user.id },
-    include: { missions: true, inventory: { orderBy: { createdAt: "desc" } } },
-  });
+  // Convert banked XP (action + mission rewards) into levels and stat points.
+  await settleLevelProgression(prisma, userId);
 
-  return NextResponse.json({ state: finalState, message });
+  const [finalState, finalMissions] = await Promise.all([
+    loadFinalState(userId),
+    getOrCreateMissions(current.id),
+  ]);
+
+  return NextResponse.json({ state: finalState, missions: finalMissions, message });
 }

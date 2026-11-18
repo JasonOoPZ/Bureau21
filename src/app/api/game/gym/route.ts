@@ -1,7 +1,10 @@
 import { authOptions } from "@/auth";
 import { GAME_CONSTANTS, computeGymEnergy, getConfidenceCap } from "@/lib/constants";
+import { guardedPilotUpdate } from "@/lib/economy";
+import { hktDayNumber } from "@/lib/hkt";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -12,6 +15,8 @@ const TRAINING_OPTIONS = {
   endurance:     { cost: 5,  field: "endurance",  gain: 0.02,  label: "Endurance" },
   panic_control: { cost: 10, field: "panic",      gain: -0.05, label: "Panic Control" },
 } as const;
+
+const MAX_GYM_STREAK_DAYS = 30;
 
 type TrainingType = keyof typeof TRAINING_OPTIONS;
 
@@ -66,58 +71,68 @@ export async function POST(request: Request) {
     );
   }
 
-  // Calculate gym streak
+  // Gym streak counts consecutive HKT calendar days, not sessions: training
+  // again on the same day keeps it, the next day extends it, a missed day
+  // (or a first visit) starts over.
   const now = new Date();
-  const lastGym = pilot.lastGymAt;
-  const hoursSinceLast = lastGym
-    ? (now.getTime() - lastGym.getTime()) / (1000 * 60 * 60)
-    : 9999;
+  const daysSinceLast = pilot.lastGymAt
+    ? hktDayNumber(now) - hktDayNumber(pilot.lastGymAt)
+    : null;
 
   let newStreak = pilot.gymStreak;
-  if (hoursSinceLast > 48) {
+  if (daysSinceLast === null || daysSinceLast > 1) {
     newStreak = 0; // streak broken
-  } else if (hoursSinceLast >= 1) {
-    newStreak = Math.min(pilot.gymStreak + 1, 30); // max 30 days
+  } else if (daysSinceLast === 1) {
+    newStreak = Math.min(pilot.gymStreak + 1, MAX_GYM_STREAK_DAYS);
   }
 
   const streakBonus = 1 + newStreak * GAME_CONSTANTS.GYM_STREAK_BONUS_PER_DAY;
   const effectiveGain = option.gain * streakBonus;
 
-  // Build the update
-  const update: Record<string, number | Date> = {
-    gymEnergy: currentEnergy - option.cost,
-    gymStreak: newStreak,
-    lastGymAt: now,
-  };
-
-  if (didReset) {
-    update.lastGymEnergyAt = now;
-  }
-
+  // Stat gains are relative so they never overwrite a concurrent change.
+  let statGain: Prisma.PilotStateUpdateManyMutationInput;
   if (training === "strength") {
-    update.strength = pilot.strength + effectiveGain;
+    statGain = { strength: { increment: effectiveGain } };
   } else if (training === "speed") {
-    update.speed = pilot.speed + effectiveGain;
+    statGain = { speed: { increment: effectiveGain } };
   } else if (training === "endurance") {
-    update.endurance = pilot.endurance + effectiveGain;
-  } else if (training === "panic_control") {
-    update.panic = Math.max(0, pilot.panic + effectiveGain);
+    statGain = { endurance: { increment: effectiveGain } };
+  } else {
+    statGain = pilot.panic + effectiveGain >= 0 ? { panic: { increment: effectiveGain } } : { panic: 0 };
   }
 
-  await prisma.$transaction([
-    prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: update,
-    }),
-    prisma.gymLog.create({
-      data: {
-        pilotId: pilot.id,
-        training,
-        gain: effectiveGain,
-        energyCost: option.cost,
-      },
-    }),
-  ]);
+  // Energy (with its daily reset) is derived from (gymEnergy, lastGymEnergyAt).
+  // The write is a compare-and-swap on exactly that pair: of N parallel sessions
+  // computed from the same snapshot only one is charged and trained; the others
+  // are rejected and must retry against the reduced energy.
+  const trained = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { gymEnergy: pilot.gymEnergy, lastGymEnergyAt: pilot.lastGymEnergyAt },
+    {
+      gymEnergy: currentEnergy - option.cost,
+      gymStreak: newStreak,
+      lastGymAt: now,
+      ...(didReset ? { lastGymEnergyAt: now } : {}),
+      ...statGain,
+    }
+  );
+
+  if (!trained) {
+    return NextResponse.json(
+      { error: "Another training session is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
+
+  await prisma.gymLog.create({
+    data: {
+      pilotId: pilot.id,
+      training,
+      gain: effectiveGain,
+      energyCost: option.cost,
+    },
+  });
 
   const gainLabel =
     training === "panic_control"
@@ -146,10 +161,14 @@ export async function GET() {
   const { energy: currentEnergy, didReset } = resolveGymEnergy(pilot);
 
   if (didReset) {
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { gymEnergy: currentEnergy, lastGymEnergyAt: new Date() },
-    });
+    // Only refill if nobody reset (or trained) since we read the row; otherwise
+    // a slow GET would hand back a full bar that a POST already spent.
+    await guardedPilotUpdate(
+      prisma,
+      session.user.id,
+      { gymEnergy: pilot.gymEnergy, lastGymEnergyAt: pilot.lastGymEnergyAt },
+      { gymEnergy: currentEnergy, lastGymEnergyAt: new Date() }
+    );
   }
 
   const energyBreakdown = computeGymEnergy(pilot.endurance, pilot.gymStreak);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { crashMultiplierAt } from "@/lib/casino-crash";
 
 /* ── constants ─────────────────────────────────────────── */
 const W = 400;
@@ -16,6 +17,17 @@ const PIPE_SPEED_START = 2.5;
 const PIPE_SPEED_MAX = 6;
 const PIPE_SPACING = 220;
 const QUICK_BETS = [100, 500, 1000, 10000, 25000];
+const CRASH_API = "/api/game/casino/crash";
+const POLL_INTERVAL_MS = 1000;
+const CASH_OUT_ATTEMPTS = 3;
+const CASH_OUT_RETRY_DELAY_MS = 400;
+
+type RunPhase = "idle" | "running" | "dead" | "cashed";
+
+/** Monotonic clock for the run timer (only read from event handlers and animation frames). */
+function monotonicNow(): number {
+  return performance.now();
+}
 
 /* ── geometry helpers ──────────────────────────────────── */
 type Pipe = { x: number; gapY: number; gapH: number; scored: boolean };
@@ -200,7 +212,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [credits, setCredits] = useState(initialCredits);
   const [bet, setBet] = useState(100);
-  const [phase, setPhase] = useState<"idle" | "running" | "dead" | "cashed">("idle");
+  const [phase, setPhase] = useState<RunPhase>("idle");
   const [result, setResult] = useState<string | null>(null);
   const [displayMult, setDisplayMult] = useState(1.0);
   const [creditsBump, setCreditsBump] = useState(false);
@@ -220,6 +232,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     deathFrame: 0,
     deathY: H / 2,
     betAmount: 100,
+    startedAt: 0,
   });
   const animRef = useRef<number>(0);
 
@@ -261,20 +274,68 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [flap]);
 
+  // settleRef: a settle request (cash-out / death) is in flight or done.
+  // finishedRef: the final result of this run is already on screen.
   const settleRef = useRef(false);
+  const finishedRef = useRef(false);
+  // Multiplier the server settled at; the animation loop freezes the HUD on it.
+  const finalMultRef = useRef<number | null>(null);
+
+  /** Shows the final result of a run exactly once. */
+  const finishRun = useCallback((nextPhase: "dead" | "cashed", label: string, multiplier?: number) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    settleRef.current = true;
+    if (typeof multiplier === "number" && multiplier > 0) {
+      finalMultRef.current = multiplier;
+      setDisplayMult(multiplier);
+    }
+    setResult(label);
+    setPhase(nextPhase);
+  }, []);
+
+  // The crash point is hidden on the server. Poll so the run ends on screen
+  // when the server says the void collapsed.
+  useEffect(() => {
+    if (phase !== "running") return;
+    const id = setInterval(async () => {
+      if (finishedRef.current) return;
+      try {
+        const res = await fetch(CRASH_API, { cache: "no-store" });
+        const data = await res.json();
+        if (data.status !== "crashed") return;
+        // The animation loop sees finishedRef and plays the death effect.
+        finishRun("dead", data.label ?? "The void collapsed!", data.multiplier);
+      } catch {
+        // Transient poll failure: the next poll or the cash-out settles the run.
+      }
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [phase, finishRun]);
 
   const startGame = async () => {
     if (bet > credits || bet < 10) return;
     setResult(null);
-    settleRef.current = false;
 
-    const res = await fetch("/api/game/casino/crash", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bet }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setResult(data.error); return; }
+    let data: { error?: string };
+    let ok = false;
+    try {
+      const res = await fetch(CRASH_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bet }),
+      });
+      data = await res.json();
+      ok = res.ok;
+    } catch {
+      setResult("Could not reach the casino. Please try again.");
+      return;
+    }
+    if (!ok) { setResult(data.error ?? "Could not start the run."); return; }
+
+    settleRef.current = false;
+    finishedRef.current = false;
+    finalMultRef.current = null;
 
     setCredits((c) => c - bet);
     setPhase("running");
@@ -293,6 +354,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     g.running = true;
     g.deathFrame = 0;
     g.betAmount = bet;
+    g.startedAt = monotonicNow();
 
     for (let i = 0; i < 3; i++) {
       g.pipes.push(createPipe(W + i * PIPE_SPACING, g.gapSize));
@@ -311,6 +373,13 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
 
   const update = () => {
     const g = gameRef.current;
+    if (g.running && finishedRef.current) {
+      // The server ended the run (the void collapsed): stop flying.
+      g.running = false;
+      g.deathY = g.playerY;
+      g.deathFrame = 0;
+      if (finalMultRef.current !== null) g.multiplier = finalMultRef.current;
+    }
     if (!g.running) {
       g.deathFrame++;
       return;
@@ -327,17 +396,14 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     g.speed = Math.min(PIPE_SPEED_MAX, PIPE_SPEED_START + progress * 0.25);
     g.gapSize = Math.max(GAP_SIZE_MIN, GAP_SIZE_START - progress * 5);
 
-    g.multiplier = parseFloat(Math.pow(Math.E, (g.distance / 1000) * 0.12).toFixed(2));
+    // Same time-based curve the server pays on (the server clock is authoritative).
+    g.multiplier = crashMultiplierAt(monotonicNow() - g.startedAt);
     setDisplayMult(g.multiplier);
 
-    for (const p of g.pipes) p.x -= g.speed;
-
-    for (const p of g.pipes) {
-      if (!p.scored && p.x + PIPE_WIDTH < 80) {
-        p.scored = true;
-        g.score++;
-      }
-    }
+    const movedPipes = g.pipes.map((p) => ({ ...p, x: p.x - g.speed }));
+    const isNewlyPassed = (p: Pipe) => !p.scored && p.x + PIPE_WIDTH < 80;
+    g.score += movedPipes.filter(isNewlyPassed).length;
+    g.pipes = movedPipes.map((p) => (isNewlyPassed(p) ? { ...p, scored: true } : p));
 
     if (g.pipes[0] && g.pipes[0].x + PIPE_WIDTH < -10) {
       g.pipes.shift();
@@ -371,14 +437,14 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     if (settleRef.current) return;
     settleRef.current = true;
 
+    const fallback = `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount.toLocaleString()} ₡`;
     try {
-      const res = await fetch("/api/game/casino/crash", { method: "DELETE" });
+      const res = await fetch(CRASH_API, { method: "DELETE" });
       const data = await res.json();
-      setResult(data.label ?? `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount} ₡`);
+      finishRun("dead", data.label ?? fallback);
     } catch {
-      setResult(`Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount} ₡`);
+      finishRun("dead", fallback);
     }
-    setPhase("dead");
   };
 
   const cashOut = async () => {
@@ -389,19 +455,36 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     if (settleRef.current) return;
     settleRef.current = true;
 
-    const res = await fetch("/api/game/casino/crash", { method: "PUT" });
-    const data = await res.json();
+    // The server locks the cash-out time on the first request, so a retry
+    // after a failed response settles at the same multiplier.
+    for (let attempt = 0; attempt < CASH_OUT_ATTEMPTS; attempt++) {
+      if (finishedRef.current) return;
+      try {
+        const res = await fetch(CRASH_API, { method: "PUT" });
+        const data = await res.json();
 
-    if (data.status === "cashed_out") {
-      setPhase("cashed");
-      setDisplayMult(data.multiplier);
-      setCredits((c) => c + data.payout);
-      setCreditsBump(true);
-      setResult(data.label);
-    } else {
-      setPhase("dead");
-      setResult(data.label);
+        if (data.status === "cashed_out") {
+          if (finishedRef.current) return;
+          setCredits((c) => c + data.payout);
+          setCreditsBump(true);
+          finishRun("cashed", data.label, data.multiplier);
+          return;
+        }
+        if (data.status === "crashed") {
+          // Too late: the hidden crash point was passed before the cash-out landed.
+          finishRun("dead", data.label ?? "The void collapsed before you cashed out!", data.multiplier);
+          return;
+        }
+        if (res.status === 400) {
+          finishRun("dead", "This run was already settled. Reload to check your balance.");
+          return;
+        }
+      } catch {
+        // Network failure: fall through and retry.
+      }
+      await new Promise((resolve) => setTimeout(resolve, CASH_OUT_RETRY_DELAY_MS));
     }
+    finishRun("dead", "Cash-out could not be confirmed. Reload to check your balance before playing again.");
   };
 
   const draw = () => {
@@ -463,7 +546,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
       ctx.fillStyle = "#64748b";
       ctx.fillText("Tap / Click / Space to flap", W / 2, H / 2);
       ctx.fillText("Navigate through the gates", W / 2, H / 2 + 20);
-      ctx.fillText("Multiplier scales with distance", W / 2, H / 2 + 40);
+      ctx.fillText("Cash out before the void collapses", W / 2, H / 2 + 40);
 
       // Diamond icon
       ctx.fillStyle = "#06b6d4";
@@ -582,10 +665,11 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
           <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">How to Play</p>
           <ul className="text-[11px] text-slate-400 space-y-1">
             <li>• <span className="text-cyan-300">Tap / Click / Space</span> to flap and navigate through gates</li>
-            <li>• Your <span className="text-green-300">multiplier</span> increases the further you fly</li>
+            <li>• Your <span className="text-green-300">multiplier</span> climbs the longer you survive (max 100x)</li>
+            <li>• The void <span className="text-red-300">collapses at a hidden multiplier</span> every run. Cash out before it does</li>
             <li>• Gates get <span className="text-amber-300">narrower</span> and <span className="text-red-300">faster</span> over time</li>
             <li>• Hit <span className="text-green-300">Cash Out</span> anytime to lock in your winnings</li>
-            <li>• Hit a wall and you lose your wager</li>
+            <li>• Hit a wall, or still be flying when the void collapses, and you lose your wager</li>
           </ul>
         </div>
       </div>

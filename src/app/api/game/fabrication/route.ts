@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { ITEM_TEMPLATES } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const userId = session.user.id;
 
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -59,34 +61,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
-  const state = await prisma.pilotState.findUnique({ where: { userId: session.user.id } });
+  const pilot = await getOrCreatePilotState(userId, session.user.name);
 
   // MINE action
   if (parsed.data.action === "mine") {
-    const lastFabAt = state?.lastFabAt ?? new Date(0);
-    const elapsedMinutes = (Date.now() - lastFabAt.getTime()) / 60000;
+    const now = new Date();
+    const cooldownMs = MINE_COOLDOWN_MINUTES * 60_000;
+    const oreGain = Math.floor(Math.random() * (MINE_ORE_MAX - MINE_ORE_MIN + 1)) + MINE_ORE_MIN;
 
-    if (elapsedMinutes < MINE_COOLDOWN_MINUTES) {
-      const remaining = Math.ceil(MINE_COOLDOWN_MINUTES - elapsedMinutes);
+    // Claim the cooldown and pay the ore in one statement: only one of N parallel mines wins.
+    const updated = await guardedPilotUpdate(
+      prisma,
+      userId,
+      { lastFabAt: { lte: new Date(now.getTime() - cooldownMs) } },
+      { ore: { increment: oreGain }, lastFabAt: now }
+    );
+
+    if (!updated) {
+      const elapsedMinutes = (now.getTime() - pilot.lastFabAt.getTime()) / 60000;
+      const remaining = Math.max(1, Math.ceil(MINE_COOLDOWN_MINUTES - elapsedMinutes));
       return NextResponse.json(
         { error: `Drill is cooling down. Ready in ${remaining} minute${remaining === 1 ? "" : "s"}.` },
         { status: 429 }
       );
     }
 
-    const oreGain = Math.floor(Math.random() * (MINE_ORE_MAX - MINE_ORE_MIN + 1)) + MINE_ORE_MIN;
-    const newOre = (state?.ore ?? 0) + oreGain;
-
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { ore: newOre, lastFabAt: new Date() },
-    });
-
     return NextResponse.json({
       action: "mine",
       oreGain,
-      ore: newOre,
+      ore: updated.ore,
       message: `Mining complete. Extracted ${oreGain} ore from the asteroid belt.`,
     });
   }
@@ -96,14 +99,6 @@ export async function POST(request: Request) {
   const recipe = CRAFT_RECIPES.find((r) => r.tier === tier);
   if (!recipe) return NextResponse.json({ error: "Unknown recipe." }, { status: 400 });
 
-  const currentOre = state?.ore ?? 0;
-  if (currentOre < recipe.oreCost) {
-    return NextResponse.json(
-      { error: `Not enough ore. Need ${recipe.oreCost}, you have ${currentOre}.` },
-      { status: 400 }
-    );
-  }
-
   // Pick a random item template of the given tier
   const eligible = ITEM_TEMPLATES.filter((t) => t.tier === tier);
   if (eligible.length === 0) {
@@ -111,31 +106,40 @@ export async function POST(request: Request) {
   }
   const template = eligible[Math.floor(Math.random() * eligible.length)];
 
-  const newOre = currentOre - recipe.oreCost;
+  try {
+    // Spend the ore first (guarded), create the item only if the spend applied.
+    const updated = await economyTx(async (tx) => {
+      const row = await guardedPilotUpdate(
+        tx,
+        userId,
+        { ore: { gte: recipe.oreCost } },
+        { ore: { decrement: recipe.oreCost } }
+      );
+      if (!row) {
+        throw new EconomyError(`Not enough ore. Need ${recipe.oreCost}, you have ${pilot.ore}.`);
+      }
+      await tx.inventoryItem.create({
+        data: {
+          pilotId: row.id,
+          name: template.name,
+          type: template.type,
+          tier: template.tier,
+          bonusType: template.bonusType,
+          bonusAmt: template.bonusAmt,
+          equipped: false,
+        },
+      });
+      return row;
+    });
 
-  await prisma.$transaction([
-    prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { ore: newOre },
-    }),
-    prisma.inventoryItem.create({
-      data: {
-        pilotId: pilot.id,
-        name: template.name,
-        type: template.type,
-        tier: template.tier,
-        bonusType: template.bonusType,
-        bonusAmt: template.bonusAmt,
-        equipped: false,
-      },
-    }),
-  ]);
-
-  return NextResponse.json({
-    action: "craft",
-    item: template,
-    oreCost: recipe.oreCost,
-    ore: newOre,
-    message: `Fabrication complete! Crafted: ${template.name}.`,
-  });
+    return NextResponse.json({
+      action: "craft",
+      item: template,
+      oreCost: recipe.oreCost,
+      ore: updated.ore,
+      message: `Fabrication complete! Crafted: ${template.name}.`,
+    });
+  } catch (error) {
+    return economyErrorResponse(error);
+  }
 }

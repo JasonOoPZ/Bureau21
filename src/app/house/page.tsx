@@ -3,9 +3,11 @@ import { TopBar } from "@/components/layout/top-bar";
 import { StarterCharacterPortrait } from "@/components/game/starter-character-portrait";
 import { HerbUseButton } from "@/components/game/herb-use-button";
 import { StatAllocator } from "@/components/game/stat-allocator";
-import { getOrCreatePilotState } from "@/lib/game-state";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
 import { calculateATK, calculateDEF, xpForLevel, GAME_CONSTANTS, getConfidenceCap, getCombatBonuses, hpPerPoint, calculateMotivationRegen } from "@/lib/constants";
 import { getStarterCharacter } from "@/lib/starter-characters";
+import { hktDayStart } from "@/lib/hkt";
+import { displayMaxLifeForce } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
@@ -77,7 +79,7 @@ export default async function HousePage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
   const character = getStarterCharacter(pilot.characterSlug);
 
   const equipped = pilot.inventory.filter((i) => i.equipped);
@@ -90,15 +92,15 @@ export default async function HousePage() {
   const atk = calculateATK(pilot.strength, pilot.atkSplit, weaponBonus);
   const def = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const maxXp = xpForLevel(pilot.level);
-  const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
+  const maxLF = displayMaxLifeForce(pilot);
   const currentMotivation = calculateMotivationRegen(pilot.lastMotivationAt, pilot.motivation, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
   const currentHpPerPoint = hpPerPoint(pilot.level);
 
   const missions = await prisma.mission.findMany({ where: { pilotId: pilot.id } });
 
   // Parallel: recent logs, aggregate stats, and daily stats all at once
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // "Today" is the HKT game day, not the server's local midnight.
+  const todayStart = hktDayStart(new Date());
 
   const [battleLogs, battleAgg, totalXpAgg, totalCreditsAgg, dailyLogs] = await Promise.all([
     prisma.battleLog.findMany({

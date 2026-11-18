@@ -20,7 +20,7 @@ type Category = "overall" | "pvp" | "wealth" | "xp";
 
 const CATEGORIES: { key: Category; label: string; color: string; activeColor: string }[] = [
   { key: "overall", label: "Overall", color: "text-slate-400", activeColor: "bg-cyan-500/20 text-cyan-200" },
-  { key: "pvp",     label: "PVP Kills", color: "text-slate-400", activeColor: "bg-red-500/20 text-red-200" },
+  { key: "pvp",     label: "Kills", color: "text-slate-400", activeColor: "bg-red-500/20 text-red-200" },
   { key: "wealth",  label: "Wealth", color: "text-slate-400", activeColor: "bg-amber-500/20 text-amber-200" },
   { key: "xp",      label: "Experience", color: "text-slate-400", activeColor: "bg-emerald-500/20 text-emerald-200" },
 ];
