@@ -68,18 +68,18 @@ describe("rateLimit", () => {
     expect(rateLimit("alice", 1, 60_000).limited).toBe(true);
   });
 
-  it("known issue: a short-window caller's cleanup erases a long-window caller's history", async () => {
+  it("a short-window caller's cleanup does not erase a long-window caller's history", async () => {
     const rateLimit = await loadRateLimit();
     // Registration allows 5 attempts per 15 minutes per IP.
     for (let i = 0; i < 5; i++) rateLimit("register:1.2.3.4", 5, 900_000);
     expect(rateLimit("register:1.2.3.4", 5, 900_000).limited).toBe(true);
 
-    // Two minutes later any player hits a 60s-window endpoint. The periodic
-    // cleanup uses that caller's 60s window as the cutoff for every key.
+    // Two minutes later any player hits a 60s-window endpoint, triggering the
+    // periodic cleanup. Each key must expire against its own window.
     vi.advanceTimersByTime(120_000);
     rateLimit("bank:someone-else", 30, 60_000);
 
-    // The registration limit should hold for another 13 minutes, but is gone.
-    expect(rateLimit("register:1.2.3.4", 5, 900_000)).toMatchObject({ limited: false, remaining: 4 });
+    // The registration limit still holds for the remaining 13 minutes.
+    expect(rateLimit("register:1.2.3.4", 5, 900_000).limited).toBe(true);
   });
 });
