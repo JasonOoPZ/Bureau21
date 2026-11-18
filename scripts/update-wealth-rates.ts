@@ -1,9 +1,10 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { initGuard } from "./_guard";
 
-const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
+const guard = initGuard({ script: "update-wealth-rates", mutates: true });
+
+const adapter = new PrismaNeon({ connectionString: guard.databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 const NEW_RATES: Record<number, number> = {
@@ -20,17 +21,25 @@ async function main() {
   for (const inv of investments) {
     const newRate = NEW_RATES[inv.days];
     if (newRate && newRate !== inv.rate) {
-      await prisma.wealthInvestment.update({
-        where: { id: inv.id },
-        data: { rate: newRate },
-      });
-      console.log(`  Updated ${inv.pilot.callsign}'s ${inv.name} (${inv.days}d): ${inv.rate}% → ${newRate}%`);
+      await guard.mutate(
+        `update ${inv.pilot.callsign}'s ${inv.name} (${inv.days}d, ${inv.id}) rate: ${inv.rate}% → ${newRate}%`,
+        () =>
+          prisma.wealthInvestment.update({
+            where: { id: inv.id },
+            data: { rate: newRate },
+          }),
+      );
     } else {
       console.log(`  ${inv.pilot.callsign}'s ${inv.name} (${inv.days}d): already at ${inv.rate}% — skipped`);
     }
   }
 
-  console.log("Done.");
+  guard.summary();
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

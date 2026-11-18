@@ -1,9 +1,10 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { initGuard } from "../_guard";
 
-const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
+const guard = initGuard({ script: "remove-dup-vc2", mutates: true });
+
+const adapter = new PrismaNeon({ connectionString: guard.databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -43,22 +44,26 @@ async function main() {
     console.log(`  Keeping:  ${toKeep.id} (rate: ${toKeep.rate}%, created: ${toKeep.createdAt.toISOString()})`);
     console.log(`  Refunding ${toRemove.amount.toLocaleString()} SVN`);
 
-    await prisma.$transaction([
-      prisma.wealthInvestment.delete({ where: { id: toRemove.id } }),
-      prisma.pilotState.update({
-        where: { id: pilotId },
-        data: { tokens: { increment: toRemove.amount } },
-      }),
-    ]);
-    console.log(`  Done. Refunded ${toRemove.amount.toLocaleString()} SVN to ${toRemove.pilot.callsign}`);
+    await guard.mutate(
+      `delete investment ${toRemove.id} and refund ${toRemove.amount.toLocaleString()} SVN to ${toRemove.pilot.callsign}`,
+      () =>
+        prisma.$transaction([
+          prisma.wealthInvestment.delete({ where: { id: toRemove.id } }),
+          prisma.pilotState.update({
+            where: { id: pilotId },
+            data: { tokens: { increment: toRemove.amount } },
+          }),
+        ]),
+    );
 
     // Ensure the kept one has correct rate
     if (toKeep.rate !== 125) {
-      await prisma.wealthInvestment.update({
-        where: { id: toKeep.id },
-        data: { rate: 125 },
-      });
-      console.log(`  Updated kept VC rate to 125%`);
+      await guard.mutate(`update kept investment ${toKeep.id} rate: ${toKeep.rate}% → 125%`, () =>
+        prisma.wealthInvestment.update({
+          where: { id: toKeep.id },
+          data: { rate: 125 },
+        }),
+      );
     }
   }
 
@@ -78,6 +83,12 @@ async function main() {
     }
   }
   console.log("Scan complete.");
+  guard.summary();
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

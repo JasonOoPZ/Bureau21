@@ -1,9 +1,10 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { initGuard } from "../_guard";
 
-const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
+const guard = initGuard({ script: "remove-duplicate-vc", mutates: true });
+
+const adapter = new PrismaNeon({ connectionString: guard.databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -28,17 +29,27 @@ async function main() {
   const toRemove = vcInvestments[1];
   console.log(`Removing: ${toRemove.id} (${toRemove.amount.toLocaleString()} SVN, created ${toRemove.createdAt.toISOString()})`);
 
-  await prisma.$transaction([
-    prisma.wealthInvestment.delete({ where: { id: toRemove.id } }),
-    prisma.pilotState.update({
-      where: { id: pilot.id },
-      data: { tokens: { increment: toRemove.amount } },
-    }),
-  ]);
+  await guard.mutate(
+    `delete investment ${toRemove.id} and refund ${toRemove.amount.toLocaleString()} SVN to ${pilot.callsign}`,
+    () =>
+      prisma.$transaction([
+        prisma.wealthInvestment.delete({ where: { id: toRemove.id } }),
+        prisma.pilotState.update({
+          where: { id: pilot.id },
+          data: { tokens: { increment: toRemove.amount } },
+        }),
+      ]),
+  );
 
   const updated = await prisma.pilotState.findUnique({ where: { id: pilot.id } });
   const remaining = await prisma.wealthInvestment.count({ where: { pilotId: pilot.id } });
-  console.log(`Done. Refunded ${toRemove.amount.toLocaleString()} SVN. New balance: ${updated?.tokens.toLocaleString()} SVN. Active positions: ${remaining}`);
+  console.log(`Balance: ${updated?.tokens.toLocaleString()} SVN. Active positions: ${remaining}`);
+  guard.summary();
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

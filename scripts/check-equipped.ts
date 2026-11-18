@@ -1,9 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { initGuard } from "./_guard";
 
-const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL! }) });
+const guard = initGuard({ script: "check-equipped", mutates: false });
+
+const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: guard.databaseUrl }) });
 
 async function main() {
   const pilot = await prisma.pilotState.findFirst({
@@ -17,4 +18,9 @@ async function main() {
   }
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());
