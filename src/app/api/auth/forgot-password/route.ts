@@ -3,9 +3,21 @@ import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { clientIp, durableRateLimit, tooManyRequests } from "@/lib/rate-limit";
+
+const FORGOT_WINDOW_MS = 15 * 60_000;
+const FORGOT_MAX_PER_IP = 5;
+const TOKEN_TTL_MS = 60 * 60_000;
+/**
+ * Live reset links allowed per account. A new request never cancels an older
+ * link (that let anyone who knew an email address keep the owner's link dead
+ * by calling this endpoint in a loop). Once the cap is reached no further
+ * mail is sent until a link expires, which also caps inbox flooding.
+ */
+const MAX_ACTIVE_TOKENS = 3;
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().max(254),
 });
 
 async function sendPasswordResetEmail(email: string, resetUrl: string) {
@@ -31,8 +43,14 @@ async function sendPasswordResetEmail(email: string, resetUrl: string) {
 }
 
 export async function POST(request: Request) {
+  // Keyed on IP only: the answer must not depend on whether the email exists.
+  const limit = await durableRateLimit(`forgot:ip:${clientIp(request.headers)}`, FORGOT_MAX_PER_IP, FORGOT_WINDOW_MS);
+  if (limit.limited) {
+    return tooManyRequests("Too many reset requests. Try again later.", limit.retryAfterMs);
+  }
+
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
     const parsed = schema.safeParse(body);
 
     // Return ok regardless to prevent email enumeration
@@ -52,12 +70,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Invalidate any existing tokens for this email
-    await prisma.passwordResetToken.deleteMany({ where: { email } });
+    const now = new Date();
+    // Housekeeping only: expired links are already unusable.
+    await prisma.passwordResetToken.deleteMany({ where: { email, expires: { lt: now } } });
+
+    const activeTokens = await prisma.passwordResetToken.count({ where: { email, expires: { gte: now } } });
+    if (activeTokens >= MAX_ACTIVE_TOKENS) {
+      // The owner already has working links in their inbox.
+      return NextResponse.json({ ok: true });
+    }
 
     const rawToken = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expires = new Date(now.getTime() + TOKEN_TTL_MS);
 
     await prisma.passwordResetToken.create({
       data: { email, tokenHash, expires },
@@ -72,7 +97,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("[forgot-password] request failed", error);
     return NextResponse.json({ error: "Failed to process request." }, { status: 500 });
   }
 }

@@ -1,12 +1,10 @@
-import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { requireUser } from "@/lib/require-user";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
@@ -48,6 +46,6 @@ export async function GET(request: Request) {
       role: pilot.user.role,
       isOnline,
     },
-    { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30" } },
+    { headers: { "Cache-Control": "private, no-store" } },
   );
 }
