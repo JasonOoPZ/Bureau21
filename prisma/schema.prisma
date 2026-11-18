@@ -22,6 +22,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   boardPosts         BoardPost[]
+  boardVotes         BoardVote[]
   chatMessages       ChatMessage[]
   quickPostsSent     QuickPost[]     @relation("QuickPostFrom")
   quickPostsReceived QuickPost[]     @relation("QuickPostTo")
@@ -33,6 +34,10 @@ model PilotState {
   id                String          @id @default(cuid())
   userId            String          @unique
   callsign          String
+  /// Lower-cased, whitespace-normalised callsign. Unique: this is what makes
+  /// callsigns unique ignoring case. Written by callsignFields() and kept in
+  /// step by the PilotState_callsignLower_sync trigger (see the migration).
+  callsignLower     String?         @unique
   characterSlug     String          @default("base-red")
   gender            String          @default("unspecified")
   level             Int             @default(1)
@@ -42,6 +47,8 @@ model PilotState {
   fuel              Int             @default(10)
   hull              Int             @default(100)
   lifeForce         Int             @default(15)
+  /// Life Force bought with allocation points. Part of the pilot's maximum.
+  bonusLifeForce    Int             @default(0)
   motivation        Int             @default(100)
   strength          Float           @default(3.0)
   speed             Float           @default(5.0)
@@ -99,6 +106,7 @@ model PilotState {
   hydroponics       HydroponicsData?
   wealthInvestments WealthInvestment[]
   casinoBets        CasinoBet[]
+  crashRuns         CrashRun[]
   watchlistOwned    Watchlist[]     @relation("WatchlistOwner")
   watchlistTargeted Watchlist[]     @relation("WatchlistTarget")
   createdAt         DateTime        @default(now())
@@ -133,12 +141,21 @@ model BattleLog {
   creditsGained Int
   roundsCount   Int
   logText       String
+  /// The other pilot's id. Null on rows written before this column existed
+  /// (the migration backfills what it can from opponentName).
+  opponentPilotId String?
+  /// "attacker" | "defender": which side `pilotId` fought on. Null on old rows.
+  role          String?
+  /// "pvp" today; leaves room for PvE logs without mixing them into PvP caps.
+  kind          String     @default("pvp")
   createdAt     DateTime   @default(now())
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 
   @@index([pilotId])
   @@index([pilotId, createdAt])
+  @@index([pilotId, opponentPilotId, createdAt])
+  @@index([pilotId, role, createdAt])
 }
 
 model InventoryItem {
@@ -172,6 +189,7 @@ model Mission {
 
   pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
 
+  @@unique([pilotId, title])
   @@index([pilotId])
 }
 
@@ -189,14 +207,33 @@ model BoardPost {
   category  String   @default("general")
   title     String
   body      String
+  /// Always the sum of BoardVote.direction for this post.
   karma     Int      @default(0)
   createdAt DateTime @default(now())
 
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  BoardVote[]
 
   @@index([authorId])
   @@index([category])
   @@index([createdAt])
+}
+
+/// One row per (post, user). Changing a vote updates the row; withdrawing it
+/// deletes the row. BoardPost.karma is adjusted by the difference.
+model BoardVote {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  direction Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post BoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
 }
 
 model ChatMessage {
@@ -370,4 +407,38 @@ model CasinoBet {
   @@index([pilotId])
   @@index([pilotId, game])
   @@index([pilotId, createdAt])
+}
+
+/// A Void Runner (crash) run. Persisted so any serverless instance can settle
+/// it. A partial unique index (raw SQL in the migration, Prisma cannot express
+/// it) allows at most one row with status = 'open' per pilot.
+model CrashRun {
+  id         String    @id @default(cuid())
+  pilotId    String
+  bet        Int
+  /// Hidden until the run is settled.
+  crashPoint Float
+  /// "open" | "cashed_out" | "crashed"
+  status     String    @default("open")
+  startedAt  DateTime  @default(now())
+  /// Server time of the first cash-out request. Retries settle at this time.
+  cashOutAt  DateTime?
+  settledAt  DateTime?
+  payout     Int       @default(0)
+
+  pilot PilotState @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+
+  @@index([pilotId, startedAt])
+  @@index([status, startedAt])
+}
+
+/// Sliding-window rate-limit hits shared by every serverless instance.
+/// `key` is a SHA-256 hash, never a raw email or IP.
+model RateLimitHit {
+  id      String   @id @default(cuid())
+  key     String
+  expires DateTime
+
+  @@index([key, expires])
+  @@index([expires])
 }
