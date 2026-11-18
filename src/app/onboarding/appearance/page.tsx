@@ -15,7 +15,7 @@ export default async function AppearanceOnboardingPage() {
     <main className="relative min-h-screen overflow-hidden bg-black px-4 py-8">
       <div
         className="absolute inset-0 -z-20 bg-cover bg-center"
-        style={{ backgroundImage: "url('/bureau21-welcome.png')" }}
+        style={{ backgroundImage: "url('/bureau21-welcome.webp')" }}
       />
       <div className="absolute inset-0 -z-10 bg-slate-950/80" />
 

@@ -24,7 +24,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 754",
     title: "Faultborn OOPZ Labs",
     summary: "Obsidian shell threaded with molten fractures and a live reactor core.",
-    image: "/characters/Bureau21BaseRed.png",
+    image: "/characters/Bureau21BaseRed.webp",
     glow: "#ff4937",
     perk: {
       name: "Shattering Power",
@@ -39,7 +39,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 872",
     title: "Underbelly Trickster",
     summary: "Neon poison circuits and corrosive humor from the worst decks in the station.",
-    image: "/characters/Bureau21BaseGreen.png",
+    image: "/characters/Bureau21BaseGreen.webp",
     glow: "#39ff14",
     perk: {
       name: "Nature's Blessing",
@@ -54,7 +54,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 617",
     title: "Silent Navigator",
     summary: "Polished onyx chassis laced with cyan signal lines and deep-space optics.",
-    image: "/characters/Bureau21BaseOnyx.png",
+    image: "/characters/Bureau21BaseOnyx.webp",
     glow: "#00e5ff",
     perk: {
       name: "Enduring Reflexes",
@@ -69,7 +69,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 374",
     title: "Refinery Pilgrim",
     summary: "Brass-plated drifter threaded with refinery heat and old station signal marks.",
-    image: "/characters/Bureau21BaseOrange.png",
+    image: "/characters/Bureau21BaseOrange.webp",
     glow: "#ff9d4d",
     perk: {
       name: "Psionic Swiftness",
@@ -84,7 +84,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 481",
     title: "Recovery Unit",
     summary: "Midnight medical chassis with violet repair seams and surgical patience.",
-    image: "/characters/Bureau21BasePurple.png",
+    image: "/characters/Bureau21BasePurple.webp",
     glow: "#b07dff",
     perk: {
       name: "Assassin's Precision",
@@ -99,7 +99,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 841",
     title: "Cryo Archivist",
     summary: "Marble-white frame with faint cryo filaments and archival precision.",
-    image: "/characters/Bureau21BaseWhite.png",
+    image: "/characters/Bureau21BaseWhite.webp",
     glow: "#b0e0ff",
     perk: {
       name: "Crushing Finality",
@@ -114,7 +114,7 @@ export const starterCharacters: StarterCharacter[] = [
     name: "Unit 627",
     title: "Signal Choir",
     summary: "Cathedral-grade comms construct laced with gold static and halo interference.",
-    image: "/characters/Bureau21BaseYellow.png",
+    image: "/characters/Bureau21BaseYellow.webp",
     glow: "#ffd866",
     perk: {
       name: "Mastered Focus",

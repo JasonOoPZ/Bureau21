@@ -141,9 +141,10 @@ export function LoginPanel() {
     <main className="relative min-h-screen overflow-hidden">
       <Image
         className="absolute inset-0 -z-30 h-full w-full object-cover scale-105 blur-[2px]"
-        src="/bureau21-welcome.png"
+        src="/bureau21-welcome.webp"
         alt="Bureau 21 landing background"
         fill
+        sizes="100vw"
         priority
       />
       <div className="absolute inset-0 -z-20 bg-gradient-to-b from-black/70 via-slate-950/60 to-black/80" />
