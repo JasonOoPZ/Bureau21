@@ -51,7 +51,7 @@ export function RefineryClient({ credits: initCredits, ore: initOre }: Props) {
             max={ore}
             value={amount}
             onChange={(e) => setAmount(Math.max(1, Math.min(ore, parseInt(e.target.value) || 1)))}
-            className="w-24 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-center text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none"
+            className="w-24 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-center text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
           />
           <span className="text-[11px] text-slate-400">→ {(amount * 3).toLocaleString("en-US")} credits</span>
           <button

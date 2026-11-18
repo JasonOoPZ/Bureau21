@@ -112,7 +112,7 @@ export function AppearanceSelector({
               onChange={(e) => setCallsign(e.target.value)}
               placeholder="Enter your callsign"
               maxLength={24}
-              className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+              className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
             />
             <p className="mt-1 text-[10px] text-slate-600">{callsign.length}/24 characters</p>
           </label>
@@ -242,6 +242,7 @@ function CharacterStatsOverlay({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => {
         if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
@@ -249,6 +250,9 @@ function CharacterStatsOverlay({
     >
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${character.name} details`}
         className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-[#0a0e14] shadow-2xl"
         style={{ boxShadow: `0 0 80px ${perk.color}22, 0 0 30px ${perk.color}11` }}
       >

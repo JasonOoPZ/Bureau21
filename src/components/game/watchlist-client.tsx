@@ -95,7 +95,7 @@ export function WatchlistClient({ initialEntries }: Props) {
           onChange={(e) => setAddCallsign(e.target.value)}
           placeholder="Add pilot by callsign..."
           maxLength={40}
-          className="flex-1 rounded border border-slate-700 bg-black/60 px-3 py-1.5 text-[12px] text-slate-200 placeholder:text-slate-600 focus:border-cyan-700 focus:outline-none"
+          className="flex-1 rounded border border-slate-700 bg-black/60 px-3 py-1.5 text-[12px] text-slate-200 placeholder:text-slate-600 focus:border-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
         />
         <button
           type="submit"
@@ -169,7 +169,7 @@ export function WatchlistClient({ initialEntries }: Props) {
                           value={notesValue}
                           onChange={(e) => setNotesValue(e.target.value)}
                           maxLength={200}
-                          className="flex-1 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-cyan-700"
+                          className="flex-1 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
                           onKeyDown={(e) => { if (e.key === "Enter") handleSaveNotes(entry.id); if (e.key === "Escape") setEditingNotes(null); }}
                         />
                         <button onClick={() => handleSaveNotes(entry.id)} className="text-emerald-400 text-[10px]">✓</button>

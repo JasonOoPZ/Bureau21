@@ -237,7 +237,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Type a message... (Enter to send)"
             maxLength={500}
-            className="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[13px] text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none"
+            className="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[13px] text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
           />
           <button
             onClick={send}

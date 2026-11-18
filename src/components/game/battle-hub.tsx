@@ -120,7 +120,7 @@ export function BattleHub({ initialLogs, pilotLevel, watchlistCount, initialTarg
             onChange={(e) => setCallsign(e.target.value)}
             placeholder="Enter callsign..."
             maxLength={40}
-            className="flex-1 rounded border border-slate-700 bg-black/60 px-3 py-1.5 text-[12px] text-slate-200 placeholder:text-slate-600 focus:border-cyan-700 focus:outline-none"
+            className="flex-1 rounded border border-slate-700 bg-black/60 px-3 py-1.5 text-[12px] text-slate-200 placeholder:text-slate-600 focus:border-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
           />
           <button
             type="submit"

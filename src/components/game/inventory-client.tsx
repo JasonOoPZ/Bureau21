@@ -329,6 +329,7 @@ function SpecialItemOverlay({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => {
         if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
@@ -336,6 +337,9 @@ function SpecialItemOverlay({
     >
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Item details"
         className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-yellow-700/40 bg-[#0a0e14] shadow-2xl"
         style={{ boxShadow: `0 0 80px ${glowColor}, 0 0 30px ${glowColor2}` }}
       >

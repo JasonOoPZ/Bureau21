@@ -70,29 +70,29 @@ function ResetPasswordForm() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="block text-sm text-slate-300">
+          <label htmlFor="reset-password" className="block text-sm text-slate-300">
             New Password
-            <input
+            <input id="reset-password" name="password" autoComplete="new-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
-              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-500 focus:border-cyan-400"
               required
             />
           </label>
-          <label className="block text-sm text-slate-300">
+          <label htmlFor="reset-password-confirm" className="block text-sm text-slate-300">
             Confirm Password
-            <input
+            <input id="reset-password-confirm" name="confirm" autoComplete="new-password"
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Repeat new password"
-              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-500 focus:border-cyan-400"
               required
             />
           </label>
-          {errorMsg && <p className="text-sm text-red-400">{errorMsg}</p>}
+          {errorMsg && <p role="alert" className="text-sm text-red-400">{errorMsg}</p>}
           <button
             type="submit"
             disabled={status === "loading"}

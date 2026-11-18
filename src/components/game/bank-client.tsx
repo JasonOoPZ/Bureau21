@@ -422,7 +422,7 @@ export function BankClient({
                   </button>
                 ))}
               </div>
-              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+              <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                 min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               <button onClick={() => api("deposit")} disabled={loading || amount > credits || amount < 1}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
@@ -455,7 +455,7 @@ export function BankClient({
                   </button>
                 ))}
               </div>
-              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+              <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                 min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               {amount > 0 && (
                 <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-xs">
@@ -502,7 +502,7 @@ export function BankClient({
                   </button>
                 ))}
               </div>
-              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+              <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                 min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
@@ -543,7 +543,7 @@ export function BankClient({
             <div className="space-y-2">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">🎯</span>
-                <input type="text" placeholder="Recipient callsign..." value={transferTo}
+                <input type="text" aria-label="Recipient callsign" placeholder="Recipient callsign..." value={transferTo}
                   onChange={(e) => setTransferTo(e.target.value)}
                   className="w-full rounded-lg bg-black/40 border border-slate-700/50 pl-9 pr-4 py-2.5 text-sm text-slate-200" />
               </div>
@@ -557,7 +557,7 @@ export function BankClient({
                   </button>
                 ))}
               </div>
-              <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+              <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                 min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               <button onClick={() => api("transfer", { recipientCallsign: transferTo })}
                 disabled={loading || amount > credits || !transferTo.trim()}
@@ -598,7 +598,7 @@ export function BankClient({
                     PAY ALL
                   </button>
                 </div>
-                <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("repay_loan")} disabled={loading || amount > credits}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-red-900/20">
@@ -626,7 +626,7 @@ export function BankClient({
                     </button>
                   ))}
                 </div>
-                <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("take_loan")} disabled={loading || amount < 1 || bank < 20}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-orange-900/20">
@@ -779,7 +779,7 @@ export function BankClient({
                     </button>
                   )}
                 </div>
-                <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
 
                 <div className="rounded-lg bg-black/30 border border-slate-800/40 p-3 grid grid-cols-3 gap-2 text-center">
@@ -878,7 +878,7 @@ export function BankClient({
 
 
               <div className="flex gap-2">
-                <input type="number" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
+                <input type="number" aria-label="Amount" value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
                   min={1} placeholder="SVN amount..."
                   className="flex-1 rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
@@ -1064,7 +1064,7 @@ export function BankClient({
                     </button>
                   ))}
                 </div>
-                <input type="number" value={wealthAmount}
+                <input type="number" aria-label="Investment amount" value={wealthAmount}
                   onChange={(e) => setWealthAmount(Math.max(1, Number(e.target.value)))}
                   min={500} {...(!hasLimitlessCard ? { max: 3000000 } : {})}
                   className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />

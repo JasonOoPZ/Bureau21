@@ -226,7 +226,7 @@ export function SyndicateClient({
               onChange={(e) => setCreateName(e.target.value)}
               maxLength={40}
               placeholder="e.g. Void Corsairs"
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 placeholder-slate-600 focus:border-purple-700 focus:outline-none transition"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 placeholder-slate-600 focus:border-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition"
             />
             <p className="mt-1 text-[9px] text-slate-600">
               {createName.length < 3 ? "✗ Minimum 3 characters" : "✓ Valid"}
@@ -245,7 +245,7 @@ export function SyndicateClient({
                   onChange={(e) => setCreateTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                   maxLength={6}
                   placeholder="VOIDC"
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] font-mono text-purple-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none transition"
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] font-mono text-purple-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition"
                 />
                 <p className="mt-1 text-[9px] text-slate-600">
                   {createTag.length === 0 ? "Min 2 chars required" : createTag.length < 2 ? `${2 - createTag.length} more needed` : "✓ Valid"}
@@ -269,7 +269,7 @@ export function SyndicateClient({
               maxLength={200}
               rows={2}
               placeholder="E.g. Elite PvP faction recruiting experienced pilots. Focus on battle training and territory control."
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] text-slate-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none transition resize-none"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] text-slate-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition resize-none"
             />
           </div>
 
@@ -316,7 +316,7 @@ export function SyndicateClient({
                 onChange={(e) => setJoinTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                 maxLength={6}
                 placeholder="VOIDC"
-                className="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] font-mono text-purple-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none transition"
+                className="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] font-mono text-purple-300 placeholder-slate-600 focus:border-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition"
               />
               <button
                 onClick={handleJoin}

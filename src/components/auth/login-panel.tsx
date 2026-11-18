@@ -192,8 +192,8 @@ export function LoginPanel() {
           <div className="h-[2px] bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
           <div className="p-5 sm:p-7">
             <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-black/50 p-1 font-display text-xs uppercase tracking-[0.2em]">
-              <button type="button" onClick={() => setMode("signin")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "signin" ? "bg-cyan-500/20 text-cyan-200 shadow-[inset_0_1px_0_rgba(34,211,238,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign In</button>
-              <button type="button" onClick={() => setMode("onboarding")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "onboarding" ? "bg-amber-500/20 text-amber-200 shadow-[inset_0_1px_0_rgba(245,158,11,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign Up</button>
+              <button type="button" aria-pressed={mode === "signin"} onClick={() => setMode("signin")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "signin" ? "bg-cyan-500/20 text-cyan-200 shadow-[inset_0_1px_0_rgba(34,211,238,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign In</button>
+              <button type="button" aria-pressed={mode === "onboarding"} onClick={() => setMode("onboarding")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "onboarding" ? "bg-amber-500/20 text-amber-200 shadow-[inset_0_1px_0_rgba(245,158,11,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign Up</button>
             </div>
 
             <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="mb-5 flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700/80 bg-slate-900/80 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
@@ -209,13 +209,13 @@ export function LoginPanel() {
 
             {mode === "signin" ? (
               <form onSubmit={handleSignIn} className="space-y-4">
-                <label className="block">
+                <label htmlFor="signin-email" className="block">
                   <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Email</span>
-                  <input type="email" value={signInEmail} onChange={(e) => setSignInEmail(e.target.value)} placeholder="pilot@bureau21.net" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]" required />
+                  <input id="signin-email" name="email" autoComplete="email" type="email" value={signInEmail} onChange={(e) => setSignInEmail(e.target.value)} placeholder="pilot@bureau21.net" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]" required />
                 </label>
-                <label className="block">
+                <label htmlFor="signin-password" className="block">
                   <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Password</span>
-                  <input type="password" value={signInPassword} onChange={(e) => setSignInPassword(e.target.value)} placeholder="At least 8 characters" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]" required />
+                  <input id="signin-password" name="password" autoComplete="current-password" type="password" value={signInPassword} onChange={(e) => setSignInPassword(e.target.value)} placeholder="At least 8 characters" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]" required />
                 </label>
                 <button type="submit" disabled={loading} className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3.5 font-display text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(6,182,212,0.25)] transition hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] disabled:cursor-not-allowed disabled:opacity-60">
                   <span className="relative z-10">{loading ? "Authenticating..." : "Launch Session"}</span>
@@ -229,20 +229,20 @@ export function LoginPanel() {
                   <p className="font-display text-[10px] uppercase tracking-[0.2em] text-fuchsia-300">Alien Model</p>
                   <p className="mt-1 text-xs text-slate-400">Choose your alien on the first loading screen after sign-up.</p>
                 </div>
-                <label className="block">
+                <label htmlFor="onboard-alias" className="block">
                   <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Pilot Alias</span>
-                  <input type="text" value={pilotName} onChange={(e) => setPilotName(e.target.value)} placeholder="Nova-21" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
+                  <input id="onboard-alias" name="alias" autoComplete="nickname" type="text" value={pilotName} onChange={(e) => setPilotName(e.target.value)} placeholder="Nova-21" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
                 </label>
-                <label className="block">
+                <label htmlFor="onboard-email" className="block">
                   <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Email</span>
-                  <input type="email" value={onboardEmail} onChange={(e) => setOnboardEmail(e.target.value)} placeholder="newpilot@bureau21.net" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
+                  <input id="onboard-email" name="email" autoComplete="email" type="email" value={onboardEmail} onChange={(e) => setOnboardEmail(e.target.value)} placeholder="newpilot@bureau21.net" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
                 </label>
-                <label className="block">
+                <label htmlFor="onboard-password" className="block">
                   <span className="font-display text-[10px] uppercase tracking-[0.2em] text-slate-400">Password</span>
-                  <input type="password" value={onboardPassword} onChange={(e) => setOnboardPassword(e.target.value)} placeholder="Minimum 8 characters" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
+                  <input id="onboard-password" name="password" autoComplete="new-password" type="password" value={onboardPassword} onChange={(e) => setOnboardPassword(e.target.value)} placeholder="Minimum 8 characters" className="mt-1.5 w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 transition placeholder:text-slate-600 focus:border-amber-500 focus:shadow-[0_0_12px_rgba(245,158,11,0.1)]" required />
                 </label>
-                <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-black/30 p-3 text-[11px] text-slate-500">
-                  <input type="checkbox" checked={acceptedPrivacy} onChange={(e) => setAcceptedPrivacy(e.target.checked)} className="mt-0.5 accent-amber-400" />
+                <label htmlFor="onboard-consent" className="flex items-start gap-3 rounded-lg border border-slate-800 bg-black/30 p-3 text-[11px] text-slate-500">
+                  <input id="onboard-consent" type="checkbox" checked={acceptedPrivacy} onChange={(e) => setAcceptedPrivacy(e.target.checked)} className="mt-0.5 accent-amber-400" />
                   I consent to account provisioning and secure session telemetry for gameplay.
                 </label>
                 <button type="submit" disabled={!isOnboardingValid || loading} className="group relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3.5 font-display text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(245,158,11,0.2)] transition hover:shadow-[0_0_30px_rgba(245,158,11,0.35)] disabled:cursor-not-allowed disabled:opacity-50">
@@ -253,7 +253,7 @@ export function LoginPanel() {
             )}
 
             {notice ? (
-              <p className="mt-5 rounded-lg border border-cyan-500/20 bg-cyan-950/20 p-3 font-display text-[10px] uppercase tracking-[0.15em] text-cyan-200/90">{notice}</p>
+              <p role="status" aria-live="polite" className="mt-5 rounded-lg border border-cyan-500/20 bg-cyan-950/20 p-3 font-display text-[10px] uppercase tracking-[0.15em] text-cyan-200/90">{notice}</p>
             ) : null}
           </div>
         </div>

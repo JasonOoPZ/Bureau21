@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface RollResult {
   won: boolean;
@@ -30,7 +30,8 @@ export function UnderbellyClient({ initialCredits, pilotLevel, hasGodCard }: Pro
   const [bet, setBet] = useState(25);
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState<RollResult | null>(null);
-  const [history, setHistory] = useState<RollResult[]>([]);
+  const [history, setHistory] = useState<(RollResult & { id: number })[]>([]);
+  const nextHistoryId = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
   const UNLOCK_LEVEL = 5;
@@ -55,7 +56,8 @@ export function UnderbellyClient({ initialCredits, pilotLevel, hasGodCard }: Pro
       if (!res.ok) throw new Error((data as unknown as { error: string }).error);
       setResult(data);
       setCredits(data.newCredits);
-      setHistory((h) => [data, ...h].slice(0, 10));
+      const id = nextHistoryId.current++;
+      setHistory((h) => [{ ...data, id }, ...h].slice(0, 10));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Roll failed.");
     } finally {
@@ -191,8 +193,8 @@ export function UnderbellyClient({ initialCredits, pilotLevel, hasGodCard }: Pro
         <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-300">Recent Rolls</h3>
           <div className="space-y-2">
-            {history.map((h, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
+            {history.map((h) => (
+              <div key={h.id} className="flex items-center justify-between text-xs">
                 <span className="text-slate-500">
                   {DIE_FACES[h.die1]} {DIE_FACES[h.die2]} — Total {h.diceTotal} — bet {h.bet} cr
                 </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 /* ═══════════════════════════════════════════════
@@ -63,6 +63,17 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
   const [buying, setBuying] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
   const [inspecting, setInspecting] = useState<VendorItem | null>(null);
+
+  // Escape closes the inspect dialog, matching the other item modals.
+  const isInspecting = inspecting !== null;
+  useEffect(() => {
+    if (!isInspecting) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInspecting(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isInspecting]);
 
   const items = tab === "weapon" ? weapons : armor;
 
@@ -239,12 +250,17 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
       {/* ─── Inspect Modal ─── */}
       {inspecting && (
         <div
+          role="presentation"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => setInspecting(null)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setInspecting(null);
+          }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${inspecting.name} details`}
             className="relative w-full max-w-md rounded-lg border border-slate-700 bg-[#0b0f14] p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
           >
             <InspectPanel item={inspecting} onClose={() => setInspecting(null)} />
           </div>
