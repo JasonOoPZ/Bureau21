@@ -28,8 +28,10 @@ export default async function TattooParlor() {
     if (!p || p.credits < cost) return;
     if (p.characterSlug === slug) return;
 
-    await prisma.pilotState.update({
-      where: { userId: sess.user.id },
+    // Guarded in the WHERE clause: parallel submits cannot overdraw (the
+    // "credits >= 0" CHECK would otherwise turn that into a server error).
+    await prisma.pilotState.updateMany({
+      where: { userId: sess.user.id, credits: { gte: cost }, characterSlug: { not: slug } },
       data: { characterSlug: slug, credits: { decrement: cost } },
     });
 
