@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { findPilotByCallsign } from "@/lib/callsign";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -50,10 +51,7 @@ export async function POST(request: Request) {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  const target = await prisma.pilotState.findFirst({
-    where: { callsign: { equals: parsed.data.targetCallsign, mode: "insensitive" } },
-    select: { id: true, callsign: true },
-  });
+  const target = await findPilotByCallsign(prisma, parsed.data.targetCallsign);
   if (!target) return NextResponse.json({ error: "Pilot not found." }, { status: 404 });
   if (target.id === pilot.id) return NextResponse.json({ error: "You cannot watchlist yourself." }, { status: 400 });
 
