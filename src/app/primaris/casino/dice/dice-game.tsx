@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { BetControls, CreditsBar } from "@/components/game/casino/bet-controls";
+import { useCreditsBump } from "@/components/game/casino/use-credits-bump";
+import { useManagedTimers } from "@/components/game/casino/use-managed-timers";
 
-const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 const DIE_FACES: Record<number, string> = { 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅" };
 
 export function DiceGame({ initialCredits }: { initialCredits: number }) {
@@ -13,14 +15,8 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
   const [landed, setLanded] = useState(false);
   const [dice, setDice] = useState<[number, number] | null>(null);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
-  const [creditsBump, setCreditsBump] = useState(false);
-
-  useEffect(() => {
-    if (creditsBump) {
-      const t = setTimeout(() => setCreditsBump(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [creditsBump]);
+  const [creditsBump, bumpCredits] = useCreditsBump();
+  const timers = useManagedTimers();
 
   const roll = async (choice: "over" | "under" | "seven") => {
     setRolling(true);
@@ -28,27 +24,37 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
     setResult(null);
 
     // Visual dice animation
-    const anim = setInterval(() => {
+    const anim = timers.every(() => {
       setDice([Math.ceil(Math.random() * 6), Math.ceil(Math.random() * 6)]);
     }, 80);
 
-    const res = await fetch("/api/game/casino", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game: "dice", bet, choice }),
-    });
-    const data = await res.json();
+    let data;
+    try {
+      const res = await fetch("/api/game/casino", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: "dice", bet, choice }),
+      });
+      data = await res.json();
+    } catch {
+      if (!timers.isMounted()) return;
+      timers.clear(anim);
+      setRolling(false);
+      setResult({ label: "Could not reach the casino. Please try again.", payout: 0 });
+      return;
+    }
+    if (!timers.isMounted()) return;
 
-    setTimeout(() => {
-      clearInterval(anim);
+    timers.after(() => {
+      timers.clear(anim);
       if (data.dice) setDice(data.dice as [number, number]);
       setRolling(false);
       setLanded(true);
-      setTimeout(() => {
+      timers.after(() => {
         setResult({ label: data.label ?? data.error, payout: (data.payout ?? 0) > 0 ? data.payout : (data.net_change ?? 0) });
         if (data.new_credits != null) {
           setCredits(data.new_credits);
-          setCreditsBump(true);
+          bumpCredits();
         }
       }, 350);
     }, 900);
@@ -99,21 +105,8 @@ export function DiceGame({ initialCredits }: { initialCredits: number }) {
         </div>
 
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Credits</span>
-            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
-          </div>
-          <div className="flex gap-2">
-            {QUICK_BETS.map((q) => (
-              <button key={q} onClick={() => setBet(q)} disabled={rolling}
-                className={`flex-1 py-1.5 rounded text-xs font-bold transition ${bet === q ? "bg-cyan-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-                {q}
-              </button>
-            ))}
-          </div>
-          <input type="number" value={bet} onChange={(e) => setBet(Math.max(10, Number(e.target.value)))}
-            disabled={rolling} min={10}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-center" />
+          <CreditsBar credits={credits} bump={creditsBump} />
+          <BetControls bet={bet} onBetChange={setBet} accent="cyan" disabled={rolling} />
           <div className="grid grid-cols-3 gap-2">
             <button onClick={() => roll("under")} disabled={rolling || bet > credits}
               className="py-3 rounded-lg bg-blue-700 hover:bg-blue-600 font-bold text-white disabled:opacity-40 transition">

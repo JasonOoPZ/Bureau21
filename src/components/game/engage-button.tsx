@@ -62,14 +62,14 @@ export function EngageButton({ targetCallsign, winPct, avgRounds, avgLfRemaining
 
         {/* Round-by-round log */}
         <div className="space-y-0.5 text-[12px] leading-relaxed font-mono">
-          {outcome.rounds.map((r, i) => {
+          {outcome.rounds.map((r) => {
             const isPlayerAttacking = r.attacker !== targetCallsign;
             const attackerLabel = isPlayerAttacking ? "You" : r.attacker;
             const defenderLabel = isPlayerAttacking ? r.defender : "you";
             const isCrit = r.crit;
 
             return (
-              <p key={i} className="text-slate-300">
+              <p key={r.round} className="text-slate-300">
                 <span className="text-slate-500">{r.round}: </span>
                 {attackerLabel} attacked{" "}
                 <span className="font-bold text-white">{defenderLabel}</span>{" "}

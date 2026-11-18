@@ -3,10 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { crashMultiplierAt } from "@/lib/casino-crash";
+import { BetControls, CreditsBar } from "@/components/game/casino/bet-controls";
+import { createFixedTimestep } from "@/components/game/casino/fixed-timestep";
+import { useCreditsBump } from "@/components/game/casino/use-credits-bump";
 
 /* ── constants ─────────────────────────────────────────── */
 const W = 400;
 const H = 600;
+// Physics constants are per fixed step (1/60 s), not per display frame.
+const PHYSICS_STEP_MS = 1000 / 60;
+// Catch-up cap: after a stall the run resumes instead of fast-forwarding.
+const MAX_STEPS_PER_FRAME = 5;
+const DEATH_EFFECT_STEPS = 30;
+const PLAYER_X = 80;
 const GRAVITY = 0.45;
 const FLAP = -7;
 const PLAYER_SIZE = 14;
@@ -16,7 +25,6 @@ const PIPE_WIDTH = 50;
 const PIPE_SPEED_START = 2.5;
 const PIPE_SPEED_MAX = 6;
 const PIPE_SPACING = 220;
-const QUICK_BETS = [100, 500, 1000, 10000, 25000];
 const CRASH_API = "/api/game/casino/crash";
 const POLL_INTERVAL_MS = 1000;
 const CASH_OUT_ATTEMPTS = 3;
@@ -110,8 +118,9 @@ function drawPlayer(ctx: CanvasRenderingContext2D, y: number, vy: number, trail:
   ctx.restore();
 }
 
-function drawPipes(ctx: CanvasRenderingContext2D, pipes: Pipe[], mult: number) {
-  for (const p of pipes) {
+function drawPipes(ctx: CanvasRenderingContext2D, pipes: Pipe[], mult: number, xOffset: number) {
+  for (const pipe of pipes) {
+    const p = xOffset === 0 ? pipe : { ...pipe, x: pipe.x + xOffset };
     // Color shifts as multiplier rises: cyan → green → amber → red
     const r = mult < 2 ? 6 : mult < 4 ? 34 : mult < 7 ? 245 : 239;
     const g = mult < 2 ? 182 : mult < 4 ? 197 : mult < 7 ? 158 : 68;
@@ -171,7 +180,7 @@ function drawHUD(ctx: CanvasRenderingContext2D, mult: number, payout: number, sc
 
   ctx.font = "bold 14px monospace";
   ctx.fillStyle = "#94a3b8";
-  ctx.fillText(`${payout.toLocaleString()} ₡`, W / 2, 66);
+  ctx.fillText(`${payout.toLocaleString("en-US")} ₡`, W / 2, 66);
 
   ctx.font = "10px monospace";
   ctx.fillStyle = "#475569";
@@ -215,7 +224,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
   const [phase, setPhase] = useState<RunPhase>("idle");
   const [result, setResult] = useState<string | null>(null);
   const [displayMult, setDisplayMult] = useState(1.0);
-  const [creditsBump, setCreditsBump] = useState(false);
+  const [creditsBump, bumpCredits] = useCreditsBump();
 
   const gameRef = useRef({
     playerY: H / 2,
@@ -235,6 +244,9 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     startedAt: 0,
   });
   const animRef = useRef<number>(0);
+  const clockRef = useRef(createFixedTimestep(PHYSICS_STEP_MS, MAX_STEPS_PER_FRAME));
+  // Latest cashOut for the keyboard shortcut (assigned in an effect below).
+  const cashOutRef = useRef<() => void>(() => {});
 
   // Generate stars once
   useEffect(() => {
@@ -250,13 +262,6 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     gameRef.current.stars = stars;
   }, []);
 
-  useEffect(() => {
-    if (creditsBump) {
-      const t = setTimeout(() => setCreditsBump(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [creditsBump]);
-
   const flap = useCallback(() => {
     if (gameRef.current.running) {
       gameRef.current.vy = FLAP;
@@ -265,9 +270,17 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Only steal keys mid-run, and never from a focused form control
+      // (Space/Enter on the Cash Out button, arrows in the bet input).
+      if (!gameRef.current.running) return;
+      const target = e.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, button, a")) return;
       if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         flap();
+      } else if (e.code === "Enter" || e.code === "KeyC") {
+        e.preventDefault();
+        cashOutRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -361,10 +374,21 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     }
 
     cancelAnimationFrame(animRef.current);
+    const clock = clockRef.current;
+    clock.reset(g.startedAt);
+    // Fixed-timestep loop: the display refresh rate only decides how often we
+    // draw. Physics always advance in 1/60 s steps measured on performance.now().
     const loop = () => {
-      update();
-      draw();
-      if (g.running || g.deathFrame < 30) {
+      const now = monotonicNow();
+      const { steps, alpha } = clock.advance(now);
+      for (let i = 0; i < steps; i++) update();
+      if (g.running && !finishedRef.current) {
+        // Same time-based curve the server pays on (the server clock is authoritative).
+        g.multiplier = crashMultiplierAt(now - g.startedAt);
+        setDisplayMult(g.multiplier);
+      }
+      draw(alpha);
+      if (g.running || g.deathFrame < DEATH_EFFECT_STEPS) {
         animRef.current = requestAnimationFrame(loop);
       }
     };
@@ -389,19 +413,15 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     g.playerY += g.vy;
     g.distance += g.speed;
 
-    g.trail.push({ x: 80, y: g.playerY });
+    g.trail.push({ x: PLAYER_X, y: g.playerY });
     if (g.trail.length > 12) g.trail.shift();
 
     const progress = g.distance / 1000;
     g.speed = Math.min(PIPE_SPEED_MAX, PIPE_SPEED_START + progress * 0.25);
     g.gapSize = Math.max(GAP_SIZE_MIN, GAP_SIZE_START - progress * 5);
 
-    // Same time-based curve the server pays on (the server clock is authoritative).
-    g.multiplier = crashMultiplierAt(monotonicNow() - g.startedAt);
-    setDisplayMult(g.multiplier);
-
     const movedPipes = g.pipes.map((p) => ({ ...p, x: p.x - g.speed }));
-    const isNewlyPassed = (p: Pipe) => !p.scored && p.x + PIPE_WIDTH < 80;
+    const isNewlyPassed = (p: Pipe) => !p.scored && p.x + PIPE_WIDTH < PLAYER_X;
     g.score += movedPipes.filter(isNewlyPassed).length;
     g.pipes = movedPipes.map((p) => (isNewlyPassed(p) ? { ...p, scored: true } : p));
 
@@ -417,7 +437,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
       return;
     }
 
-    const px = 80;
+    const px = PLAYER_X;
     for (const p of g.pipes) {
       if (px + PLAYER_SIZE > p.x && px - PLAYER_SIZE < p.x + PIPE_WIDTH) {
         if (g.playerY - PLAYER_SIZE < p.gapY || g.playerY + PLAYER_SIZE > p.gapY + p.gapH) {
@@ -437,7 +457,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     if (settleRef.current) return;
     settleRef.current = true;
 
-    const fallback = `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount.toLocaleString()} ₡`;
+    const fallback = `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount.toLocaleString("en-US")} ₡`;
     try {
       const res = await fetch(CRASH_API, { method: "DELETE" });
       const data = await res.json();
@@ -466,7 +486,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
         if (data.status === "cashed_out") {
           if (finishedRef.current) return;
           setCredits((c) => c + data.payout);
-          setCreditsBump(true);
+          bumpCredits();
           finishRun("cashed", data.label, data.multiplier);
           return;
         }
@@ -487,7 +507,8 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     finishRun("dead", "Cash-out could not be confirmed. Reload to check your balance before playing again.");
   };
 
-  const draw = () => {
+  /** `alpha` is the 0..1 progress into the next physics step, used to smooth motion. */
+  const draw = (alpha: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -503,11 +524,13 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
 
     drawGrid(ctx, g.distance);
     drawStars(ctx, g.stars, g.distance);
-    drawPipes(ctx, g.pipes, g.multiplier);
+    // Between physics steps, project motion forward by the leftover fraction of a step.
+    drawPipes(ctx, g.pipes, g.multiplier, g.running ? -g.speed * alpha : 0);
 
     if (g.running) {
-      drawPlayer(ctx, g.playerY, g.vy, g.trail);
-    } else if (g.deathFrame < 30) {
+      const renderY = g.playerY + g.vy * alpha;
+      drawPlayer(ctx, renderY, g.vy, g.trail);
+    } else if (g.deathFrame < DEATH_EFFECT_STEPS) {
       drawDeathEffect(ctx, g.deathY, g.deathFrame);
     }
 
@@ -564,8 +587,37 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
   }, [phase]);
 
   useEffect(() => {
-    return () => cancelAnimationFrame(animRef.current);
-  }, []);
+    cashOutRef.current = cashOut;
+  });
+
+  // Leaving mid-run (route change, tab close) forfeits the wager straight away
+  // instead of leaving the run open on the server until it expires. The route
+  // settles a death on DELETE; keepalive lets the request outlive the page.
+  useEffect(() => {
+    const game = gameRef.current;
+    const forfeit = () => {
+      if (!game.running || settleRef.current) return;
+      game.running = false;
+      settleRef.current = true;
+      fetch(CRASH_API, { method: "DELETE", keepalive: true }).catch(() => {
+        // Nothing to recover: the server closes the run out as a loss on expiry.
+      });
+      finishRun("dead", `Run abandoned. Lost ${game.betAmount.toLocaleString("en-US")} ₡`);
+    };
+    window.addEventListener("pagehide", forfeit);
+    return () => {
+      window.removeEventListener("pagehide", forfeit);
+      cancelAnimationFrame(animRef.current);
+      forfeit();
+    };
+  }, [finishRun]);
+
+  const statusText =
+    phase === "running"
+      ? `Run in progress. Multiplier ${Math.floor(displayMult)}x. Press Space or Up Arrow to flap, Enter to cash out.`
+      : phase === "idle"
+      ? "Void Runner is ready. Set a bet and launch."
+      : "";
 
   return (
     <div className="min-h-screen bg-black text-slate-100 px-3 py-4">
@@ -583,25 +635,28 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
             ref={canvasRef}
             width={W}
             height={H}
+            role="img"
+            aria-label="Void Runner playfield: a ship flying through gates while the payout multiplier climbs"
             className="w-full cursor-pointer"
-            style={{ imageRendering: "auto" }}
-            onClick={phase === "running" ? flap : undefined}
-            onTouchStart={phase === "running" ? (e) => { e.preventDefault(); flap(); } : undefined}
+            style={{ imageRendering: "auto", touchAction: phase === "running" ? "none" : "auto" }}
+            onPointerDown={phase === "running" ? (e) => { e.preventDefault(); flap(); } : undefined}
           />
+          <p className="sr-only" role="status" aria-live="polite">{statusText}</p>
 
           {phase === "running" && (
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); cashOut(); }}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-green-600/90 hover:bg-green-500 px-6 py-3 font-bold text-white text-sm backdrop-blur-sm shadow-[0_0_20px_rgba(34,197,94,0.3)] transition animate-pulse"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-green-600/90 hover:bg-green-500 px-6 py-3 font-bold text-white text-sm backdrop-blur-sm shadow-[0_0_20px_rgba(34,197,94,0.3)] transition animate-pulse focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              💰 Cash Out ({Math.floor(bet * displayMult).toLocaleString()} ₡)
+              💰 Cash Out ({Math.floor(bet * displayMult).toLocaleString("en-US")} ₡)
             </button>
           )}
         </div>
 
         {/* Result */}
         {result && (
-          <div className={`rounded-lg p-3 text-sm text-center ${
+          <div role="status" className={`rounded-lg p-3 text-sm text-center ${
             phase === "cashed"
               ? "bg-green-900/20 border border-green-800 text-green-300"
               : "bg-red-900/20 border border-red-800 text-red-300"
@@ -612,38 +667,8 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
 
         {/* Bet controls */}
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Credits</span>
-            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>
-              {credits.toLocaleString()} ₡
-            </span>
-          </div>
-
-          <div className="flex gap-2">
-            {QUICK_BETS.map((q) => (
-              <button
-                key={q}
-                onClick={() => setBet(q)}
-                disabled={phase === "running"}
-                className={`flex-1 py-1.5 rounded text-xs font-bold transition ${
-                  bet === q
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                }`}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-
-          <input
-            type="number"
-            value={bet}
-            onChange={(e) => setBet(Math.max(10, Number(e.target.value)))}
-            disabled={phase === "running"}
-            min={10}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-center"
-          />
+          <CreditsBar credits={credits} bump={creditsBump} />
+          <BetControls bet={bet} onBetChange={setBet} accent="cyan" disabled={phase === "running"} />
 
           {phase !== "running" ? (
             <button
@@ -655,7 +680,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
             </button>
           ) : (
             <div className="text-center text-[10px] text-slate-500 uppercase tracking-wider">
-              Tap the screen or press Space to flap
+              Tap the screen or press Space to flap · Enter to cash out
             </div>
           )}
         </div>

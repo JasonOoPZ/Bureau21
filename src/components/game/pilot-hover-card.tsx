@@ -122,7 +122,7 @@ export function PilotHoverCard({ userId, children, className }: Props) {
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md bg-black/40 border border-slate-800/40 p-1.5 text-center">
                   <div className="text-[8px] uppercase text-slate-500">XP</div>
-                  <div className="text-[11px] font-bold text-emerald-400 font-mono">{preview.xp.toLocaleString()}</div>
+                  <div className="text-[11px] font-bold text-emerald-400 font-mono">{preview.xp.toLocaleString("en-US")}</div>
                 </div>
                 <div className="rounded-md bg-black/40 border border-slate-800/40 p-1.5 text-center">
                   <div className="text-[8px] uppercase text-slate-500">Kills</div>
@@ -138,7 +138,7 @@ export function PilotHoverCard({ userId, children, className }: Props) {
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-slate-500">📍 {preview.sector}</span>
                 {preview.bounty > 0 && (
-                  <span className="text-red-400 font-bold">🎯 {preview.bounty.toLocaleString()} ₡</span>
+                  <span className="text-red-400 font-bold">🎯 {preview.bounty.toLocaleString("en-US")} ₡</span>
                 )}
               </div>
 

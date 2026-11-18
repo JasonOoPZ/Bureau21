@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import { BetControls, CreditsBar } from "@/components/game/casino/bet-controls";
+import { useCreditsBump } from "@/components/game/casino/use-credits-bump";
+import { useManagedTimers } from "@/components/game/casino/use-managed-timers";
 
-const QUICK_BETS = [100, 500, 1000, 10000, 25000];
+const REEL_IDS = ["left", "middle", "right"] as const;
 
 export function SlotsGame({ initialCredits }: { initialCredits: number }) {
   const [credits, setCredits] = useState(initialCredits);
@@ -13,14 +16,8 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
   const [reelsStopped, setReelsStopped] = useState([false, false, false]);
   const [isJackpot, setIsJackpot] = useState(false);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
-  const [creditsBump, setCreditsBump] = useState(false);
-
-  useEffect(() => {
-    if (creditsBump) {
-      const t = setTimeout(() => setCreditsBump(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [creditsBump]);
+  const [creditsBump, bumpCredits] = useCreditsBump();
+  const timers = useManagedTimers();
 
   const spin = useCallback(async () => {
     setSpinning(true);
@@ -29,7 +26,7 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
     setReelsStopped([false, false, false]);
     // Visual spin
     const symbols = ["🎰", "💎", "⚡", "🔥", "💀", "🪙"];
-    const spinInterval = setInterval(() => {
+    const spinInterval = timers.every(() => {
       setReels([
         symbols[Math.floor(Math.random() * symbols.length)],
         symbols[Math.floor(Math.random() * symbols.length)],
@@ -37,28 +34,38 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
       ]);
     }, 80);
 
-    const res = await fetch("/api/game/casino", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game: "slots", bet }),
-    });
-    const data = await res.json();
+    let data;
+    try {
+      const res = await fetch("/api/game/casino", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: "slots", bet }),
+      });
+      data = await res.json();
+    } catch {
+      if (!timers.isMounted()) return;
+      timers.clear(spinInterval);
+      setSpinning(false);
+      setResult({ label: "Could not reach the casino. Please try again.", payout: 0 });
+      return;
+    }
+    if (!timers.isMounted()) return;
 
     // Staggered reel stops for dramatic effect
     const finalReels = data.reels ?? reels;
-    setTimeout(() => {
-      clearInterval(spinInterval);
+    timers.after(() => {
+      timers.clear(spinInterval);
       // Stop reel 1
       setReels((prev) => [finalReels[0], prev[1], prev[2]]);
       setReelsStopped([true, false, false]);
 
       // Stop reel 2
-      setTimeout(() => {
+      timers.after(() => {
         setReels((prev) => [prev[0], finalReels[1], prev[2]]);
         setReelsStopped([true, true, false]);
 
         // Stop reel 3
-        setTimeout(() => {
+        timers.after(() => {
           setReels(finalReels);
           setReelsStopped([true, true, true]);
           setSpinning(false);
@@ -68,12 +75,12 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
           if (payout >= bet * 10) setIsJackpot(true);
           if (data.new_credits != null) {
             setCredits(data.new_credits);
-            setCreditsBump(true);
+            bumpCredits();
           }
         }, 300);
       }, 300);
     }, 800);
-  }, [bet, reels]);
+  }, [bet, reels, timers, bumpCredits]);
 
   return (
     <div className="min-h-screen bg-black text-slate-100 px-3 py-4">
@@ -90,7 +97,7 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
 
           <div className="flex justify-center gap-4 my-8">
             {reels.map((s, i) => (
-              <div key={i}
+              <div key={REEL_IDS[i]}
                 className={`w-20 h-20 bg-slate-900 border-2 rounded-xl flex items-center justify-center text-5xl transition-all ${
                   spinning && !reelsStopped[i]
                     ? "border-amber-500 animate-reel-spin"
@@ -126,21 +133,8 @@ export function SlotsGame({ initialCredits }: { initialCredits: number }) {
         </div>
 
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Credits</span>
-            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
-          </div>
-          <div className="flex gap-2">
-            {QUICK_BETS.map((q) => (
-              <button key={q} onClick={() => setBet(q)} disabled={spinning}
-                className={`flex-1 py-1.5 rounded text-xs font-bold transition ${bet === q ? "bg-amber-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-                {q}
-              </button>
-            ))}
-          </div>
-          <input type="number" value={bet} onChange={(e) => setBet(Math.max(10, Number(e.target.value)))}
-            disabled={spinning} min={10}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-center" />
+          <CreditsBar credits={credits} bump={creditsBump} />
+          <BetControls bet={bet} onBetChange={setBet} accent="amber" disabled={spinning} />
           <button onClick={spin} disabled={spinning || bet > credits}
             className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 font-bold text-white disabled:opacity-40 transition">
             {spinning ? "Spinning..." : `🎰 Spin (${bet} ₡)`}

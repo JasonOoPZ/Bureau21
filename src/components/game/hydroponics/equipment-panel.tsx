@@ -65,7 +65,7 @@ export function EquipmentPanel({ property, credits, onUpgrade }: Props) {
                   className="mt-1.5 rounded bg-slate-700/60 px-2.5 py-0.5 text-[9px] font-semibold text-slate-300 hover:bg-slate-600/60 disabled:opacity-30 transition-colors"
                   aria-label={`Upgrade ${eq.name} to level ${currentLevel + 1} for ${nextCost} credits`}
                 >
-                  Upgrade — {nextCost.toLocaleString()} cr
+                  Upgrade — {nextCost.toLocaleString("en-US")} cr
                 </button>
               )}
             </div>

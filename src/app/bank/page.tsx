@@ -52,6 +52,7 @@ export default async function BankPage() {
           <PixelBanner scene="bank" title="Bureau Bank" subtitle="Secure vault · Loans · Bonds · Sovereign exchange · Pilot transfers" />
 
           <BankClient
+            serverNow={Date.now()}
             initialCredits={pilot.credits}
             initialCreditsBank={pilot.creditsBank}
             initialTokens={pilot.tokens}

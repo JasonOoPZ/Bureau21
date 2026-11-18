@@ -155,12 +155,12 @@ export function ScannerClient({ syndicates }: Props) {
             Level must be between
             <input type="number" min={1} max={500} value={filters.levelMin}
               onChange={(e) => updateFilter("levelMin", parseInt(e.target.value) || 1)}
-              className="w-16 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+              className="w-16 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
               disabled={!filters.levelEnabled} />
             and
             <input type="number" min={1} max={500} value={filters.levelMax}
               onChange={(e) => updateFilter("levelMax", parseInt(e.target.value) || 1)}
-              className="w-16 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+              className="w-16 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
               disabled={!filters.levelEnabled} />
           </label>
         </div>
@@ -172,12 +172,12 @@ export function ScannerClient({ syndicates }: Props) {
           Kill count must be between
           <input type="number" min={0} value={filters.killsMin}
             onChange={(e) => updateFilter("killsMin", parseInt(e.target.value) || 0)}
-            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
             disabled={!filters.killsEnabled} />
           and
           <input type="number" min={0} value={filters.killsMax}
             onChange={(e) => updateFilter("killsMax", parseInt(e.target.value) || 0)}
-            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
             disabled={!filters.killsEnabled} />
         </label>
 
@@ -188,7 +188,7 @@ export function ScannerClient({ syndicates }: Props) {
           Must be at least
           <input type="number" min={0} value={filters.minAgeDays}
             onChange={(e) => updateFilter("minAgeDays", parseInt(e.target.value) || 0)}
-            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="w-20 rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
             disabled={!filters.minAgeDaysEnabled} />
           days old.
         </label>
@@ -277,7 +277,7 @@ export function ScannerClient({ syndicates }: Props) {
                 <select
                   value={!["any", "none", "not_mine"].includes(filters.syndicateFilter) ? filters.syndicateFilter : syndicates[0]?.id ?? ""}
                   onChange={(e) => updateFilter("syndicateFilter", e.target.value)}
-                  className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+                  className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
                 >
                   {syndicates.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -300,7 +300,7 @@ export function ScannerClient({ syndicates }: Props) {
               <select
                 value={filters.sortBy}
                 onChange={(e) => updateFilter("sortBy", e.target.value as "id" | "level" | "kills")}
-                className="rounded border border-slate-700 bg-black/60 px-3 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+                className="rounded border border-slate-700 bg-black/60 px-3 py-1 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
               >
                 <option value="id">Sort by ID</option>
                 <option value="level">Sort by Level</option>

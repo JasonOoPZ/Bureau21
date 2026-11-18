@@ -60,7 +60,7 @@ src/lib/               Game logic, constants, and data tables
 src/lib/__tests__/     Unit tests
 src/auth.ts            NextAuth configuration
 src/proxy.ts           Request proxy: www redirect and the /lobby and /admin sign-in gate
-scripts/               One-off admin scripts (run against DATABASE_URL)
+scripts/               Admin scripts: dry-run by default, --confirm to write (see scripts/_guard.ts); applied one-offs live in scripts/archive/
 ```
 
 `src/proxy.ts` is what earlier Next.js versions called middleware. Next.js 16 renamed the file convention, and with a `src/` layout it must sit next to `app/`.

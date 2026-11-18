@@ -54,6 +54,7 @@ export default async function GymPage() {
           <PixelBanner scene="gym" title="Galaxy Gym" subtitle="Burn energy to train your stats." />
 
           <GymConsole
+            serverNow={now.getTime()}
             initial={{
               gymEnergy: currentEnergy,
               energyBreakdown,

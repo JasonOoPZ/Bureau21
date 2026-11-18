@@ -75,7 +75,7 @@ export function ArmoryClient({ catalog, initialCredits, inventoryCount }: Props)
         <span className="text-[11px] text-slate-400">
           Inventory: <span className={invCount >= 20 ? "text-red-400" : "text-slate-200"}>{invCount}/20</span>
         </span>
-        <span className="text-[13px] font-bold text-amber-300">{credits.toLocaleString()} Cr</span>
+        <span className="text-[13px] font-bold text-amber-300">{credits.toLocaleString("en-US")} Cr</span>
       </div>
 
       {/* Filter */}

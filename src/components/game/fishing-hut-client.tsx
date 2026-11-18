@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface Props { motivation: number; credits: number; fish: number; }
 
@@ -10,7 +10,8 @@ export function FishingHutClient({ motivation: initMot, credits: initCredits, fi
   const [fish, setFish] = useState(initFish);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ catchName: string; catchValue: number; rarity: string } | null>(null);
-  const [history, setHistory] = useState<{ name: string; value: number; rarity: string }[]>([]);
+  const [history, setHistory] = useState<{ id: number; name: string; value: number; rarity: string }[]>([]);
+  const nextHistoryId = useRef(0);
 
   const cast = async () => {
     setLoading(true);
@@ -24,7 +25,8 @@ export function FishingHutClient({ motivation: initMot, credits: initCredits, fi
       setCredits(data.credits);
       setFish(data.totalFish);
       if (data.catchValue > 0) {
-        setHistory((h) => [{ name: data.catchName, value: data.catchValue, rarity: data.rarity }, ...h.slice(0, 9)]);
+        const id = nextHistoryId.current++;
+        setHistory((h) => [{ id, name: data.catchName, value: data.catchValue, rarity: data.rarity }, ...h.slice(0, 9)]);
       }
     } catch { setResult({ catchName: "Network error.", catchValue: 0, rarity: "miss" }); }
     finally { setLoading(false); }
@@ -48,7 +50,7 @@ export function FishingHutClient({ motivation: initMot, credits: initCredits, fi
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
           <div><span className="text-slate-500">Fish Caught: </span><span className="font-bold text-cyan-300">{fish}</span></div>
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>
@@ -72,8 +74,8 @@ export function FishingHutClient({ motivation: initMot, credits: initCredits, fi
         <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Recent Catches</p>
           <div className="mt-2 space-y-1">
-            {history.map((h, i) => (
-              <div key={i} className="flex items-center justify-between text-[11px]">
+            {history.map((h) => (
+              <div key={h.id} className="flex items-center justify-between text-[11px]">
                 <span className={rarityColor[h.rarity] || "text-slate-300"}>{h.name}</span>
                 <span className="text-emerald-400">+{h.value}</span>
               </div>

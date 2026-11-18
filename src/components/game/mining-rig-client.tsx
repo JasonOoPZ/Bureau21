@@ -32,7 +32,7 @@ export function MiningRigClient({ motivation: initMot, ore: initOre }: Props) {
           Each extraction run costs 15 motivation. Rare veins can yield massive hauls.
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
-          <div><span className="text-slate-500">Ore: </span><span className="font-bold text-slate-200">{ore.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Ore: </span><span className="font-bold text-slate-200">{ore.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>

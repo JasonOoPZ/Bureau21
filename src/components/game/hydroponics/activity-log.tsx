@@ -2,6 +2,7 @@
 
 import type { EventLogEntry } from "@/lib/hydroponics/types";
 import { useState } from "react";
+import { formatGameTime } from "@/components/format";
 
 interface Props {
   log: EventLogEntry[];
@@ -44,7 +45,7 @@ export function ActivityLog({ log }: Props) {
                 <span className="text-xs flex-shrink-0">{entry.icon}</span>
                 <p className="text-[9px] leading-snug flex-1">{entry.message}</p>
                 <span className="text-[8px] text-slate-700 flex-shrink-0 tabular-nums font-mono">
-                  {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {formatGameTime(entry.timestamp)}
                 </span>
               </div>
             ))

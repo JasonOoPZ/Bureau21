@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { formatGameDateTime } from "@/components/format";
 
 interface QuickPost {
   id: string;
@@ -67,10 +68,7 @@ export function QuickPostClient({
     setBusy(false);
   };
 
-  const fmt = (d: string) => {
-    const dt = new Date(d);
-    return dt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  };
+  const fmt = formatGameDateTime;
 
   return (
     <div className="space-y-3">
@@ -179,7 +177,7 @@ export function QuickPostClient({
               onChange={(e) => setToCallsign(e.target.value)}
               maxLength={40}
               placeholder="Enter exact callsign"
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-[12px] text-slate-200 placeholder-slate-600 focus:border-cyan-700 focus:outline-none"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-[12px] text-slate-200 placeholder-slate-600 focus:border-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
             />
           </div>
           <div>
@@ -190,7 +188,7 @@ export function QuickPostClient({
               maxLength={500}
               rows={4}
               placeholder="What do you want to say?"
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-300 placeholder-slate-600 focus:border-cyan-700 focus:outline-none resize-none"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-300 placeholder-slate-600 focus:border-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 resize-none"
             />
             <p className="mt-0.5 text-right text-[9px] text-slate-600">{body.length}/500</p>
           </div>

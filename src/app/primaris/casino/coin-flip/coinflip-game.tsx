@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-
-const QUICK_BETS = [100, 500, 1000, 10000, 25000];
+import { BetControls, CreditsBar } from "@/components/game/casino/bet-controls";
+import { useCreditsBump } from "@/components/game/casino/use-credits-bump";
+import { useManagedTimers } from "@/components/game/casino/use-managed-timers";
 
 function CoinFace({ side }: { side: "heads" | "tails" }) {
   const isHeads = side === "heads";
@@ -31,20 +32,9 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
   const [coin, setCoin] = useState<"heads" | "tails" | null>(null);
   const [landed, setLanded] = useState(false);
   const [result, setResult] = useState<{ label: string; payout: number } | null>(null);
-  const [creditsBump, setCreditsBump] = useState(false);
+  const [creditsBump, bumpCredits] = useCreditsBump();
+  const timers = useManagedTimers();
   const flipInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (creditsBump) {
-      const t = setTimeout(() => setCreditsBump(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [creditsBump]);
-
-  // Clean up interval on unmount
-  useEffect(() => {
-    return () => { if (flipInterval.current) clearInterval(flipInterval.current); };
-  }, []);
 
   const flip = async (choice: "heads" | "tails") => {
     setFlipping(true);
@@ -54,39 +44,49 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
 
     // Start toggling the visible face rapidly — heads/tails alternate
     let faceToggle = false;
-    flipInterval.current = setInterval(() => {
+    flipInterval.current = timers.every(() => {
       faceToggle = !faceToggle;
       setVisibleFace(faceToggle ? "tails" : "heads");
     }, 150);
 
-    const res = await fetch("/api/game/casino", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game: "coinflip", bet, choice }),
-    });
-    const data = await res.json();
+    let data;
+    try {
+      const res = await fetch("/api/game/casino", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: "coinflip", bet, choice }),
+      });
+      data = await res.json();
+    } catch {
+      if (!timers.isMounted()) return;
+      timers.clear(flipInterval.current);
+      setFlipping(false);
+      setResult({ label: "Could not reach the casino. Please try again.", payout: 0 });
+      return;
+    }
+    if (!timers.isMounted()) return;
     const winner: "heads" | "tails" = data.result ?? choice;
 
     // After 1.6s of spinning, slow down then stop on winning face
-    setTimeout(() => {
+    timers.after(() => {
       // Slow down the flipping
-      if (flipInterval.current) clearInterval(flipInterval.current);
+      timers.clear(flipInterval.current);
       let slowCount = 0;
-      const slowFlip = setInterval(() => {
+      const slowFlip = timers.every(() => {
         slowCount++;
         setVisibleFace((prev) => (prev === "heads" ? "tails" : "heads"));
         if (slowCount >= 4) {
-          clearInterval(slowFlip);
+          timers.clear(slowFlip);
           // Land on winning face
           setVisibleFace(winner);
           setFlipping(false);
           setCoin(winner);
           setLanded(true);
-          setTimeout(() => {
+          timers.after(() => {
             setResult({ label: data.label ?? data.error, payout: (data.payout ?? 0) > 0 ? data.payout : (data.net_change ?? 0) });
             if (data.new_credits != null) {
               setCredits(data.new_credits);
-              setCreditsBump(true);
+              bumpCredits();
             }
           }, 400);
         }
@@ -140,21 +140,8 @@ export function CoinFlipGame({ initialCredits }: { initialCredits: number }) {
         </div>
 
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Credits</span>
-            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>{credits.toLocaleString()} ₡</span>
-          </div>
-          <div className="flex gap-2">
-            {QUICK_BETS.map((q) => (
-              <button key={q} onClick={() => setBet(q)} disabled={flipping}
-                className={`flex-1 py-1.5 rounded text-xs font-bold transition ${bet === q ? "bg-slate-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-                {q}
-              </button>
-            ))}
-          </div>
-          <input type="number" value={bet} onChange={(e) => setBet(Math.max(10, Number(e.target.value)))}
-            disabled={flipping} min={10}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-center" />
+          <CreditsBar credits={credits} bump={creditsBump} />
+          <BetControls bet={bet} onBetChange={setBet} accent="slate" disabled={flipping} />
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => flip("heads")} disabled={flipping || bet > credits}
               className="py-3 rounded-lg bg-amber-700 hover:bg-amber-600 font-bold text-white disabled:opacity-40 transition">

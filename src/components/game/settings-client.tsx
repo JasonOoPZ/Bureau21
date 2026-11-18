@@ -109,14 +109,15 @@ export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsig
           Your display name across Bureau 21. 2–24 characters. Letters, numbers, spaces, hyphens, and underscores only.
         </p>
         <div className="flex items-end gap-3">
-          <label className="flex-1">
-            <input
+          <label htmlFor="settings-callsign" className="flex-1">
+            <span className="sr-only">New callsign</span>
+            <input id="settings-callsign" name="callsign" autoComplete="off"
               type="text"
               value={callsign}
               onChange={(e) => { setCallsign(e.target.value); setCallsignMessage(""); }}
               maxLength={24}
               placeholder="Enter new callsign"
-              className="w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
+              className="w-full rounded-lg border border-slate-700/80 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition placeholder:text-slate-600 focus:border-cyan-500 focus:shadow-[0_0_12px_rgba(34,211,238,0.1)]"
             />
             <p className="mt-1 text-[10px] text-slate-600">{callsign.length}/24 characters</p>
           </label>
@@ -154,7 +155,7 @@ export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsig
         {callsignMessage && (
           <p className={`mt-2 text-[11px] font-semibold ${
             callsignMessage.includes("updated") ? "text-emerald-400" : "text-red-400"
-          }`}>{callsignMessage}</p>
+          }`} role="status">{callsignMessage}</p>
         )}
       </div>
 
@@ -214,9 +215,10 @@ export function SettingsClient({ currentTheme, currentQuicklinks, currentCallsig
             <div key={i} className="flex items-center gap-3">
               <span className="w-6 shrink-0 text-center text-[11px] font-bold text-amber-400">{i + 1}</span>
               <select
+                aria-label={`Quicklink slot ${i + 1}`}
                 value={link?.href ?? ""}
                 onChange={(e) => handleQuicklinkChange(i, e.target.value)}
-                className="w-full rounded border border-slate-700 bg-slate-900/50 px-3 py-2 text-[12px] text-slate-200 outline-none focus:border-amber-500"
+                className="w-full rounded border border-slate-700 bg-slate-900/50 px-3 py-2 text-[12px] text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus:border-amber-500"
               >
                 <option value="">— Empty Slot —</option>
                 {sideRailLinks.map((navLink) => (

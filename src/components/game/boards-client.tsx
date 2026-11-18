@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatGameDate } from "@/components/format";
 
 interface BoardPost {
   id: string;
@@ -134,7 +135,7 @@ export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none"
+                className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-slate-200 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>{CAT_LABELS[c] ?? c}</option>
@@ -146,7 +147,7 @@ export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
             />
             <textarea
               placeholder="Post body..."
@@ -154,7 +155,7 @@ export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props
               onChange={(e) => setBody(e.target.value)}
               rows={4}
               maxLength={2000}
-              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none"
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
             />
             <button
               onClick={submit}
@@ -196,7 +197,7 @@ export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props
                     >
                       {post.authorName}
                     </Link>
-                    {" "}· {new Date(post.createdAt).toLocaleDateString()}
+                    {" "}· {formatGameDate(post.createdAt)}
                   </p>
                 </div>
                 <span className="shrink-0 text-[11px] text-slate-600">{expanded === post.id ? "▲" : "▼"}</span>

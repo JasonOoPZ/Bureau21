@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 /* ═══════════════════════════════════════════════
@@ -64,6 +64,17 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
   const [messages, setMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
   const [inspecting, setInspecting] = useState<VendorItem | null>(null);
 
+  // Escape closes the inspect dialog, matching the other item modals.
+  const isInspecting = inspecting !== null;
+  useEffect(() => {
+    if (!isInspecting) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInspecting(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isInspecting]);
+
   const items = tab === "weapon" ? weapons : armor;
 
   // Group by tier
@@ -106,7 +117,7 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
         <span className="text-[11px] text-slate-400">
           Inventory: <span className={invCount >= 20 ? "text-red-400" : "text-slate-200"}>{invCount}/20</span>
         </span>
-        <span className="text-[13px] font-bold text-amber-300">{credits.toLocaleString()} Cr</span>
+        <span className="text-[13px] font-bold text-amber-300">{credits.toLocaleString("en-US")} Cr</span>
       </div>
 
       {/* ─── Tabs ─── */}
@@ -198,7 +209,7 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
                         {item.slot === "weapon" ? `⚔ ${item.stat} ATK` : `🛡 ${item.stat} DEF`}
                       </span>
                       <span className={`text-[12px] font-bold ${canAfford ? "text-amber-300" : "text-slate-600"}`}>
-                        {item.price === 0 ? "Free" : `${item.price.toLocaleString()} Cr`}
+                        {item.price === 0 ? "Free" : `${item.price.toLocaleString("en-US")} Cr`}
                       </span>
                     </div>
 
@@ -239,12 +250,17 @@ export function EquipmentVendor({ weapons, armor, pilotLevel, initialCredits, in
       {/* ─── Inspect Modal ─── */}
       {inspecting && (
         <div
+          role="presentation"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => setInspecting(null)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setInspecting(null);
+          }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${inspecting.name} details`}
             className="relative w-full max-w-md rounded-lg border border-slate-700 bg-[#0b0f14] p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
           >
             <InspectPanel item={inspecting} onClose={() => setInspecting(null)} />
           </div>
@@ -310,7 +326,7 @@ function InspectPanel({ item, onClose }: { item: VendorItem; onClose: () => void
         />
         <StatBox
           label="Price"
-          value={item.price === 0 ? "Free" : `${item.price.toLocaleString()} Cr`}
+          value={item.price === 0 ? "Free" : `${item.price.toLocaleString("en-US")} Cr`}
           color="text-amber-300"
           icon="◈"
         />

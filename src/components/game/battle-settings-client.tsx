@@ -90,7 +90,7 @@ export function BattleSettingsClient({ initial }: Props) {
           <select
             value={battleCooldown}
             onChange={(e) => setBattleCooldown(parseInt(e.target.value))}
-            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
           >
             {COOLDOWN_OPTIONS.map((m) => (
               <option key={m} value={m}>{m}</option>
@@ -104,7 +104,7 @@ export function BattleSettingsClient({ initial }: Props) {
           <select
             value={combatStimUse}
             onChange={(e) => setCombatStimUse(e.target.value)}
-            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
           >
             <option value="never">never</option>
             <option value="attack_only">when I attack</option>
@@ -123,7 +123,7 @@ export function BattleSettingsClient({ initial }: Props) {
           <select
             value={atkSplit}
             onChange={(e) => setAtkSplit(parseInt(e.target.value))}
-            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
+            className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus:border-cyan-700"
           >
             {Array.from({ length: 21 }, (_, i) => i * 5).map((pct) => (
               <option key={pct} value={pct}>{pct}%</option>

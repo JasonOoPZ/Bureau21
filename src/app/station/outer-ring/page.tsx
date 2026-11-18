@@ -33,7 +33,7 @@ export default async function OuterRingPage() {
             <span className="text-slate-600">|</span>
             <span className="text-slate-400">LF <span className="text-rose-400 font-semibold">{pilot.lifeForce}</span></span>
             <span className="text-slate-600">|</span>
-            <span className="text-slate-400">Credits <span className="text-amber-300 font-semibold">{pilot.credits.toLocaleString()}</span></span>
+            <span className="text-slate-400">Credits <span className="text-amber-300 font-semibold">{pilot.credits.toLocaleString("en-US")}</span></span>
           </div>
         </PixelBanner>
 

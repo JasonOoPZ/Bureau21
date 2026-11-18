@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-
-const QUICK_BETS = [100, 500, 1000, 10000, 25000];
+import { BetControls, CreditsBar } from "@/components/game/casino/bet-controls";
+import { useCreditsBump } from "@/components/game/casino/use-credits-bump";
 
 interface HandState {
   cards: string[];
@@ -57,16 +57,9 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
   const [resultLabel, setResultLabel] = useState<string | null>(null);
   const [totalPayout, setTotalPayout] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [creditsBump, setCreditsBump] = useState(false);
+  const [creditsBump, bumpCredits] = useCreditsBump();
   const [dealKey, setDealKey] = useState(0);
   const [insuranceMsg, setInsuranceMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (creditsBump) {
-      const t = setTimeout(() => setCreditsBump(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [creditsBump]);
 
   const api = async (action: string, extra?: Record<string, unknown>) => {
     setLoading(true);
@@ -100,7 +93,7 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
 
     // Credits update: payout - totalBet = net (bet was already deducted)
     setCredits((c) => c + payout);
-    setCreditsBump(true);
+    bumpCredits();
   };
 
   const deal = async () => {
@@ -309,25 +302,11 @@ export function BlackjackGame({ initialCredits }: { initialCredits: number }) {
 
         {/* Controls */}
         <div className="bg-[#0a0d11] border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Credits</span>
-            <span className={`text-amber-400 font-bold font-mono ${creditsBump ? "animate-credits-bump" : ""}`}>
-              {credits.toLocaleString()} ₡
-            </span>
-          </div>
+          <CreditsBar credits={credits} bump={creditsBump} />
 
           {phase === "betting" && (
             <>
-              <div className="flex gap-2">
-                {QUICK_BETS.map((q) => (
-                  <button key={q} onClick={() => setBet(q)}
-                    className={`flex-1 py-1.5 rounded text-xs font-bold transition ${bet === q ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>
-                    {q}
-                  </button>
-                ))}
-              </div>
-              <input type="number" value={bet} onChange={(e) => setBet(Math.max(10, Number(e.target.value)))} min={10}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-center" />
+              <BetControls bet={bet} onBetChange={setBet} accent="emerald" />
               <button onClick={deal} disabled={loading || bet > credits}
                 className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-white disabled:opacity-40 transition">
                 Deal ({bet} ₡)

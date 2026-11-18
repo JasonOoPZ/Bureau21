@@ -239,9 +239,9 @@ export default async function HousePage() {
                   <span className="text-slate-200">{currentMotivation}/{GAME_CONSTANTS.MOTIVATION_CAP_FREE}</span>
 
                   <span className="font-semibold text-slate-400">Credits:</span>
-                  <span className="text-amber-300">{pilot.credits.toLocaleString()}</span>
+                  <span className="text-amber-300">{pilot.credits.toLocaleString("en-US")}</span>
                   <span className="font-semibold text-slate-400">Sovereigns:</span>
-                  <span className="text-purple-300">{pilot.tokens.toLocaleString()}</span>
+                  <span className="text-purple-300">{pilot.tokens.toLocaleString("en-US")}</span>
 
                   <span className="font-semibold text-slate-400">Account Age:</span>
                   <span className="text-slate-200">{accountAgeDays} days</span>
@@ -402,19 +402,19 @@ export default async function HousePage() {
                   <div className="rounded border border-amber-900/40 bg-amber-950/20 p-3 text-center">
                     <p className="text-[10px] uppercase tracking-wide text-amber-600">Credits</p>
                     <p className="mt-1 text-2xl font-bold text-amber-300">
-                      {pilot.credits.toLocaleString()}
+                      {pilot.credits.toLocaleString("en-US")}
                     </p>
                   </div>
                   <div className="rounded border border-purple-900/40 bg-purple-950/20 p-3 text-center">
                     <p className="text-[10px] uppercase tracking-wide text-purple-500">Sovereigns</p>
-                    <p className="mt-1 text-2xl font-bold text-purple-300">{pilot.tokens.toLocaleString()}</p>
+                    <p className="mt-1 text-2xl font-bold text-purple-300">{pilot.tokens.toLocaleString("en-US")}</p>
                   </div>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
                   <span className="font-semibold text-slate-400">Total XP Earned:</span>
-                  <span className="text-cyan-200">{totalXpEarned.toLocaleString()}</span>
+                  <span className="text-cyan-200">{totalXpEarned.toLocaleString("en-US")}</span>
                   <span className="font-semibold text-slate-400">Total Credits Earned:</span>
-                  <span className="text-amber-300">{totalCreditsEarned.toLocaleString()}</span>
+                  <span className="text-amber-300">{totalCreditsEarned.toLocaleString("en-US")}</span>
                 </div>
               </section>
 

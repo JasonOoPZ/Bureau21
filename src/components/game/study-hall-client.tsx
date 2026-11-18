@@ -131,7 +131,7 @@ export function StudyHallClient({ courses, progress, motivation, studyCost }: Pr
                     </span>
                   </td>
                   <td className="px-3 py-1.5 text-right font-mono text-slate-300">
-                    {pts} / {course.maxPoints.toLocaleString()}
+                    {pts} / {course.maxPoints.toLocaleString("en-US")}
                   </td>
                   <td className="px-3 py-1.5 text-right">
                     {isMax ? (
@@ -149,7 +149,7 @@ export function StudyHallClient({ courses, progress, motivation, studyCost }: Pr
                           }))
                         }
                         disabled={isLoading}
-                        className="w-14 rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-center text-[11px] text-slate-200 focus:border-cyan-600 focus:outline-none disabled:opacity-50"
+                        className="w-14 rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-center text-[11px] text-slate-200 focus:border-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:opacity-50"
                       />
                     )}
                   </td>

@@ -116,7 +116,7 @@ export function SimulatorClient({ initial }: Props) {
       {/* Train for Credits */}
       <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
         <h3 className="text-[13px] font-bold text-slate-200">
-          Drill for {creditReward.toLocaleString()} Credits
+          Drill for {creditReward.toLocaleString("en-US")} Credits
         </h3>
         <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">
           Run a simulated contract mission. Many a strong pilot has fallen by the wayside of a lesser

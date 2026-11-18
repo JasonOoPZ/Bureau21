@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface Props { motivation: number; credits: number; }
 
@@ -9,7 +9,8 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
   const [credits, setCredits] = useState(initCredits);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ outcome: string; success: boolean; creditsGained: number } | null>(null);
-  const [history, setHistory] = useState<{ success: boolean; credits: number }[]>([]);
+  const [history, setHistory] = useState<{ id: number; success: boolean; credits: number }[]>([]);
+  const nextHistoryId = useRef(0);
 
   const run = async () => {
     setLoading(true);
@@ -21,7 +22,8 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
       setResult(data);
       setMotivation(data.motivationLeft);
       setCredits(data.credits);
-      setHistory((h) => [{ success: data.success, credits: data.creditsGained }, ...h.slice(0, 9)]);
+      const id = nextHistoryId.current++;
+      setHistory((h) => [{ id, success: data.success, credits: data.creditsGained }, ...h.slice(0, 9)]);
     } catch { setResult({ outcome: "Network error.", success: false, creditsGained: 0 }); }
     finally { setLoading(false); }
   };
@@ -37,7 +39,7 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
           Each run costs 25 motivation. 10% chance of getting busted (lose credits). Big payouts for lucky runs.
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>
@@ -57,7 +59,7 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
           </p>
           <p className="mt-1 text-slate-400">{result.outcome}</p>
           <p className={`mt-1 font-mono ${result.creditsGained >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {result.creditsGained >= 0 ? "+" : ""}{result.creditsGained.toLocaleString()} credits
+            {result.creditsGained >= 0 ? "+" : ""}{result.creditsGained.toLocaleString("en-US")} credits
           </p>
         </div>
       )}
@@ -66,11 +68,11 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
         <div className="rounded-md border border-slate-800 bg-[#0a0d11] p-4">
           <p className="text-[10px] uppercase tracking-wider text-slate-500">Run History</p>
           <div className="mt-2 space-y-1">
-            {history.map((h, i) => (
-              <div key={i} className="flex items-center justify-between text-[11px]">
+            {history.map((h) => (
+              <div key={h.id} className="flex items-center justify-between text-[11px]">
                 <span className={h.success ? "text-emerald-400" : "text-red-400"}>{h.success ? "Delivered" : "Busted"}</span>
                 <span className={h.credits >= 0 ? "text-emerald-400" : "text-red-400"}>
-                  {h.credits >= 0 ? "+" : ""}{h.credits.toLocaleString()}
+                  {h.credits >= 0 ? "+" : ""}{h.credits.toLocaleString("en-US")}
                 </span>
               </div>
             ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface BotTemplate {
   name: string;
@@ -76,7 +76,8 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard 
   const [lf, setLf] = useState(pilotLf);
   const [credits, setCredits] = useState(pilotCredits);
   const [level, setLevel] = useState(pilotLevel);
-  const [log, setLog] = useState<string[]>([]);
+  const [log, setLog] = useState<{ id: number; text: string }[]>([]);
+  const nextLogId = useRef(0);
 
   const UNLOCK_LEVEL = 15;
 
@@ -97,8 +98,9 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard 
       setLf(data.state.lifeForce);
       setCredits(data.state.credits);
       setLevel(data.state.level);
+      const logId = nextLogId.current++;
       setLog((prev) => [
-        `${data.outcome.winner === "player" ? "✓" : "✗"} vs ${BOTS.find((b) => b.slug === selectedBot)?.name} — ${data.outcome.winner === "player" ? `+${data.outcome.creditsGained} cr / +${data.outcome.xpGained} XP` : "defeat"}`,
+        { id: logId, text: `${data.outcome.winner === "player" ? "✓" : "✗"} vs ${BOTS.find((b) => b.slug === selectedBot)?.name} — ${data.outcome.winner === "player" ? `+${data.outcome.creditsGained} cr / +${data.outcome.xpGained} XP` : "defeat"}` },
         ...prev,
       ].slice(0, 8));
     } catch (e: unknown) {
@@ -147,7 +149,7 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard 
       {/* Pilot status */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4 text-center">
-          <div className="text-xl font-bold text-amber-300">{credits.toLocaleString()}</div>
+          <div className="text-xl font-bold text-amber-300">{credits.toLocaleString("en-US")}</div>
           <div className="text-xs text-slate-500 mt-1">Credits</div>
         </div>
         <div className="rounded-xl border border-rose-900/40 bg-rose-900/10 p-4 text-center">
@@ -285,8 +287,8 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard 
         <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-300">Recent Engagements</h3>
           <div className="space-y-1">
-            {log.map((entry, i) => (
-              <div key={i} className="text-xs text-slate-500 font-mono">{entry}</div>
+            {log.map((entry) => (
+              <div key={entry.id} className="text-xs text-slate-500 font-mono">{entry.text}</div>
             ))}
           </div>
         </div>

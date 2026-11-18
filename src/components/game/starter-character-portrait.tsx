@@ -24,7 +24,6 @@ export function StarterCharacterPortrait({ slug, size = "md" }: StarterCharacter
       width={dims.width}
       height={dims.height}
       className="object-contain"
-      unoptimized
       draggable={false}
     />
   );
