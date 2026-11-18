@@ -34,7 +34,10 @@ export async function proxy(request: NextRequest) {
 
   if (needsAuth(pathname)) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
+    // `suspended` / `revoked` are refreshed into the cookie whenever the
+    // client reads /api/auth/session. This is only an early redirect: pages
+    // and API routes still do the authoritative per-request check.
+    if (!token || token.suspended || token.revoked) {
       const signInUrl = new URL(SIGN_IN_PATH, request.url);
       signInUrl.searchParams.set("callbackUrl", pathname + search);
       return NextResponse.redirect(signInUrl);
