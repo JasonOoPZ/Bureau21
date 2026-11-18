@@ -1,5 +1,6 @@
+import { EconomyError, economyErrorResponse, economyTx } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
-import { claimOnce, durableRateLimit, releaseClaim, tooManyRequests } from "@/lib/rate-limit";
+import { durableRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/require-user";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,12 +14,6 @@ const POST_WINDOW_MS = 10 * 60_000;
 const POST_MAX_PER_WINDOW = 5;
 const VOTE_WINDOW_MS = 60_000;
 const VOTE_MAX_PER_WINDOW = 20;
-/**
- * Stop-gap until votes are stored (BoardVote table, see PR notes): a pilot
- * may vote on a given post once per this window. Without the table a vote
- * cannot be changed or undone, and it can be repeated after the window.
- */
-const VOTE_ONCE_WINDOW_MS = 30 * 24 * 60 * 60_000;
 
 const postSchema = z.object({
   title: z.string().min(3).max(120),
@@ -28,8 +23,47 @@ const postSchema = z.object({
 
 const voteSchema = z.object({
   postId: z.string().min(1).max(64),
-  direction: z.union([z.literal(1), z.literal(-1)]),
+  /** 1 = upvote, -1 = downvote, 0 = withdraw the vote. */
+  direction: z.union([z.literal(1), z.literal(-1), z.literal(0)]),
 });
+
+/**
+ * Set the caller's vote on a post to `direction` and return the new karma.
+ *
+ * One BoardVote row per (post, user), so a vote can be changed or withdrawn
+ * but never counted twice. The post row is locked first: votes on one post
+ * queue up, each reads the vote the previous one left, and karma moves by
+ * exactly the difference. Repeating the same vote changes nothing.
+ */
+async function castVote(userId: string, postId: string, direction: 1 | -1 | 0): Promise<number> {
+  return economyTx(async (tx) => {
+    const locked = await tx.$queryRaw<{ karma: number }[]>`
+      SELECT "karma" FROM "BoardPost" WHERE "id" = ${postId} FOR UPDATE`;
+    if (locked.length === 0) throw new EconomyError("Post not found.", 404);
+
+    const where = { postId_userId: { postId, userId } };
+    const previous = await tx.boardVote.findUnique({ where, select: { direction: true } });
+    const delta = direction - (previous?.direction ?? 0);
+    if (delta === 0) return locked[0].karma;
+
+    if (direction === 0) {
+      await tx.boardVote.delete({ where });
+    } else {
+      await tx.boardVote.upsert({
+        where,
+        create: { postId, userId, direction },
+        update: { direction },
+      });
+    }
+
+    const post = await tx.boardPost.update({
+      where: { id: postId },
+      data: { karma: { increment: delta } },
+      select: { karma: true },
+    });
+    return post.karma;
+  });
+}
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -66,14 +100,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
 
-  const posts = await prisma.boardPost.findMany({
+  const rows = await prisma.boardPost.findMany({
     where: category && VALID_CATEGORIES.includes(category as typeof VALID_CATEGORIES[number])
       ? { category }
       : undefined,
     orderBy: { createdAt: "desc" },
     take: 30,
-    include: { author: { select: { id: true, name: true } } },
+    include: {
+      author: { select: { id: true, name: true } },
+      // Only the caller's own vote; other voters are never exposed.
+      votes: { where: { userId: auth.userId }, select: { direction: true } },
+    },
   });
+  const posts = rows.map(({ votes, ...post }) => ({ ...post, myVote: votes[0]?.direction ?? 0 }));
 
   // Now behind a session check, so it must not sit in a shared cache.
   return NextResponse.json({ posts }, { headers: { "Cache-Control": "private, no-store" } });
@@ -95,28 +134,10 @@ export async function PATCH(request: Request) {
     return tooManyRequests("You are voting too quickly. Try again shortly.", burst.retryAfterMs);
   }
 
-  const post = await prisma.boardPost.findUnique({ where: { id: postId }, select: { id: true } });
-  if (!post) {
-    return NextResponse.json({ error: "Post not found." }, { status: 404 });
+  try {
+    const karma = await castVote(auth.userId, postId, direction);
+    return NextResponse.json({ karma, myVote: direction });
+  } catch (error) {
+    return economyErrorResponse(error);
   }
-
-  // Atomic: of N parallel votes by one pilot on one post, exactly one wins.
-  const voteKey = `board-vote:${auth.userId}:${postId}`;
-  if (!(await claimOnce(voteKey, VOTE_ONCE_WINDOW_MS))) {
-    return NextResponse.json({ error: "You have already voted on this post." }, { status: 409 });
-  }
-
-  const updated = await prisma.boardPost.updateManyAndReturn({
-    where: { id: postId },
-    data: { karma: { increment: direction } },
-    select: { karma: true },
-  });
-
-  if (updated.length === 0) {
-    // Deleted between the lookup and the write: give the vote back.
-    await releaseClaim(voteKey);
-    return NextResponse.json({ error: "Post not found." }, { status: 404 });
-  }
-
-  return NextResponse.json({ karma: updated[0].karma });
 }
