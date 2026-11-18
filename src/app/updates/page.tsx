@@ -80,7 +80,7 @@ const PATCH_NOTES: PatchNote[] = [
     date: "2026-03-10",
     tag: "live",
     entries: [
-      "Project scaffolded: Next.js 15, TypeScript, Tailwind CSS, Prisma + SQLite.",
+      "Project scaffolded: Next.js 16, TypeScript, Tailwind CSS, Prisma + Postgres (Neon).",
       "NextAuth v4: Credentials + Google OAuth providers.",
       "User and PilotState models. Initial route map from Bureau21 planning docs.",
       "TopBar, SectionShell, and base layout components.",

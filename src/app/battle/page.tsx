@@ -39,7 +39,6 @@ export default async function BattlePage({
   // Watchlist count — model available after prisma generate
   let watchlistCount = 0;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const wlResult = await (prisma as any).watchlist?.count({ where: { pilotId: pilot.id } });
     if (typeof wlResult === "number") watchlistCount = wlResult;
   } catch { /* watchlist table may not exist yet */ }
