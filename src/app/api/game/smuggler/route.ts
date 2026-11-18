@@ -1,9 +1,12 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { GAME_CONSTANTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
+const RUN_MOTIVATION_COST = 25;
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -18,7 +21,7 @@ export async function POST() {
   const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
   const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
 
-  if (currentMotivation < 25) {
+  if (currentMotivation < RUN_MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 25 motivation for a smuggling run." }, { status: 400 });
   }
 
@@ -60,20 +63,37 @@ export async function POST() {
     success = true;
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - 25,
+  // Motivation regen is derived from (motivation, lastMotivationAt). The write
+  // is a compare-and-swap on exactly that pair, so of N parallel runs computed
+  // from the same snapshot only one applies; the rest must retry and pay again.
+  const updated = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    {
+      motivation: pilot.motivation,
+      lastMotivationAt: pilot.lastMotivationAt,
+      // a fine may never push the balance below zero
+      ...(creditsGained < 0 ? { credits: { gte: -creditsGained } } : {}),
+    },
+    {
+      motivation: currentMotivation - RUN_MOTIVATION_COST,
       lastMotivationAt: now,
       credits: { increment: creditsGained },
-    },
-  });
+    }
+  );
+
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Another action is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({
     outcome,
     success,
     creditsGained,
-    credits: pilot.credits + creditsGained,
-    motivationLeft: currentMotivation - 25,
+    credits: updated.credits,
+    motivationLeft: updated.motivation,
   });
 }

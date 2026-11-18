@@ -1,10 +1,15 @@
 import { authOptions } from "@/auth";
+import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { GAME_CONSTANTS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { ITEM_TEMPLATES } from "@/lib/item-data";
+
+const SALVAGE_MOTIVATION_COST = 10;
+const BUSY_ERROR = "Another action is still resolving. Try again.";
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -24,7 +29,7 @@ export async function POST() {
   const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
   const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
 
-  if (currentMotivation < 10) {
+  if (currentMotivation < SALVAGE_MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 10 motivation to salvage." }, { status: 400 });
   }
 
@@ -53,50 +58,60 @@ export async function POST() {
     }
   }
 
-  if (foundItem) {
-    await prisma.$transaction([
-      prisma.pilotState.update({
-        where: { userId: session.user.id },
-        data: {
-          credits: { decrement: cost },
-          motivation: currentMotivation - 10,
-          lastMotivationAt: now,
-        },
-      }),
-      prisma.inventoryItem.create({
-        data: {
-          pilotId: pilot.id,
-          name: itemName,
-          type: itemType,
-          tier: itemTier,
-          bonusType: itemBonusType,
-          bonusAmt: itemBonusAmt,
-        },
-      }),
-    ]);
+  // The charge is guarded twice: credits must still cover the cost, and the
+  // motivation snapshot the regen was computed from must be unchanged
+  // (compare-and-swap). N parallel salvages from one snapshot => one charge,
+  // one roll; the rest are rejected.
+  const chargeGuard: Prisma.PilotStateWhereInput = {
+    credits: { gte: cost },
+    motivation: pilot.motivation,
+    lastMotivationAt: pilot.lastMotivationAt,
+  };
+  const charge: Prisma.PilotStateUpdateManyMutationInput = {
+    credits: { decrement: cost },
+    motivation: currentMotivation - SALVAGE_MOTIVATION_COST,
+    lastMotivationAt: now,
+  };
 
-    return NextResponse.json({
-      found: true,
-      item: { name: itemName, type: itemType, tier: itemTier, bonusType: itemBonusType, bonusAmt: itemBonusAmt },
-      credits: pilot.credits - cost,
-      motivationLeft: currentMotivation - 10,
-    });
+  if (foundItem) {
+    try {
+      const charged = await economyTx(async (tx) => {
+        const row = await guardedPilotUpdate(tx, session.user.id, chargeGuard, charge);
+        if (!row) throw new EconomyError(BUSY_ERROR, 409);
+        await tx.inventoryItem.create({
+          data: {
+            pilotId: pilot.id,
+            name: itemName,
+            type: itemType,
+            tier: itemTier,
+            bonusType: itemBonusType,
+            bonusAmt: itemBonusAmt,
+          },
+        });
+        return row;
+      });
+
+      return NextResponse.json({
+        found: true,
+        item: { name: itemName, type: itemType, tier: itemTier, bonusType: itemBonusType, bonusAmt: itemBonusAmt },
+        credits: charged.credits,
+        motivationLeft: charged.motivation,
+      });
+    } catch (error) {
+      return economyErrorResponse(error);
+    }
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      credits: { decrement: cost },
-      motivation: currentMotivation - 10,
-      lastMotivationAt: now,
-    },
-  });
+  const charged = await guardedPilotUpdate(prisma, session.user.id, chargeGuard, charge);
+  if (!charged) {
+    return NextResponse.json({ error: BUSY_ERROR }, { status: 409 });
+  }
 
   return NextResponse.json({
     found: false,
     item: null,
     message: "Sifted through wreckage but found nothing useful.",
-    credits: pilot.credits - cost,
-    motivationLeft: currentMotivation - 10,
+    credits: charged.credits,
+    motivationLeft: charged.motivation,
   });
 }

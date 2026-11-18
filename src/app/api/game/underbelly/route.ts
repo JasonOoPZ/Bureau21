@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { pilotHasGodCard } from "@/lib/item-data";
 import { prisma } from "@/lib/prisma";
@@ -52,17 +53,26 @@ export async function POST(request: Request) {
 
   const won = Math.random() < WIN_CHANCE;
   const creditDelta = won ? Math.floor(bet * WIN_MULTIPLIER) - bet : -bet;
-  const newCredits = pilot.credits + creditDelta;
 
   // Roll dice faces for animation data (client uses these to show the result)
   const die1 = Math.floor(Math.random() * 6) + 1;
   const die2 = Math.floor(Math.random() * 6) + 1;
   const diceTotal = die1 + die2;
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: { credits: newCredits },
-  });
+  // Guarded, relative settle: the stake must still be covered at write time.
+  const settled = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { credits: { gte: bet } },
+    { credits: { increment: creditDelta } }
+  );
+  if (!settled) {
+    return NextResponse.json(
+      { error: "Insufficient credits for that bet." },
+      { status: 400 }
+    );
+  }
+  const newCredits = settled.credits;
 
   return NextResponse.json({
     won,

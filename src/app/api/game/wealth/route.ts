@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { getServerSession } from "next-auth";
@@ -24,8 +25,17 @@ function json(data: Record<string, unknown>, status = 200) {
 }
 
 export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    return economyErrorResponse(error);
+  }
+}
+
+async function handlePost(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return json({ error: "Unauthorized." }, 401);
+  const userId = session.user.id;
 
   const rl = rateLimit(`wealth:${session.user.id}`, 20, 60_000);
   if (rl.limited) return json({ error: "Too many requests." }, 429);
@@ -103,12 +113,27 @@ export async function POST(request: Request) {
 
     let updated;
     try {
-      [updated] = await prisma.$transaction([
-        prisma.pilotState.update({
-          where: { userId: session.user.id },
-          data: { tokens: { decrement: amt } },
-        }),
-        prisma.wealthInvestment.create({
+      updated = await economyTx(async (tx) => {
+        // Guarded debit first. It row-locks the pilot, so parallel buys queue
+        // up and the position checks below see every position opened before.
+        const row = await guardedPilotUpdate(
+          tx,
+          userId,
+          { tokens: { gte: amt } },
+          { tokens: { decrement: amt } }
+        );
+        if (!row) throw new EconomyError("Insufficient Sovereigns.");
+
+        const open = await tx.wealthInvestment.findMany({
+          where: { pilotId: pilot.id },
+          select: { days: true },
+        });
+        if (open.length >= MAX_INVESTMENTS)
+          throw new EconomyError(`Maximum ${MAX_INVESTMENTS} active investments allowed.`);
+        if (open.some((inv) => inv.days === investmentDays))
+          throw new EconomyError(`You already have an active ${tier.name} position. Only one per type allowed.`);
+
+        await tx.wealthInvestment.create({
           data: {
             pilotId: pilot.id,
             name: tier.name,
@@ -118,8 +143,9 @@ export async function POST(request: Request) {
             maturesAt,
             lastClaimedAt: now,
           },
-        }),
-      ]);
+        });
+        return row;
+      });
     } catch (e: unknown) {
       if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002") {
         return json({ error: `You already have an active ${tier.name} position. Only one per type allowed.` }, 400);
@@ -163,16 +189,19 @@ export async function POST(request: Request) {
     const yieldAmount = Math.floor(inv.amount * (dailyRate / 100) * claimableDays);
     if (yieldAmount < 1) return json({ error: "Yield too small to claim." }, 400);
 
-    const [updated] = await prisma.$transaction([
-      prisma.pilotState.update({
-        where: { userId: session.user.id },
-        data: { tokens: { increment: yieldAmount } },
-      }),
-      prisma.wealthInvestment.update({
-        where: { id: inv.id },
+    const updated = await economyTx(async (tx) => {
+      // Advancing the claim marker is the claim: it only succeeds for the one
+      // request that still sees the marker the yield was computed from.
+      const claimed = await tx.wealthInvestment.updateMany({
+        where: { id: inv.id, pilotId: pilot.id, lastClaimedAt: inv.lastClaimedAt },
         data: { lastClaimedAt: now },
-      }),
-    ]);
+      });
+      if (claimed.count !== 1) throw new EconomyError("No yield to claim yet. Yield accrues daily.");
+      return tx.pilotState.update({
+        where: { userId },
+        data: { tokens: { increment: yieldAmount } },
+      });
+    });
 
     const allInvestments = await prisma.wealthInvestment.findMany({
       where: { pilotId: pilot.id },
@@ -208,13 +237,18 @@ export async function POST(request: Request) {
 
     const payout = inv.amount + remainingYield;
 
-    const [updated] = await prisma.$transaction([
-      prisma.pilotState.update({
-        where: { userId: session.user.id },
+    const updated = await economyTx(async (tx) => {
+      // Deleting the position is the claim. The claim marker is part of the
+      // guard so a yield claim racing this collect cannot be paid twice.
+      const removed = await tx.wealthInvestment.deleteMany({
+        where: { id: inv.id, pilotId: pilot.id, lastClaimedAt: inv.lastClaimedAt },
+      });
+      if (removed.count !== 1) throw new EconomyError("Investment not found.", 404);
+      return tx.pilotState.update({
+        where: { userId },
         data: { tokens: { increment: payout } },
-      }),
-      prisma.wealthInvestment.delete({ where: { id: inv.id } }),
-    ]);
+      });
+    });
 
     const allInvestments = await prisma.wealthInvestment.findMany({
       where: { pilotId: pilot.id },
@@ -240,13 +274,17 @@ export async function POST(request: Request) {
     const penalty = Math.floor(inv.amount * 0.15);
     const payout = inv.amount - penalty;
 
-    const [updated] = await prisma.$transaction([
-      prisma.pilotState.update({
-        where: { userId: session.user.id },
+    const updated = await economyTx(async (tx) => {
+      // Deleting the position is the claim: only the request that removes it is paid.
+      const removed = await tx.wealthInvestment.deleteMany({
+        where: { id: inv.id, pilotId: pilot.id },
+      });
+      if (removed.count !== 1) throw new EconomyError("Investment not found.", 404);
+      return tx.pilotState.update({
+        where: { userId },
         data: { tokens: { increment: payout } },
-      }),
-      prisma.wealthInvestment.delete({ where: { id: inv.id } }),
-    ]);
+      });
+    });
 
     const allInvestments = await prisma.wealthInvestment.findMany({
       where: { pilotId: pilot.id },

@@ -1,7 +1,7 @@
 import { authOptions } from "@/auth";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
 import {
   applyEquipmentBonuses,
-  applyLevelProgression,
   applyPassiveRegeneration,
   checkCooldown,
   COOLDOWN_SECONDS,
@@ -18,6 +18,8 @@ import { z } from "zod";
 const schema = z.object({
   action: z.enum(["scan", "mine", "patrol", "repair", "jump", "use_herb"]),
 });
+
+const RECHARGING_ERROR = "Recharging... try again in a moment.";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -61,7 +63,6 @@ export async function POST(request: Request) {
   let hull = regen.hull;
   let lifeForce = regen.lifeForce;
   let xp = current.xp;
-  let level = current.level;
   let currentSector = current.currentSector;
   let kills = current.kills;
   let message = "";
@@ -111,14 +112,17 @@ export async function POST(request: Request) {
     }
     const restored = Math.min(GAME_CONSTANTS.BLUE_HERB_REVIVE_LF, maxLF - lifeForce);
     lifeForce = Math.min(maxLF, lifeForce + GAME_CONSTANTS.BLUE_HERB_REVIVE_LF);
-    await prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: {
-        lifeForce,
-        herbs: { decrement: 1 },
-        lastActionAt: new Date(),
-      },
-    });
+    // Compare-and-swap on lastActionAt claims the action slot; the herb
+    // check is in the same WHERE clause so one herb is never used twice.
+    const used = await guardedPilotUpdate(
+      prisma,
+      session.user.id,
+      { lastActionAt: current.lastActionAt, herbs: { gte: 1 } },
+      { lifeForce, herbs: { decrement: 1 }, lastActionAt: new Date() }
+    );
+    if (!used) {
+      return NextResponse.json({ error: RECHARGING_ERROR }, { status: 429 });
+    }
     const finalState = await prisma.pilotState.findUnique({
       where: { userId: session.user.id },
       include: { missions: true, inventory: { orderBy: { createdAt: "desc" } } },
@@ -150,34 +154,45 @@ export async function POST(request: Request) {
     xp += baseXp;
   }
 
-  const progressed = applyLevelProgression(xp, level);
-  xp = progressed.xp;
-  level = progressed.level;
+  // Everything this action earned or spent, as deltas against the row we read.
+  const creditsDelta = credits - current.credits;
+  const xpGain = xp - current.xp;
+  const killsGain = kills - current.kills;
 
-  // Try item drop
+  // Persist with a compare-and-swap on lastActionAt. That one guard both
+  // enforces the cooldown atomically (N parallel actions => one applies) and
+  // proves no other action ran since our read, so the regen-derived fuel/hull
+  // values are still valid. Credits, XP and kills are applied as deltas and a
+  // spend (repair) must still be covered at write time.
+  const applied = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    {
+      lastActionAt: current.lastActionAt,
+      ...(creditsDelta < 0 ? { credits: { gte: -creditsDelta } } : {}),
+    },
+    {
+      credits: { increment: creditsDelta },
+      fuel: Math.max(0, fuel),
+      hull: Math.max(0, hull),
+      lifeForce,
+      xp: { increment: xpGain },
+      currentSector,
+      kills: { increment: killsGain },
+      lastActionAt: new Date(),
+      lastFuelRegen: regen.lastFuelRegen,
+    }
+  );
+  if (!applied) {
+    return NextResponse.json({ error: RECHARGING_ERROR }, { status: 429 });
+  }
+
+  // Try item drop (only for the request that actually claimed the action)
   const drop = await tryDropItem(current.id, action);
   if (drop) {
     const tierLabel = drop.tier === 3 ? "LEGENDARY" : drop.tier === 2 ? "RARE" : "Common";
     message += ` [LOOT: ${tierLabel} — ${drop.name}!]`;
   }
-
-  // Persist pilot state update
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      credits: Math.max(0, credits),
-      fuel: Math.max(0, fuel),
-      hull: Math.max(0, hull),
-      lifeForce,
-      xp,
-      level,
-      unspentPoints: { increment: progressed.pointsEarned },
-      currentSector,
-      kills,
-      lastActionAt: new Date(),
-      lastFuelRegen: regen.lastFuelRegen,
-    },
-  });
 
   // Track mission progress
   const missions = await getOrCreateMissions(current.id);
@@ -191,11 +206,12 @@ export async function POST(request: Request) {
   for (const mission of activeMissions) {
     const newCount = mission.currentCount + 1;
     const isCompleted = newCount >= mission.targetCount;
-    await prisma.mission.update({
-      where: { id: mission.id },
-      data: { currentCount: newCount, completed: isCompleted },
+    // Guarded on completed=false so a mission reward is paid at most once.
+    const progressedMission = await prisma.mission.updateMany({
+      where: { id: mission.id, completed: false },
+      data: { currentCount: { increment: 1 }, completed: isCompleted },
     });
-    if (isCompleted) {
+    if (isCompleted && progressedMission.count === 1) {
       message += ` [MISSION COMPLETE: ${mission.title}! +${mission.rewardXp} XP, +${mission.rewardCredits} credits]`;
       await prisma.pilotState.update({
         where: { userId: session.user.id },
@@ -206,6 +222,9 @@ export async function POST(request: Request) {
       });
     }
   }
+
+  // Convert banked XP (action + mission rewards) into levels and stat points.
+  await settleLevelProgression(prisma, session.user.id);
 
   // Fetch final state with inventory and missions
   const finalState = await prisma.pilotState.findUnique({

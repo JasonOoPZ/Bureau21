@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { EconomyError, economyErrorResponse, economyTx } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -33,17 +34,25 @@ export async function POST(request: Request) {
   const tierValues: Record<number, number> = { 1: 50, 2: 200, 3: 750 };
   const value = tierValues[item.tier] ?? 50;
 
-  await prisma.$transaction([
-    prisma.inventoryItem.delete({ where: { id: item.id } }),
-    prisma.pilotState.update({
-      where: { userId: session.user.id },
-      data: { credits: { increment: value } },
-    }),
-  ]);
+  try {
+    // Deleting the item is the claim: only the request that actually removes it is paid.
+    const updated = await economyTx(async (tx) => {
+      const removed = await tx.inventoryItem.deleteMany({
+        where: { id: item.id, pilotId: pilot.id, equipped: false },
+      });
+      if (removed.count !== 1) throw new EconomyError("Item not found or is equipped.");
+      return tx.pilotState.update({
+        where: { id: pilot.id },
+        data: { credits: { increment: value } },
+      });
+    });
 
-  return NextResponse.json({
-    sold: item.name,
-    creditsGained: value,
-    credits: pilot.credits + value,
-  });
+    return NextResponse.json({
+      sold: item.name,
+      creditsGained: value,
+      credits: updated.credits,
+    });
+  } catch (error) {
+    return economyErrorResponse(error);
+  }
 }
