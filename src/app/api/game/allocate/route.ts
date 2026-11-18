@@ -28,7 +28,8 @@ const STAT_LABELS: Record<Stat, string> = {
 function statIncrement(stat: Stat, amount: number): Prisma.PilotStateUpdateManyMutationInput {
   switch (stat) {
     case "hp":
-      return { lifeForce: { increment: amount } };
+      // Raises the maximum (so regen refills it) and grants the points now.
+      return { lifeForce: { increment: amount }, bonusLifeForce: { increment: amount } };
     case "strength":
       return { strength: { increment: amount } };
     case "speed":

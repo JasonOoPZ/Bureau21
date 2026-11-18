@@ -115,9 +115,9 @@ export async function POST(request: Request) {
   }
 
   if (leveledUp) {
-    // Level-up refill: raise LF to the new max, but never lower LF that is
-    // already above it (allocated HP).
-    const newMax = maxLifeForce({ level: claimed.level });
+    // Level-up refill: raise LF to the new max (which includes allocated HP),
+    // but never lower LF that is already above it.
+    const newMax = maxLifeForce(claimed);
     await guardedPilotUpdate(prisma, session.user.id, { lifeForce: { lt: newMax } }, { lifeForce: newMax });
   }
 
