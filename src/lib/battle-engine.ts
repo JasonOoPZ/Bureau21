@@ -41,6 +41,20 @@ export interface BattleOutcome {
   logText: string;
 }
 
+/**
+ * Credits a defender may still lose right now under the rolling 24h loss cap.
+ * The cap is a share of (credits on hand + credits already lost in the
+ * window), i.e. of what they would hold had they lost nothing, so repeated
+ * losses consume one fixed allowance instead of 10% of a shrinking balance
+ * each time. Never more than they hold; never negative.
+ */
+export function pvpDefenderLossAllowance(credits: number, lostInWindow: number): number {
+  const onHand = Math.max(0, Math.floor(credits));
+  const lost = Math.max(0, Math.floor(lostInWindow));
+  const cap = Math.floor((onHand + lost) * GAME_CONSTANTS.PVP_DEFENDER_DAILY_LOSS_RATIO);
+  return Math.max(0, Math.min(onHand, cap - lost));
+}
+
 export interface PvpPilotInput {
   callsign: string;
   level: number;
@@ -52,6 +66,8 @@ export interface PvpPilotInput {
   characterSlug?: string;
   /** Credits on hand. When given, the loser never pays more than this. */
   credits?: number;
+  /** Extra ceiling on what this pilot pays if they lose (the defender's daily loss cap). */
+  maxLoss?: number;
   inventory: { type: string; bonusType: string; bonusAmt: number; equipped: boolean }[];
 }
 
@@ -175,8 +191,11 @@ export function resolvePvpBattle(
   // Credits: the winner's purse is taken from the loser, never minted, and is
   // limited to what the loser actually has.
   const stake = Math.max(10, Math.floor(15 + loserLevel * 5));
-  const loserCredits = (attackerWon ? defenderInput : attackerInput).credits;
-  const winCredits = loserCredits === undefined ? stake : Math.max(0, Math.min(stake, Math.floor(loserCredits)));
+  const loser = attackerWon ? defenderInput : attackerInput;
+  const winCredits = Math.max(
+    0,
+    Math.min(stake, Math.floor(loser.credits ?? stake), Math.floor(loser.maxLoss ?? stake))
+  );
   const loseCredits = -winCredits;
 
   // Apply hero XP multipliers

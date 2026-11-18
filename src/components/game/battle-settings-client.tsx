@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { GAME_CONSTANTS } from "@/lib/constants";
+
+const MIN_COOLDOWN = GAME_CONSTANTS.PVP_MIN_DEFENDER_COOLDOWN_MINUTES;
+const COOLDOWN_OPTIONS = [5, 10, 15, 20, 30].filter((m) => m >= MIN_COOLDOWN);
 
 interface Props {
   initial: {
@@ -17,7 +21,10 @@ interface Props {
 export function BattleSettingsClient({ initial }: Props) {
   const [autoHerbs, setAutoHerbs] = useState(initial.autoHerbs);
   const [hideBattleLogs, setHideBattleLogs] = useState(initial.hideBattleLogs);
-  const [battleCooldown, setBattleCooldown] = useState(initial.battleCooldown);
+  const [battleCooldown, setBattleCooldown] = useState(
+    // Older saves may hold 1-3 minutes, which already behave as the minimum.
+    Math.max(MIN_COOLDOWN, initial.battleCooldown)
+  );
   const [combatStimUse, setCombatStimUse] = useState(initial.combatStimUse);
   const [atkSplit, setAtkSplit] = useState(initial.atkSplit);
   const [loading, setLoading] = useState(false);
@@ -85,7 +92,7 @@ export function BattleSettingsClient({ initial }: Props) {
             onChange={(e) => setBattleCooldown(parseInt(e.target.value))}
             className="rounded border border-slate-700 bg-black/60 px-2 py-0.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-700"
           >
-            {[1, 2, 3, 5, 10, 15, 20, 30].map((m) => (
+            {COOLDOWN_OPTIONS.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>

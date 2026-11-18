@@ -8,7 +8,7 @@ import {
   type Db,
 } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { resolvePvpBattle } from "@/lib/battle-engine";
+import { pvpDefenderLossAllowance, resolvePvpBattle } from "@/lib/battle-engine";
 import type { BattleOutcome, PvpPilotInput, PvpTarget } from "@/lib/battle-engine";
 import { computeHeroBonuses, applyHeroXpProgression } from "@/lib/hero-data";
 import { loadPilotForPlay, syncVitals } from "@/lib/pilot-sync";
@@ -129,6 +129,27 @@ async function assertBattleAllowed(tx: Db, attacker: Combatant, defender: Combat
   }
 }
 
+/**
+ * What the defender can still lose under the rolling 24h loss cap. Runs under
+ * the defender's row lock, and every battle writes its log row in the same
+ * transaction, so concurrent battles cannot both spend the same allowance.
+ *
+ * BattleLog has no attacker/defender column, so the sum covers every PvP
+ * credit loss in the window, including fights this pilot started and lost.
+ * That only makes the cap stricter, never looser.
+ */
+async function defenderLossAllowance(tx: Db, defender: Combatant, now: Date): Promise<number> {
+  const recent = await tx.battleLog.aggregate({
+    where: {
+      pilotId: defender.id,
+      creditsGained: { lt: 0 },
+      createdAt: { gte: new Date(now.getTime() - PAIR_WINDOW_MS) },
+    },
+    _sum: { creditsGained: true },
+  });
+  return pvpDefenderLossAllowance(defender.credits, -(recent._sum.creditsGained ?? 0));
+}
+
 function toBattleInput(pilot: Combatant): PvpPilotInput {
   return {
     callsign: pilot.callsign,
@@ -208,9 +229,11 @@ async function runBattle(tx: Db, attackerUserId: string, defenderUserId: string)
     tx.playerHero.findMany({ where: { pilotId: defender.id, active: true } }),
   ]);
 
+  const defenderMaxLoss = await defenderLossAllowance(tx, defender, now);
+
   const outcome = resolvePvpBattle(
     toBattleInput(attacker),
-    toBattleInput(defender),
+    { ...toBattleInput(defender), maxLoss: defenderMaxLoss },
     computeHeroBonuses(attackerHeroes),
     computeHeroBonuses(defenderHeroes)
   );

@@ -29,6 +29,12 @@ export const GAME_CONSTANTS = {
   PVP_MIN_DEFENDER_COOLDOWN_MINUTES: 5,
   /** Battles allowed between the same two pilots per rolling 24h (either direction). */
   PVP_PAIR_DAILY_CAP: 5,
+  /**
+   * Share of a pilot's on-hand credits they can lose in PvP per rolling 24h.
+   * Measured against credits now + credits already lost in the window, so the
+   * allowance does not shrink (or reset) as they lose.
+   */
+  PVP_DEFENDER_DAILY_LOSS_RATIO: 0.1,
   /** Life Force needed to attack or be attacked: the larger of these two. */
   PVP_MIN_LIFE_FORCE: 5,
   PVP_MIN_LIFE_FORCE_RATIO: 0.2,

@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { GAME_CONSTANTS } from "@/lib/constants";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -8,7 +9,12 @@ import { z } from "zod";
 const updateSchema = z.object({
   autoHerbs: z.boolean().optional(),
   hideBattleLogs: z.boolean().optional(),
-  battleCooldown: z.number().int().min(1).max(30).optional(),
+  battleCooldown: z
+    .number()
+    .int()
+    .min(GAME_CONSTANTS.PVP_MIN_DEFENDER_COOLDOWN_MINUTES)
+    .max(GAME_CONSTANTS.BATTLE_GAUGE_MAX_MINUTES)
+    .optional(),
   combatStimUse: z.enum(["never", "attack_only", "defend_only", "attack_or_defend"]).optional(),
   atkSplit: z.number().int().min(0).max(100).optional(),
 });
