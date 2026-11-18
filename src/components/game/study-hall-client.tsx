@@ -131,7 +131,7 @@ export function StudyHallClient({ courses, progress, motivation, studyCost }: Pr
                     </span>
                   </td>
                   <td className="px-3 py-1.5 text-right font-mono text-slate-300">
-                    {pts} / {course.maxPoints.toLocaleString()}
+                    {pts} / {course.maxPoints.toLocaleString("en-US")}
                   </td>
                   <td className="px-3 py-1.5 text-right">
                     {isMax ? (

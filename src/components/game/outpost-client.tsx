@@ -36,7 +36,7 @@ export function OutpostClient({ credits: initCredits, level, canClaim: initCan, 
           Supplies replenish every 24 hours. Income scales with your pilot level.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-4 text-[11px]">
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Level: </span><span className="font-bold text-cyan-300">{level}</span></div>
           <div><span className="text-slate-500">Daily Income: </span><span className="font-bold text-emerald-300">{expectedIncome} cr</span></div>
           <div><span className="text-slate-500">Status: </span><span className={`font-bold ${canClaim ? "text-emerald-300" : "text-amber-300"}`}>{canClaim ? "Ready" : `${hoursLeft}h remaining`}</span></div>

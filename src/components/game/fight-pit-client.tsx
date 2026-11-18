@@ -49,7 +49,7 @@ export function FightPitClient({ motivation: initMot, lifeForce: initLF, credits
           No weapons, no shields, no rules. Just raw brutality and a cheering crowd.
         </p>
         <div className="mt-3 grid grid-cols-3 gap-4 text-center text-[11px]">
-          <div><span className="text-slate-500">Credits</span><br/><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits</span><br/><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Life Force</span><br/><span className="font-bold text-emerald-300">{lifeForce}</span></div>
           <div><span className="text-slate-500">Motivation</span><br/><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>

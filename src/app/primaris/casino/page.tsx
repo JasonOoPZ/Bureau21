@@ -477,7 +477,7 @@ export default async function CasinoPage() {
                 </div>
                 <div className="hidden sm:block text-right">
                   <div className="text-[10px] uppercase tracking-widest text-slate-500">Credits</div>
-                  <div className="text-lg font-black text-amber-400 font-mono drop-shadow-lg" style={{ textShadow: "0 0 12px rgba(245,158,11,0.4)" }}>{pilot.credits.toLocaleString()} ₡</div>
+                  <div className="text-lg font-black text-amber-400 font-mono drop-shadow-lg" style={{ textShadow: "0 0 12px rgba(245,158,11,0.4)" }}>{pilot.credits.toLocaleString("en-US")} ₡</div>
                 </div>
               </div>
             </div>
@@ -486,7 +486,7 @@ export default async function CasinoPage() {
           {/* Credits display for mobile */}
           <div className="sm:hidden rounded-md border border-purple-900/30 bg-[#0b0f14] px-4 py-2.5 flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-widest text-slate-500">Credits</span>
-            <span className="text-lg font-black text-amber-400 font-mono">{pilot.credits.toLocaleString()} ₡</span>
+            <span className="text-lg font-black text-amber-400 font-mono">{pilot.credits.toLocaleString("en-US")} ₡</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -555,7 +555,7 @@ export default async function CasinoPage() {
                   <path d="M24 4l4 10h10l-8 6 3 10-9-6-9 6 3-10-8-6h10z" fill="#f59e0b" />
                 </svg>
                 <p className="text-[10px] text-amber-500/70 uppercase tracking-wider font-semibold">Casino Revenue</p>
-                <p className="text-xl font-black text-amber-400 font-mono mt-1">{casinoRevenue.toLocaleString()} ₡</p>
+                <p className="text-xl font-black text-amber-400 font-mono mt-1">{casinoRevenue.toLocaleString("en-US")} ₡</p>
                 <p className="text-[9px] text-slate-600 mt-0.5">All-time house earnings</p>
               </div>
               <div className="relative overflow-hidden rounded-lg border border-red-900/40 bg-gradient-to-br from-red-950/30 to-black/40 p-4 text-center">
@@ -568,7 +568,7 @@ export default async function CasinoPage() {
                 {highRoller ? (
                   <>
                     <p className="text-base font-black text-red-300 mt-1">{nameMap[highRoller] ?? "Unknown"}</p>
-                    <p className="text-[10px] text-slate-600 font-mono">{pilotAgg[highRoller].wagered.toLocaleString()} ₡ wagered</p>
+                    <p className="text-[10px] text-slate-600 font-mono">{pilotAgg[highRoller].wagered.toLocaleString("en-US")} ₡ wagered</p>
                   </>
                 ) : (
                   <p className="text-xs text-slate-600 mt-2">No bets yet</p>
@@ -583,7 +583,7 @@ export default async function CasinoPage() {
                 {biggestLoser && pilotAgg[biggestLoser].net < 0 ? (
                   <>
                     <p className="text-base font-black text-purple-300 mt-1">{nameMap[biggestLoser] ?? "Unknown"}</p>
-                    <p className="text-[10px] text-slate-600 font-mono">{Math.abs(pilotAgg[biggestLoser].net).toLocaleString()} ₡ lost</p>
+                    <p className="text-[10px] text-slate-600 font-mono">{Math.abs(pilotAgg[biggestLoser].net).toLocaleString("en-US")} ₡ lost</p>
                   </>
                 ) : (
                   <p className="text-xs text-slate-600 mt-2">No losses yet</p>
@@ -631,16 +631,16 @@ export default async function CasinoPage() {
                 <div className="rounded-lg border border-slate-800 bg-black/40 p-2.5 text-center">
                   <p className="text-[10px] text-slate-500">Net P&L</p>
                   <p className={`text-sm font-bold font-mono ${stats.totalNet >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {stats.totalNet >= 0 ? "+" : ""}{stats.totalNet.toLocaleString()} ₡
+                    {stats.totalNet >= 0 ? "+" : ""}{stats.totalNet.toLocaleString("en-US")} ₡
                   </p>
                 </div>
                 <div className="rounded-lg border border-slate-800 bg-black/40 p-2.5 text-center">
                   <p className="text-[10px] text-slate-500">Avg Bet</p>
-                  <p className="text-sm font-bold text-amber-400 font-mono">{stats.averageBet.toLocaleString()} ₡</p>
+                  <p className="text-sm font-bold text-amber-400 font-mono">{stats.averageBet.toLocaleString("en-US")} ₡</p>
                 </div>
               </div>
               <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500">
-                <span>Total Wagered: <span className="text-slate-300 font-mono">{stats.totalWagered.toLocaleString()} ₡</span></span>
+                <span>Total Wagered: <span className="text-slate-300 font-mono">{stats.totalWagered.toLocaleString("en-US")} ₡</span></span>
                 <span className="text-slate-700">|</span>
                 <span>Favorite Game: <span className="text-red-300">{GAME_LABELS[stats.favoriteGame] ?? stats.favoriteGame}</span></span>
               </div>

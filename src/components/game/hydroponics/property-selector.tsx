@@ -69,7 +69,7 @@ export function PropertySelector({ owned, selectedId, credits, onSelect, onBuy }
                 <div className="mt-1.5">
                   {p.cost > 0 ? (
                     <span className={`text-[10px] font-mono ${canAfford ? "text-amber-400" : "text-red-500"}`}>
-                      {p.cost.toLocaleString()} cr
+                      {p.cost.toLocaleString("en-US")} cr
                     </span>
                   ) : (
                     <span className="text-[10px] text-emerald-400">FREE</span>

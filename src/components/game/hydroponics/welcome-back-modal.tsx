@@ -37,7 +37,7 @@ export function WelcomeBackModal({ report, onClose }: Props) {
             <Row icon="🔬" label="Research earned" value={`+${report.rpEarned} RP`} color="text-purple-400" />
           )}
           {report.wagesDeducted > 0 && (
-            <Row icon="💰" label="Wages paid" value={`-${report.wagesDeducted.toLocaleString()} cr`} color="text-red-400" />
+            <Row icon="💰" label="Wages paid" value={`-${report.wagesDeducted.toLocaleString("en-US")} cr`} color="text-red-400" />
           )}
           {report.eventsOccurred.length > 0 && (
             <Row icon="⚡" label="Events occurred" value={`${report.eventsOccurred.length}`} color="text-amber-400" />

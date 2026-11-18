@@ -39,7 +39,7 @@ export function SalvageYardClient({ motivation: initMot, credits: initCredits }:
           Pay 200 credits and spend 10 motivation to dig through the wreckage. You might find something valuable — or nothing at all.
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>

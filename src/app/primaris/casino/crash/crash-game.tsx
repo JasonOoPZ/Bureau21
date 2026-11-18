@@ -180,7 +180,7 @@ function drawHUD(ctx: CanvasRenderingContext2D, mult: number, payout: number, sc
 
   ctx.font = "bold 14px monospace";
   ctx.fillStyle = "#94a3b8";
-  ctx.fillText(`${payout.toLocaleString()} ₡`, W / 2, 66);
+  ctx.fillText(`${payout.toLocaleString("en-US")} ₡`, W / 2, 66);
 
   ctx.font = "10px monospace";
   ctx.fillStyle = "#475569";
@@ -457,7 +457,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
     if (settleRef.current) return;
     settleRef.current = true;
 
-    const fallback = `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount.toLocaleString()} ₡`;
+    const fallback = `Crashed at ${g.multiplier.toFixed(2)}x! Lost ${g.betAmount.toLocaleString("en-US")} ₡`;
     try {
       const res = await fetch(CRASH_API, { method: "DELETE" });
       const data = await res.json();
@@ -649,7 +649,7 @@ export function CrashGame({ initialCredits }: { initialCredits: number }) {
               onClick={(e) => { e.stopPropagation(); cashOut(); }}
               className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-green-600/90 hover:bg-green-500 px-6 py-3 font-bold text-white text-sm backdrop-blur-sm shadow-[0_0_20px_rgba(34,197,94,0.3)] transition animate-pulse focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              💰 Cash Out ({Math.floor(bet * displayMult).toLocaleString()} ₡)
+              💰 Cash Out ({Math.floor(bet * displayMult).toLocaleString("en-US")} ₡)
             </button>
           )}
         </div>

@@ -50,7 +50,7 @@ export function InfoBrokerClient({ credits: initCredits }: Props) {
           on any pilot — stats, equipment, syndicate affiliation, and more.
         </p>
         <p className="mt-2 text-[11px] text-slate-300">
-          Credits: <span className="font-bold text-amber-300">{credits.toLocaleString()}</span>
+          Credits: <span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span>
         </p>
       </div>
 

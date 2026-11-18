@@ -86,7 +86,7 @@ export function UnderbellyClient({ initialCredits, pilotLevel, hasGodCard }: Pro
       <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4 flex items-center justify-between">
         <span className="text-sm text-slate-400">Your Credits</span>
         <span className="font-[family-name:var(--font-orbitron)] text-xl font-bold text-amber-300">
-          {credits.toLocaleString()} cr
+          {credits.toLocaleString("en-US")} cr
         </span>
       </div>
 

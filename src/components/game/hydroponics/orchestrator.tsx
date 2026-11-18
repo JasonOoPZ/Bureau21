@@ -169,7 +169,7 @@ export function HydroponicsOrchestrator() {
       {/* Top Bar */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-[#0a0d11] px-4 py-2.5">
         <div className="flex items-center gap-1.5 text-[11px]">
-          <span className="text-amber-400 font-mono font-bold">{credits.toLocaleString()}</span>
+          <span className="text-amber-400 font-mono font-bold">{credits.toLocaleString("en-US")}</span>
           <span className="text-slate-500">Credits</span>
         </div>
         <div className="flex items-center gap-1.5 text-[11px]">

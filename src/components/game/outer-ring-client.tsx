@@ -147,7 +147,7 @@ export function OuterRingClient({ pilotLevel, pilotLf, pilotCredits, hasGodCard 
       {/* Pilot status */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4 text-center">
-          <div className="text-xl font-bold text-amber-300">{credits.toLocaleString()}</div>
+          <div className="text-xl font-bold text-amber-300">{credits.toLocaleString("en-US")}</div>
           <div className="text-xs text-slate-500 mt-1">Credits</div>
         </div>
         <div className="rounded-xl border border-rose-900/40 bg-rose-900/10 p-4 text-center">

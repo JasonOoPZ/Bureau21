@@ -48,7 +48,7 @@ export function FishingHutClient({ motivation: initMot, credits: initCredits, fi
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
           <div><span className="text-slate-500">Fish Caught: </span><span className="font-bold text-cyan-300">{fish}</span></div>
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>

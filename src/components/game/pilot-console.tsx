@@ -46,6 +46,7 @@ const actions = [
 ] as const;
 
 const COOLDOWN_SECONDS = 2;
+const COOLDOWN_TICK_MS = 100;
 
 const TIER_COLORS: Record<number, string> = {
   1: "text-slate-300",
@@ -62,6 +63,22 @@ const BONUS_DESC: Record<string, string> = {
 
 type Tab = "ops" | "inventory" | "contracts";
 
+interface PilotSnapshot {
+  state: PilotState;
+  missions: Mission[];
+}
+
+/** Loads the pilot state; resolves to null when the server refuses or is unreachable. */
+async function fetchPilotSnapshot(): Promise<PilotSnapshot | null> {
+  try {
+    const response = await fetch("/api/game/state", { cache: "no-store" });
+    if (!response.ok) return null;
+    return (await response.json()) as PilotSnapshot;
+  } catch {
+    return null;
+  }
+}
+
 export function PilotConsole() {
   const [state, setState] = useState<PilotState | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -70,20 +87,17 @@ export function PilotConsole() {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [tab, setTab] = useState<Tab>("ops");
 
-  async function refreshState() {
-    const response = await fetch("/api/game/state", { cache: "no-store" });
-    if (!response.ok) { setMessage("Unable to load pilot state."); return; }
-    const payload = (await response.json()) as { state: PilotState; missions: Mission[] };
-    setState(payload.state);
-    setMissions(payload.missions);
+  function applySnapshot(snapshot: PilotSnapshot | null) {
+    if (!snapshot) { setMessage("Unable to load pilot state."); return; }
+    setState(snapshot.state);
+    setMissions(snapshot.missions);
     setMessage("Command console synchronized.");
   }
 
-  function calculateCooldown() {
-    if (!state) return;
-    const elapsed = (Date.now() - new Date(state.lastActionAt).getTime()) / 1000;
-    setCooldownRemaining(Math.max(0, COOLDOWN_SECONDS - elapsed));
+  async function refreshState() {
+    applySnapshot(await fetchPilotSnapshot());
   }
+
 
   async function executeAction(action: (typeof actions)[number]["id"]) {
     setBusy(true);
@@ -132,12 +146,40 @@ export function PilotConsole() {
     setBusy(false);
   }
 
-  useEffect(() => { refreshState(); }, []);
+  // Initial load. `active` drops the response if the console unmounts first.
   useEffect(() => {
-    const t = setInterval(calculateCooldown, 100);
-    return () => clearInterval(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+    let active = true;
+    fetchPilotSnapshot().then((snapshot) => {
+      if (!active) return;
+      if (!snapshot) { setMessage("Unable to load pilot state."); return; }
+      setState(snapshot.state);
+      setMissions(snapshot.missions);
+      setMessage("Command console synchronized.");
+    });
+    return () => { active = false; };
+  }, []);
+
+  // Re-arm only when the last action changes, and stop ticking once the
+  // cooldown has run out instead of polling every 100ms forever.
+  const lastActionAt = state?.lastActionAt ?? null;
+  useEffect(() => {
+    if (lastActionAt === null) return;
+    const lastActionMs = new Date(lastActionAt).getTime();
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const tick = () => {
+      const elapsed = (Date.now() - lastActionMs) / 1000;
+      const remaining = Math.max(0, COOLDOWN_SECONDS - elapsed);
+      setCooldownRemaining(remaining);
+      if (remaining === 0 && timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+    timer = setInterval(tick, COOLDOWN_TICK_MS);
+    return () => {
+      if (timer !== null) clearInterval(timer);
+    };
+  }, [lastActionAt]);
 
   const canAct = cooldownRemaining === 0 && !busy;
 

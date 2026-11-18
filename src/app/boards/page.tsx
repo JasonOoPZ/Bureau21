@@ -95,8 +95,8 @@ export default async function BoardsPage() {
                       <div className="text-[11px] text-slate-500 leading-tight">{board.desc}</div>
                     </div>
                     <div className="flex gap-8 shrink-0">
-                      <span className="w-16 text-right text-[12px] font-mono text-slate-400">{topicCount.toLocaleString()}</span>
-                      <span className="w-16 text-right text-[12px] font-mono text-slate-500">{topicCount.toLocaleString()}</span>
+                      <span className="w-16 text-right text-[12px] font-mono text-slate-400">{topicCount.toLocaleString("en-US")}</span>
+                      <span className="w-16 text-right text-[12px] font-mono text-slate-500">{topicCount.toLocaleString("en-US")}</span>
                     </div>
                   </Link>
                 );

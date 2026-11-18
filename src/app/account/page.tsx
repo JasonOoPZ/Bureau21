@@ -92,7 +92,7 @@ export default async function AccountPage() {
             <div className="grid gap-2 grid-cols-3 sm:grid-cols-6">
               {[
                 { label: "Level", value: pilot.level },
-                { label: "XP", value: pilot.xp.toLocaleString() },
+                { label: "XP", value: pilot.xp.toLocaleString("en-US") },
                 { label: "Credits", value: `${pilot.credits} cr` },
                 { label: "Sovereigns", value: pilot.tokens },
                 { label: "Inventory", value: `${inventoryCount}/20` },

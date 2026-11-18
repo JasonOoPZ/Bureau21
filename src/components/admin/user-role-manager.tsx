@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatGameDate } from "@/components/format";
 
 type UserRow = {
   id: string;
@@ -145,7 +146,7 @@ export function UserRoleManager({ users }: UserRoleManagerProps) {
                     </span>
                   </td>
                   <td className="py-3 text-slate-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {formatGameDate(user.createdAt)}
                   </td>
                   <td className="py-3">
                     <div className="flex gap-2">

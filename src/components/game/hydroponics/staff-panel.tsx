@@ -69,7 +69,7 @@ export function StaffPanel({ state, credits, onHire, onFire, onAssign, onClose }
               />
             </div>
             <div className="text-[9px] text-slate-400">
-              Cost: <span className="text-amber-400 font-mono">{hireCost.toLocaleString()} cr</span>
+              Cost: <span className="text-amber-400 font-mono">{hireCost.toLocaleString("en-US")} cr</span>
             </div>
             <button
               onClick={() => onHire(hireRole, hireSkill)}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatGameDate } from "@/components/format";
+import { useNow } from "@/components/use-now";
 
 // ── Inline SVG Graphics ────────────────────────────────────────────
 
@@ -139,6 +141,8 @@ interface Props {
   hasVentureCard: boolean;
   hasLimitlessCard: boolean;
   initialWealthInvestments: WealthInvestmentData[];
+  /** Server render time (epoch ms), so the first client render matches the server. */
+  serverNow: number;
 }
 
 export function BankClient({
@@ -148,8 +152,10 @@ export function BankClient({
   initialBondMaturesAt, initialBondCreatedAt, initialBondLastClaimedAt,
   buyRate, sellRate, initialBankTreasury, hasVentureCard, hasLimitlessCard: initialHasLimitlessCard,
   initialWealthInvestments,
+  serverNow,
 }: Props) {
   const [tab, setTab] = useState<Tab>("vault");
+  const nowMs = useNow(serverNow);
   const [credits, setCredits] = useState(initialCredits);
   const [bank, setBank] = useState(initialCreditsBank);
   const [tokens, setTokens] = useState(initialTokens);
@@ -250,20 +256,19 @@ export function BankClient({
   ];
 
   const bondMatures = bondMaturesAt ? new Date(bondMaturesAt) : null;
-  const bondMature = bondMatures ? bondMatures <= new Date() : false;
+  const bondMature = bondMatures ? bondMatures.getTime() <= nowMs : false;
   const selectedBondOpt = BOND_OPTIONS.find((b) => b.days === bondDays) ?? BOND_OPTIONS[2];
 
   // Calculate accrued yield for active bond
   const bondCreatedDate = bondCreatedAt ? new Date(bondCreatedAt) : null;
   const bondLastClaimedDate = bondLastClaimedAt ? new Date(bondLastClaimedAt) : null;
-  const now = new Date();
   let accruedYield = 0;
   let accruedDays = 0;
   if (bondAmount > 0 && activeBondDays > 0 && bondCreatedDate && bondLastClaimedDate) {
     const dailyRate = bondRate / activeBondDays;
     // Yield accrues at midnight UTC — first yield the day AFTER creation
     const accrualStart = Math.floor(bondCreatedDate.getTime() / 86_400_000) + 1;
-    const nowDay = Math.floor(now.getTime() / 86_400_000);
+    const nowDay = Math.floor(nowMs / 86_400_000);
     const claimedDay = Math.max(Math.floor(bondLastClaimedDate.getTime() / 86_400_000), accrualStart - 1);
     const totalDaysPassed = Math.min(Math.max(0, nowDay - accrualStart + 1), activeBondDays);
     const daysClaimed = Math.max(0, claimedDay - accrualStart + 1);
@@ -284,7 +289,7 @@ export function BankClient({
             <path d="M12 6.5v1M12 16.5v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
           <div className="text-[9px] uppercase tracking-[0.2em] text-amber-500 font-semibold">On Hand</div>
-          <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString()}</div>
+          <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString("en-US")}</div>
           <div className="text-[10px] text-amber-600 mt-0.5">₡ credits</div>
         </div>
         <div className="relative overflow-hidden rounded-xl border border-cyan-700/40 bg-gradient-to-br from-cyan-950/60 to-[#0a0d11] p-4">
@@ -294,7 +299,7 @@ export function BankClient({
             <circle cx="12" cy="12" r="0.8" fill="currentColor"/>
           </svg>
           <div className="text-[9px] uppercase tracking-[0.2em] text-cyan-500 font-semibold">In Vault</div>
-          <div className="text-2xl font-black text-cyan-300 font-mono mt-1">{bank.toLocaleString()}</div>
+          <div className="text-2xl font-black text-cyan-300 font-mono mt-1">{bank.toLocaleString("en-US")}</div>
           <div className="text-[10px] text-cyan-600 mt-0.5">₡ secured</div>
         </div>
         <div className="relative overflow-hidden rounded-xl border border-violet-700/40 bg-gradient-to-br from-violet-950/60 to-[#0a0d11] p-4">
@@ -302,7 +307,7 @@ export function BankClient({
             <path d="M12 2l2.5 6.5H22l-6 4.5 2.5 7L12 16l-6.5 4 2.5-7-6-4.5h7.5L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
           </svg>
           <div className="text-[9px] uppercase tracking-[0.2em] text-violet-500 font-semibold">Sovereigns</div>
-          <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString()}</div>
+          <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString("en-US")}</div>
           <div className="text-[10px] text-violet-600 mt-0.5">SVN</div>
         </div>
       </div>
@@ -313,7 +318,7 @@ export function BankClient({
           <span className="text-lg">⚠️</span>
           <div>
             <div className="text-[10px] uppercase tracking-wide text-red-500 font-semibold">Outstanding Debt</div>
-            <div className="text-sm font-bold text-red-300">{loanAmount.toLocaleString()} ₡</div>
+            <div className="text-sm font-bold text-red-300">{loanAmount.toLocaleString("en-US")} ₡</div>
           </div>
         </div>
       )}
@@ -329,16 +334,16 @@ export function BankClient({
               {bondMature ? "Bond Matured!" : "Active Investment"}
             </div>
             <div className="text-sm font-bold text-emerald-300">
-              {bondAmount.toLocaleString()} ₡ at {bondRate}%
+              {bondAmount.toLocaleString("en-US")} ₡ at {bondRate}%
               {!bondMature && bondMatures && (
-                <span className="text-xs text-slate-500 font-normal ml-2">matures {bondMatures.toLocaleDateString()}</span>
+                <span className="text-xs text-slate-500 font-normal ml-2">matures {formatGameDate(bondMatures)}</span>
               )}
             </div>
           </div>
           {bondMature && (
             <button onClick={() => api("collect_bond")} disabled={loading}
               className="px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-xs disabled:opacity-30 transition whitespace-nowrap">
-              Collect {Math.floor(bondAmount * (1 + bondRate / 100)).toLocaleString()} ₡
+              Collect {Math.floor(bondAmount * (1 + bondRate / 100)).toLocaleString("en-US")} ₡
             </button>
           )}
         </div>
@@ -386,7 +391,7 @@ export function BankClient({
                 <h2 className="text-base font-black text-cyan-300 uppercase tracking-wide">Secure Vault</h2>
                 <p className="text-[11px] text-slate-400 mt-1">Credits stored in the vault are protected from theft, death penalties, and combat losses.</p>
                 <div className="flex gap-3 mt-2">
-                  <div className="text-[10px]"><span className="text-slate-500">Balance: </span><span className="text-cyan-300 font-mono font-bold">{bank.toLocaleString()} ₡</span></div>
+                  <div className="text-[10px]"><span className="text-slate-500">Balance: </span><span className="text-cyan-300 font-mono font-bold">{bank.toLocaleString("en-US")} ₡</span></div>
                   <div className="text-[10px]"><span className="text-slate-500">Withdraw fee: </span><span className="text-red-400 font-mono">2.5%</span></div>
                 </div>
               </div>
@@ -405,7 +410,7 @@ export function BankClient({
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-cyan-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                     }`}>
-                    {q.toLocaleString()}
+                    {q.toLocaleString("en-US")}
                   </button>
                 ))}
               </div>
@@ -421,7 +426,7 @@ export function BankClient({
                 min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
               <button onClick={() => api("deposit")} disabled={loading || amount > credits || amount < 1}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
-                ⬇️ Deposit {amount.toLocaleString()} ₡
+                ⬇️ Deposit {amount.toLocaleString("en-US")} ₡
               </button>
             </div>
 
@@ -438,7 +443,7 @@ export function BankClient({
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-amber-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                     }`}>
-                    {q.toLocaleString()}
+                    {q.toLocaleString("en-US")}
                   </button>
                 ))}
               </div>
@@ -456,17 +461,17 @@ export function BankClient({
                 <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-xs">
                   <div>
                     <span className="text-slate-500">Fee: </span>
-                    <span className="text-red-400 font-mono font-bold">{Math.ceil(amount * 0.025).toLocaleString()} ₡</span>
+                    <span className="text-red-400 font-mono font-bold">{Math.ceil(amount * 0.025).toLocaleString("en-US")} ₡</span>
                   </div>
                   <div>
                     <span className="text-slate-500">You receive: </span>
-                    <span className="text-amber-300 font-mono font-bold">{(amount - Math.ceil(amount * 0.025)).toLocaleString()} ₡</span>
+                    <span className="text-amber-300 font-mono font-bold">{(amount - Math.ceil(amount * 0.025)).toLocaleString("en-US")} ₡</span>
                   </div>
                 </div>
               )}
               <button onClick={() => api("withdraw")} disabled={loading || amount > bank || amount < 1}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
-                ⬆️ Withdraw {amount.toLocaleString()} ₡
+                ⬆️ Withdraw {amount.toLocaleString("en-US")} ₡
               </button>
             </div>
 
@@ -480,11 +485,11 @@ export function BankClient({
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg bg-black/30 border border-violet-800/20 p-3 text-center">
                   <div className="text-[10px] text-slate-500 uppercase">Your Credits</div>
-                  <div className="text-lg font-black text-amber-300 font-mono">{credits.toLocaleString()} ₡</div>
+                  <div className="text-lg font-black text-amber-300 font-mono">{credits.toLocaleString("en-US")} ₡</div>
                 </div>
                 <div className="rounded-lg bg-black/30 border border-violet-800/20 p-3 text-center">
                   <div className="text-[10px] text-slate-500 uppercase">Your Sovereigns</div>
-                  <div className="text-lg font-black text-violet-300 font-mono">{tokens.toLocaleString()} SVN</div>
+                  <div className="text-lg font-black text-violet-300 font-mono">{tokens.toLocaleString("en-US")} SVN</div>
                 </div>
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -502,13 +507,13 @@ export function BankClient({
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
                   className="py-3 rounded-xl bg-gradient-to-r from-violet-700 to-violet-600 hover:from-violet-600 hover:to-violet-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-violet-900/20">
-                  🪙 Buy {amount.toLocaleString()} SVN
-                  <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString()} ₡</span>
+                  🪙 Buy {amount.toLocaleString("en-US")} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Cost: {(amount * buyRate).toLocaleString("en-US")} ₡</span>
                 </button>
                 <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
                   className="py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/20">
-                  💰 Sell {amount.toLocaleString()} SVN
-                  <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString()} ₡</span>
+                  💰 Sell {amount.toLocaleString("en-US")} SVN
+                  <span className="block text-[10px] opacity-70 font-normal">Get: {(amount * sellRate).toLocaleString("en-US")} ₡</span>
                 </button>
               </div>
             </div>
@@ -520,7 +525,7 @@ export function BankClient({
                 <div className="text-[9px] uppercase tracking-[0.15em] text-slate-500 font-semibold">Bureau Bank Treasury</div>
                 <div className="text-[10px] text-slate-400">Accumulated from all pilot withdrawal fees</div>
               </div>
-              <div className="text-lg font-black text-amber-400 font-mono">{bankTreasury.toLocaleString()} ₡</div>
+              <div className="text-lg font-black text-amber-400 font-mono">{bankTreasury.toLocaleString("en-US")} ₡</div>
             </div>
           </>
         )}
@@ -548,7 +553,7 @@ export function BankClient({
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-purple-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                     }`}>
-                    {q.toLocaleString()}
+                    {q.toLocaleString("en-US")}
                   </button>
                 ))}
               </div>
@@ -557,7 +562,7 @@ export function BankClient({
               <button onClick={() => api("transfer", { recipientCallsign: transferTo })}
                 disabled={loading || amount > credits || !transferTo.trim()}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-purple-900/20">
-                ⚡ Send {amount.toLocaleString()} ₡ to {transferTo || "..."}
+                ⚡ Send {amount.toLocaleString("en-US")} ₡ to {transferTo || "..."}
               </button>
             </div>
           </>
@@ -577,7 +582,7 @@ export function BankClient({
               <div className="space-y-3">
                 <div className="rounded-lg bg-red-950/30 border border-red-900/30 p-3 text-center">
                   <div className="text-[10px] uppercase tracking-wide text-red-500 font-semibold">Amount Owed</div>
-                  <div className="text-2xl font-black text-red-300 font-mono">{loanAmount.toLocaleString()} ₡</div>
+                  <div className="text-2xl font-black text-red-300 font-mono">{loanAmount.toLocaleString("en-US")} ₡</div>
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
                   {QUICK_AMOUNTS.filter((q) => q <= loanAmount).map((q) => (
@@ -585,7 +590,7 @@ export function BankClient({
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                         amount === q ? "bg-red-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                       }`}>
-                      {q.toLocaleString()}
+                      {q.toLocaleString("en-US")}
                     </button>
                   ))}
                   <button onClick={() => setAmount(Math.min(loanAmount, credits))}
@@ -597,7 +602,7 @@ export function BankClient({
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("repay_loan")} disabled={loading || amount > credits}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-red-900/20">
-                  💳 Repay {Math.min(amount, loanAmount).toLocaleString()} ₡
+                  💳 Repay {Math.min(amount, loanAmount).toLocaleString("en-US")} ₡
                 </button>
               </div>
             ) : (
@@ -606,7 +611,7 @@ export function BankClient({
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate-400">Available to borrow</span>
                     <span className="text-lg font-black text-orange-300 font-mono">
-                      {Math.max(0, Math.floor(bank * 0.05)).toLocaleString()} ₡
+                      {Math.max(0, Math.floor(bank * 0.05)).toLocaleString("en-US")} ₡
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-600 mt-1">5% of vault balance · 6.9% surcharge applied</div>
@@ -617,7 +622,7 @@ export function BankClient({
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                         amount === q ? "bg-orange-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                       }`}>
-                      {q.toLocaleString()}
+                      {q.toLocaleString("en-US")}
                     </button>
                   ))}
                 </div>
@@ -625,8 +630,8 @@ export function BankClient({
                   min={1} className="w-full rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("take_loan")} disabled={loading || amount < 1 || bank < 20}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-orange-900/20">
-                  💳 Borrow {amount.toLocaleString()} ₡
-                  <span className="block text-[10px] opacity-70 font-normal">You will owe {Math.ceil(amount * 1.069).toLocaleString()} ₡</span>
+                  💳 Borrow {amount.toLocaleString("en-US")} ₡
+                  <span className="block text-[10px] opacity-70 font-normal">You will owe {Math.ceil(amount * 1.069).toLocaleString("en-US")} ₡</span>
                 </button>
               </div>
             )}
@@ -650,7 +655,7 @@ export function BankClient({
                 <div className="rounded-lg bg-emerald-950/30 border border-emerald-900/30 p-4 space-y-3">
                   <div className="text-center">
                     <div className="text-[10px] uppercase tracking-wide text-emerald-500 font-semibold">Active Bond</div>
-                    <div className="text-2xl font-black text-emerald-300 font-mono">{bondAmount.toLocaleString()} ₡</div>
+                    <div className="text-2xl font-black text-emerald-300 font-mono">{bondAmount.toLocaleString("en-US")} ₡</div>
                     <div className="text-xs text-slate-400 mt-1">
                       {bondRate}% over {activeBondDays} days · {(bondRate / activeBondDays).toFixed(4)}%/day
                     </div>
@@ -666,7 +671,7 @@ export function BankClient({
                     <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Matures</div>
                       <div className="text-sm font-bold text-slate-300">
-                        {bondMatures?.toLocaleDateString() ?? "—"}
+                        {bondMatures ? formatGameDate(bondMatures) : "—"}
                       </div>
                     </div>
                   </div>
@@ -675,13 +680,13 @@ export function BankClient({
                     <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Yield</div>
                       <div className="text-sm font-bold text-emerald-400 font-mono">
-                        +{Math.floor(bondAmount * bondRate / 100).toLocaleString()} ₡
+                        +{Math.floor(bondAmount * bondRate / 100).toLocaleString("en-US")} ₡
                       </div>
                     </div>
                     <div className="rounded-lg bg-black/30 border border-slate-800/30 p-2.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Daily Yield</div>
                       <div className="text-sm font-bold text-emerald-400 font-mono">
-                        +{Math.floor(bondAmount * (bondRate / activeBondDays) / 100).toLocaleString()} ₡
+                        +{Math.floor(bondAmount * (bondRate / activeBondDays) / 100).toLocaleString("en-US")} ₡
                       </div>
                     </div>
                   </div>
@@ -696,15 +701,15 @@ export function BankClient({
                         <div className="text-[10px] text-slate-400">{accruedDays} day{accruedDays !== 1 ? "s" : ""} unclaimed</div>
                       </div>
                       <div className="text-xl font-black text-cyan-300 font-mono">
-                        {accruedYield > 0 ? `+${accruedYield.toLocaleString()} ₡` : "0 ₡"}
+                        {accruedYield > 0 ? `+${accruedYield.toLocaleString("en-US")} ₡` : "0 ₡"}
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => api("claim_yield")} disabled={loading || accruedDays < 1}
                         className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-cyan-900/20">
-                        💰 Claim {accruedYield > 0 ? `${accruedYield.toLocaleString()} ₡` : "Yield"}
+                        💰 Claim {accruedYield > 0 ? `${accruedYield.toLocaleString("en-US")} ₡` : "Yield"}
                       </button>
-                      <button onClick={() => { if (confirm(`Early bond withdrawal?\n\nYou'll receive ${(bondAmount - Math.floor(bondAmount * 0.15)).toLocaleString()} ₡ back.\n15% penalty: −${Math.floor(bondAmount * 0.15).toLocaleString()} ₡\n\nAll unclaimed yield is forfeited.`)) api("early_withdraw_bond"); }}
+                      <button onClick={() => { if (confirm(`Early bond withdrawal?\n\nYou'll receive ${(bondAmount - Math.floor(bondAmount * 0.15)).toLocaleString("en-US")} ₡ back.\n15% penalty: −${Math.floor(bondAmount * 0.15).toLocaleString("en-US")} ₡\n\nAll unclaimed yield is forfeited.`)) api("early_withdraw_bond"); }}
                         disabled={loading}
                         className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-900/80 to-red-800/80 hover:from-red-800 hover:to-red-700 text-red-200 font-bold text-[11px] disabled:opacity-30 transition-all">
                         ⚠️ Withdraw
@@ -723,7 +728,7 @@ export function BankClient({
                         <div className="text-[10px] text-slate-400">Collect principal + unclaimed yield</div>
                       </div>
                       <div className="text-xl font-black text-amber-300 font-mono">
-                        {(bondAmount + accruedYield).toLocaleString()} ₡
+                        {(bondAmount + accruedYield).toLocaleString("en-US")} ₡
                       </div>
                     </div>
                     <button onClick={() => api("collect_bond")} disabled={loading}
@@ -764,7 +769,7 @@ export function BankClient({
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                         amount === q ? "bg-emerald-700 text-white" : "bg-slate-800/60 text-slate-400 hover:bg-slate-700"
                       }`}>
-                      {q.toLocaleString()}
+                      {q.toLocaleString("en-US")}
                     </button>
                   ))}
                   {bank >= 100 && (
@@ -781,26 +786,26 @@ export function BankClient({
                   <div>
                     <div className="text-[10px] text-slate-500">Daily Yield</div>
                     <div className="text-sm font-black text-emerald-400 font-mono">
-                      +{Math.floor(amount * selectedBondOpt.rate / selectedBondOpt.days / 100).toLocaleString()} ₡
+                      +{Math.floor(amount * selectedBondOpt.rate / selectedBondOpt.days / 100).toLocaleString("en-US")} ₡
                     </div>
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-500">Total Return</div>
                     <div className="text-sm font-black text-emerald-300 font-mono">
-                      +{Math.floor(amount * selectedBondOpt.rate / 100).toLocaleString()} ₡
+                      +{Math.floor(amount * selectedBondOpt.rate / 100).toLocaleString("en-US")} ₡
                     </div>
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-500">Payout</div>
                     <div className="text-sm font-bold text-slate-300 font-mono">
-                      {Math.floor(amount * (1 + selectedBondOpt.rate / 100)).toLocaleString()} ₡
+                      {Math.floor(amount * (1 + selectedBondOpt.rate / 100)).toLocaleString("en-US")} ₡
                     </div>
                   </div>
                 </div>
 
                 <button onClick={() => api("buy_bond", { bondDays })} disabled={loading || amount > bank || amount < 100}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-emerald-900/20">
-                  📊 Invest {amount.toLocaleString()} ₡ for {selectedBondOpt.label}
+                  📊 Invest {amount.toLocaleString("en-US")} ₡ for {selectedBondOpt.label}
                   <span className="block text-[10px] opacity-70 font-normal">{selectedBondOpt.rate}% total · {(selectedBondOpt.rate / selectedBondOpt.days).toFixed(3)}%/day · Claim daily</span>
                 </button>
                 <p className="text-[10px] text-slate-600 text-center">Minimum 100 ₡ · Funds from vault · 1 bond per pilot · Claim yield daily</p>
@@ -846,13 +851,13 @@ export function BankClient({
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg bg-black/40 border border-violet-700/30 p-3 text-center">
                   <div className="text-[9px] uppercase tracking-widest text-violet-500 font-semibold">Your Sovereigns</div>
-                  <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString()}</div>
+                  <div className="text-2xl font-black text-violet-300 font-mono mt-1">{tokens.toLocaleString("en-US")}</div>
                   <div className="text-[10px] text-violet-600">SVN</div>
                 </div>
                 <div className="rounded-lg bg-black/40 border border-amber-700/30 p-3 text-center">
                   <div className="text-[9px] uppercase tracking-widest text-amber-500 font-semibold">Credits On Hand</div>
-                  <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString()}</div>
-                  <div className="text-[10px] text-amber-600">₡ · buys up to {Math.floor(credits / buyRate).toLocaleString()} SVN</div>
+                  <div className="text-2xl font-black text-amber-300 font-mono mt-1">{credits.toLocaleString("en-US")}</div>
+                  <div className="text-[10px] text-amber-600">₡ · buys up to {Math.floor(credits / buyRate).toLocaleString("en-US")} SVN</div>
                 </div>
               </div>
 
@@ -865,7 +870,7 @@ export function BankClient({
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                       amount === q ? "bg-yellow-600 text-white" : "bg-black/40 text-slate-400 hover:bg-slate-700 border border-slate-800/50"
                     }`}>
-                    {q >= 1000000 ? `${(q / 1000000)}M` : q >= 1000 ? `${(q / 1000).toLocaleString()}K` : q}
+                    {q >= 1000000 ? `${(q / 1000000)}M` : q >= 1000 ? `${(q / 1000).toLocaleString("en-US")}K` : q}
                   </button>
                 ))}
               </div>
@@ -878,14 +883,14 @@ export function BankClient({
                   className="flex-1 rounded-lg bg-black/40 border border-slate-700/50 px-4 py-2.5 text-sm text-center font-mono text-slate-200" />
                 <button onClick={() => api("buy_tokens")} disabled={loading || credits < amount * buyRate}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/30 whitespace-nowrap">
-                  🪙 Buy {amount.toLocaleString()} SVN
+                  🪙 Buy {amount.toLocaleString("en-US")} SVN
                 </button>
               </div>
 
               <div className="rounded-lg bg-black/30 border border-slate-800/40 p-2.5 flex justify-between text-[10px]">
                 <span className="text-slate-500">Rate: <span className="text-yellow-400 font-mono font-bold">{buyRate} ₡</span>/SVN</span>
-                <span className="text-slate-500">Cost: <span className="text-amber-300 font-mono font-bold">{(amount * buyRate).toLocaleString()} ₡</span></span>
-                <span className="text-slate-500">Remaining: <span className="text-amber-300 font-mono font-bold">{Math.max(0, credits - amount * buyRate).toLocaleString()} ₡</span></span>
+                <span className="text-slate-500">Cost: <span className="text-amber-300 font-mono font-bold">{(amount * buyRate).toLocaleString("en-US")} ₡</span></span>
+                <span className="text-slate-500">Remaining: <span className="text-amber-300 font-mono font-bold">{Math.max(0, credits - amount * buyRate).toLocaleString("en-US")} ₡</span></span>
               </div>
 
               {/* Sell SVN */}
@@ -894,7 +899,7 @@ export function BankClient({
                 <div className="flex gap-2 items-center">
                   <button onClick={() => api("sell_tokens")} disabled={loading || tokens < amount}
                     className="flex-1 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-yellow-600 hover:from-amber-600 hover:to-yellow-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-amber-900/30">
-                    💰 Sell {amount.toLocaleString()} SVN → {(amount * sellRate).toLocaleString()} ₡
+                    💰 Sell {amount.toLocaleString("en-US")} SVN → {(amount * sellRate).toLocaleString("en-US")} ₡
                   </button>
                 </div>
                 <div className="text-[10px] text-slate-500">Sell rate: <span className="text-amber-400 font-mono font-bold">{sellRate} ₡</span>/SVN</div>
@@ -910,13 +915,13 @@ export function BankClient({
               <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-2.5 text-center">
                 <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Invested</div>
                 <div className="text-lg font-black text-amber-300 font-mono">
-                  {wealthInvestments.reduce((s, i) => s + i.amount, 0).toLocaleString()} <span className="text-[10px] text-amber-600">SVN</span>
+                  {wealthInvestments.reduce((s, i) => s + i.amount, 0).toLocaleString("en-US")} <span className="text-[10px] text-amber-600">SVN</span>
                 </div>
               </div>
               <div className="rounded-lg bg-black/30 border border-yellow-800/20 p-2.5 text-center">
                 <div className="text-[9px] uppercase tracking-wider text-slate-500">Total Return</div>
                 <div className="text-lg font-black text-emerald-400 font-mono">
-                  +{wealthInvestments.reduce((s, i) => s + Math.floor(i.amount * i.rate / 100), 0).toLocaleString()} <span className="text-[10px] text-emerald-600">SVN</span>
+                  +{wealthInvestments.reduce((s, i) => s + Math.floor(i.amount * i.rate / 100), 0).toLocaleString("en-US")} <span className="text-[10px] text-emerald-600">SVN</span>
                 </div>
               </div>
             </div>
@@ -929,11 +934,11 @@ export function BankClient({
                   const matures = new Date(inv.maturesAt);
                   const created = new Date(inv.createdAt);
                   const lastClaimed = new Date(inv.lastClaimedAt);
-                  const isMatured = matures <= new Date();
+                  const isMatured = matures.getTime() <= nowMs;
                   const dailyRate = inv.rate / inv.days;
                   // Yield accrues at midnight UTC — first yield available the day AFTER creation
                   const accrualStart = Math.floor(created.getTime() / 86_400_000) + 1;
-                  const nowDay = Math.floor(Date.now() / 86_400_000);
+                  const nowDay = Math.floor(nowMs / 86_400_000);
                   const claimedDay = Math.max(Math.floor(lastClaimed.getTime() / 86_400_000), accrualStart - 1);
                   const totalDaysPassed = Math.min(Math.max(0, nowDay - accrualStart + 1), inv.days);
                   const daysClaimed = Math.max(0, claimedDay - accrualStart + 1);
@@ -952,7 +957,7 @@ export function BankClient({
                         <div>
                           <div className="text-xs font-bold text-yellow-300">{inv.name}</div>
                           <div className="text-[10px] text-slate-500">
-                            {inv.amount.toLocaleString()} SVN · {inv.rate}% / {inv.days}d · {dailyRate.toFixed(3)}%/day
+                            {inv.amount.toLocaleString("en-US")} SVN · {inv.rate}% / {inv.days}d · {dailyRate.toFixed(3)}%/day
                           </div>
                         </div>
                         <div className={`text-[10px] font-bold uppercase tracking-wide ${isMatured ? "text-amber-400" : "text-emerald-500"}`}>
@@ -967,9 +972,9 @@ export function BankClient({
                       </div>
 
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-slate-500">Total yield: <span className="text-emerald-400 font-mono font-bold">+{totalYield.toLocaleString()} SVN</span></span>
+                        <span className="text-slate-500">Total yield: <span className="text-emerald-400 font-mono font-bold">+{totalYield.toLocaleString("en-US")} SVN</span></span>
                         {pendingYield > 0 && !isMatured && (
-                          <span className="text-cyan-400 font-mono font-bold">+{pendingYield.toLocaleString()} SVN pending</span>
+                          <span className="text-cyan-400 font-mono font-bold">+{pendingYield.toLocaleString("en-US")} SVN pending</span>
                         )}
                       </div>
 
@@ -978,11 +983,11 @@ export function BankClient({
                           <button onClick={() => wealthApi("claim_yield", { investmentId: inv.id })}
                             disabled={loading || claimableDays < 1}
                             className="flex-1 py-2 rounded-lg bg-gradient-to-r from-cyan-800 to-cyan-700 hover:from-cyan-700 hover:to-cyan-600 text-white font-bold text-[11px] disabled:opacity-30 transition-all">
-                            💰 Claim {pendingYield > 0 ? `${pendingYield.toLocaleString()} SVN` : "Yield"}
+                            💰 Claim {pendingYield > 0 ? `${pendingYield.toLocaleString("en-US")} SVN` : "Yield"}
                           </button>
                         )}
                         {!isMatured && (
-                          <button onClick={() => { if (confirm(`Early withdrawal from ${inv.name}?\n\nYou'll receive ${(inv.amount - Math.floor(inv.amount * 0.15)).toLocaleString()} SVN back.\n15% penalty: −${Math.floor(inv.amount * 0.15).toLocaleString()} SVN`)) wealthApi("early_withdraw", { investmentId: inv.id }); }}
+                          <button onClick={() => { if (confirm(`Early withdrawal from ${inv.name}?\n\nYou'll receive ${(inv.amount - Math.floor(inv.amount * 0.15)).toLocaleString("en-US")} SVN back.\n15% penalty: −${Math.floor(inv.amount * 0.15).toLocaleString("en-US")} SVN`)) wealthApi("early_withdraw", { investmentId: inv.id }); }}
                             disabled={loading}
                             className="py-2 px-3 rounded-lg bg-gradient-to-r from-red-900/80 to-red-800/80 hover:from-red-800 hover:to-red-700 text-red-200 font-bold text-[11px] disabled:opacity-30 transition-all">
                             ⚠️ Withdraw
@@ -992,7 +997,7 @@ export function BankClient({
                           <button onClick={() => wealthApi("collect_investment", { investmentId: inv.id })}
                             disabled={loading}
                             className="flex-1 py-2 rounded-lg bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold text-[11px] disabled:opacity-30 transition-all">
-                            🎉 Collect {(inv.amount + Math.floor(inv.amount * (dailyRate / 100) * Math.max(0, inv.days - daysClaimed))).toLocaleString()} SVN
+                            🎉 Collect {(inv.amount + Math.floor(inv.amount * (dailyRate / 100) * Math.max(0, inv.days - daysClaimed))).toLocaleString("en-US")} SVN
                           </button>
                         )}
                       </div>
@@ -1069,19 +1074,19 @@ export function BankClient({
                   <div>
                     <div className="text-[10px] text-slate-500">Daily Yield</div>
                     <div className="text-sm font-black text-yellow-400 font-mono">
-                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / selectedWealthOpt.days / 100).toLocaleString()} SVN
+                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / selectedWealthOpt.days / 100).toLocaleString("en-US")} SVN
                     </div>
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-500">Total Return</div>
                     <div className="text-sm font-black text-emerald-300 font-mono">
-                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / 100).toLocaleString()} SVN
+                      +{Math.floor(wealthAmount * selectedWealthOpt.rate / 100).toLocaleString("en-US")} SVN
                     </div>
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-500">Payout</div>
                     <div className="text-sm font-bold text-slate-300 font-mono">
-                      {Math.floor(wealthAmount * (1 + selectedWealthOpt.rate / 100)).toLocaleString()} SVN
+                      {Math.floor(wealthAmount * (1 + selectedWealthOpt.rate / 100)).toLocaleString("en-US")} SVN
                     </div>
                   </div>
                 </div>
@@ -1089,7 +1094,7 @@ export function BankClient({
                 <button onClick={() => wealthApi("buy_investment", { investmentDays: wealthDays })}
                   disabled={loading || wealthAmount > tokens || wealthAmount < 500 || (!hasLimitlessCard && wealthAmount > 3000000) || wealthInvestments.some((inv) => inv.days === wealthDays)}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-700 to-amber-600 hover:from-yellow-600 hover:to-amber-500 text-white font-bold text-sm disabled:opacity-30 transition-all shadow-lg shadow-yellow-900/20">
-                  👑 Invest {wealthAmount.toLocaleString()} SVN in {selectedWealthOpt.tag}
+                  👑 Invest {wealthAmount.toLocaleString("en-US")} SVN in {selectedWealthOpt.tag}
                   <span className="block text-[10px] opacity-70 font-normal">
                     {selectedWealthOpt.rate}% over {selectedWealthOpt.days} days · Guaranteed return · Claim daily
                   </span>

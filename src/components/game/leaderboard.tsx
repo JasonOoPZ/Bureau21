@@ -140,8 +140,8 @@ export function Leaderboard({ compact = false }: LeaderboardProps) {
                     )}
                   </td>
                   <td className={`py-2.5 pr-3 text-right ${hl === "level" ? "text-cyan-300 font-semibold" : "text-amber-300"}`}>{entry.level}</td>
-                  <td className={`py-2.5 pr-3 text-right ${hl === "xp" ? "text-emerald-300 font-semibold" : "text-emerald-300/70"}`}>{entry.xp.toLocaleString()}</td>
-                  <td className={`py-2.5 pr-3 text-right ${hl === "credits" ? "text-amber-300 font-semibold" : "text-cyan-200/70"}`}>{entry.credits.toLocaleString()}</td>
+                  <td className={`py-2.5 pr-3 text-right ${hl === "xp" ? "text-emerald-300 font-semibold" : "text-emerald-300/70"}`}>{entry.xp.toLocaleString("en-US")}</td>
+                  <td className={`py-2.5 pr-3 text-right ${hl === "credits" ? "text-amber-300 font-semibold" : "text-cyan-200/70"}`}>{entry.credits.toLocaleString("en-US")}</td>
                   {!compact && <td className={`py-2.5 pr-3 text-right ${hl === "kills" ? "text-red-300 font-semibold" : "text-red-300/70"}`}>{entry.kills}</td>}
                   {!compact && <td className="py-2.5 text-slate-400 hidden md:table-cell">{entry.sector}</td>}
                 </tr>

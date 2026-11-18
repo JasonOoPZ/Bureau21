@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { formatGameDateTime } from "@/components/format";
 
 interface QuickPost {
   id: string;
@@ -67,10 +68,7 @@ export function QuickPostClient({
     setBusy(false);
   };
 
-  const fmt = (d: string) => {
-    const dt = new Date(d);
-    return dt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  };
+  const fmt = formatGameDateTime;
 
   return (
     <div className="space-y-3">

@@ -37,7 +37,7 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
           Each run costs 25 motivation. 10% chance of getting busted (lose credits). Big payouts for lucky runs.
         </p>
         <div className="mt-3 flex gap-6 text-[11px]">
-          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString()}</span></div>
+          <div><span className="text-slate-500">Credits: </span><span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span></div>
           <div><span className="text-slate-500">Motivation: </span><span className="font-bold text-amber-300">{motivation}</span></div>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
           </p>
           <p className="mt-1 text-slate-400">{result.outcome}</p>
           <p className={`mt-1 font-mono ${result.creditsGained >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {result.creditsGained >= 0 ? "+" : ""}{result.creditsGained.toLocaleString()} credits
+            {result.creditsGained >= 0 ? "+" : ""}{result.creditsGained.toLocaleString("en-US")} credits
           </p>
         </div>
       )}
@@ -70,7 +70,7 @@ export function SmugglerClient({ motivation: initMot, credits: initCredits }: Pr
               <div key={i} className="flex items-center justify-between text-[11px]">
                 <span className={h.success ? "text-emerald-400" : "text-red-400"}>{h.success ? "Delivered" : "Busted"}</span>
                 <span className={h.credits >= 0 ? "text-emerald-400" : "text-red-400"}>
-                  {h.credits >= 0 ? "+" : ""}{h.credits.toLocaleString()}
+                  {h.credits >= 0 ? "+" : ""}{h.credits.toLocaleString("en-US")}
                 </span>
               </div>
             ))}

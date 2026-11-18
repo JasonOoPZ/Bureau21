@@ -138,7 +138,7 @@ export function FabricationClient() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-800 bg-[#0b0f14] p-4 text-center">
-          <div className="text-2xl font-bold text-amber-300">{state.credits.toLocaleString()}</div>
+          <div className="text-2xl font-bold text-amber-300">{state.credits.toLocaleString("en-US")}</div>
           <div className="text-xs text-slate-500 mt-1">Credits</div>
         </div>
         <div className="rounded-xl border border-orange-900/40 bg-orange-900/10 p-4 text-center">

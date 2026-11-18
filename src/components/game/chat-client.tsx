@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { formatGameTime } from "@/components/format";
 
 interface ChatMsg {
   id: string;
@@ -10,6 +11,8 @@ interface ChatMsg {
   authorName: string;
   createdAt: string;
 }
+
+const CHAT_POLL_MS = 5_000;
 
 interface Props {
   initialMessages: ChatMsg[];
@@ -25,6 +28,8 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
+  // Mirror of atBottom for the poller, so scrolling does not restart the interval.
+  const atBottomRef = useRef(true);
   const [unread, setUnread] = useState(0);
 
   // Track if the user is scrolled to bottom
@@ -36,6 +41,10 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
     if (near) setUnread(0);
   }
 
+  useEffect(() => {
+    atBottomRef.current = atBottom;
+  }, [atBottom]);
+
   // Auto-scroll if at bottom
   useEffect(() => {
     if (atBottom) {
@@ -44,11 +53,12 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
     }
   }, [messages, atBottom]);
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (signal: AbortSignal) => {
     try {
-      const res = await fetch("/api/game/chat");
+      const res = await fetch("/api/game/chat", { signal });
       if (res.ok) {
         const data = await res.json();
+        if (signal.aborted) return;
         const fetched: ChatMsg[] = data.messages.map(
           (m: { id: string; body: string; author: { id: string; name: string }; createdAt: string }) => ({
             id: m.id,
@@ -62,20 +72,47 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
           // Count by id: the window is a fixed 60, so its length stops growing.
           const known = new Set(prev.map((m) => m.id));
           const newMsgCount = fetched.filter((m) => !known.has(m.id)).length;
-          if (newMsgCount > 0 && !atBottom) {
+          if (newMsgCount > 0 && !atBottomRef.current) {
             setUnread((u) => u + newMsgCount);
           }
           return fetched;
         });
         if (data.onlineCount != null) setOnlineCount(data.onlineCount);
       }
-    } catch { /* ignore */ }
-  }, [atBottom]);
+    } catch {
+      // Aborted on unmount, or a transient network failure: the next poll retries.
+    }
+  }, []);
 
-  // Poll every 5 seconds
+  // Poll every 5 seconds while the tab is visible; catch up when it returns.
   useEffect(() => {
-    const interval = setInterval(fetchMessages, 5_000);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const stop = () => {
+      if (interval !== null) clearInterval(interval);
+      interval = null;
+    };
+    const start = () => {
+      if (interval !== null) return;
+      interval = setInterval(() => fetchMessages(controller.signal), CHAT_POLL_MS);
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stop();
+        return;
+      }
+      fetchMessages(controller.signal);
+      start();
+    };
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      stop();
+      controller.abort();
+    };
   }, [fetchMessages]);
 
   async function send() {
@@ -127,8 +164,7 @@ export function ChatClient({ initialMessages, currentUser }: Props) {
     setUnread(0);
   }
 
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const fmt = formatGameTime;
 
   return (
     <div className="flex h-[70vh] flex-col rounded-md border border-slate-800 bg-[#0a0d11]">

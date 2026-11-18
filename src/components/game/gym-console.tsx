@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { GAME_CONSTANTS } from "@/lib/constants";
+import { formatGameShortDate } from "@/components/format";
+import { useNow } from "@/components/use-now";
 
 interface TrainingOption {
   key: string;
@@ -41,6 +43,8 @@ interface GymState {
 
 interface Props {
   initial: GymState;
+  /** Server render time (epoch ms), so the first client render matches the server. */
+  serverNow: number;
 }
 
 const TRAINING_DATA = {
@@ -60,8 +64,7 @@ function formatHours(h: number) {
 }
 
 /** Group gym logs by day and sum gains per stat */
-function aggregateLogs(logs: GymLogEntry[], days: number) {
-  const now = Date.now();
+function aggregateLogs(logs: GymLogEntry[], days: number, now: number) {
   const cutoff = now - days * 24 * 60 * 60 * 1000;
   const filtered = logs.filter((l) => new Date(l.createdAt).getTime() >= cutoff);
 
@@ -69,7 +72,7 @@ function aggregateLogs(logs: GymLogEntry[], days: number) {
   const totals: Record<string, number> = {};
 
   for (const log of filtered) {
-    const day = new Date(log.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const day = formatGameShortDate(log.createdAt);
     if (!byDay[day]) byDay[day] = {};
     byDay[day][log.training] = (byDay[day][log.training] ?? 0) + Math.abs(log.gain);
     totals[log.training] = (totals[log.training] ?? 0) + Math.abs(log.gain);
@@ -92,7 +95,9 @@ const STAT_TEXT_COLORS: Record<string, string> = {
   panic_control: "text-purple-400",
 };
 
-export function GymConsole({ initial }: Props) {
+export function GymConsole({ initial, serverNow }: Props) {
+  // One-minute ticks are plenty for a 7/30-day window.
+  const now = useNow(serverNow, 60_000);
   const [state, setState] = useState<GymState>(initial);
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -101,14 +106,24 @@ export function GymConsole({ initial }: Props) {
 
   // Poll energy regen every 60s
   useEffect(() => {
+    const controller = new AbortController();
     const interval = setInterval(async () => {
-      const res = await fetch("/api/game/gym");
-      if (res.ok) {
+      if (document.hidden) return;
+      try {
+        const res = await fetch("/api/game/gym", { signal: controller.signal });
+        // A failed refresh keeps the last known state; the next tick retries.
+        if (!res.ok) return;
         const data = await res.json();
-        setState(data);
+        if (!controller.signal.aborted) setState(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        console.warn("[gym] energy refresh failed, will retry", err);
       }
     }, 60_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      controller.abort();
+    };
   }, []);
 
   async function train(trainingKey: string) {
@@ -147,8 +162,8 @@ export function GymConsole({ initial }: Props) {
   const streakBonus = 1 + state.gymStreak * GAME_CONSTANTS.GYM_STREAK_BONUS_PER_DAY;
 
   const gains = useMemo(
-    () => aggregateLogs(state.gymLogs, gainView === "week" ? 7 : 30),
-    [state.gymLogs, gainView]
+    () => aggregateLogs(state.gymLogs, gainView === "week" ? 7 : 30, now),
+    [state.gymLogs, gainView, now]
   );
 
   // Daily activity sparkline (last 7 or 30 days)

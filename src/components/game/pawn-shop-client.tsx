@@ -49,7 +49,7 @@ export function PawnShopClient({ credits: initCredits, items: initItems }: Props
           No questions asked, no returns. Prices are non-negotiable.
         </p>
         <p className="mt-2 text-[11px] text-slate-300">
-          Credits: <span className="font-bold text-amber-300">{credits.toLocaleString()}</span>
+          Credits: <span className="font-bold text-amber-300">{credits.toLocaleString("en-US")}</span>
         </p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatGameDate } from "@/components/format";
 
 interface BoardPost {
   id: string;
@@ -196,7 +197,7 @@ export function BoardsClient({ initialPosts, currentUser, boardCategory }: Props
                     >
                       {post.authorName}
                     </Link>
-                    {" "}· {new Date(post.createdAt).toLocaleDateString()}
+                    {" "}· {formatGameDate(post.createdAt)}
                   </p>
                 </div>
                 <span className="shrink-0 text-[11px] text-slate-600">{expanded === post.id ? "▲" : "▼"}</span>
