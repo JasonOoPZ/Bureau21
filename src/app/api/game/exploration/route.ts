@@ -1,9 +1,13 @@
 import { authOptions } from "@/auth";
-import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
+const MOTIVATION_COST = 20;
+const FUEL_COST = 5;
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -11,18 +15,15 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  // Regenerated fuel is persisted first, so the fuel check is never stale.
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
+  const spend = planMotivationSpend(pilot, MOTIVATION_COST);
 
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
-
-  if (currentMotivation < 20) {
+  if (spend.available < MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 20 motivation to explore." }, { status: 400 });
   }
 
-  if (pilot.fuel < 5) {
+  if (pilot.fuel < FUEL_COST) {
     return NextResponse.json({ error: "Need 5 fuel to launch an expedition." }, { status: 400 });
   }
 
@@ -71,18 +72,30 @@ export async function POST() {
     eventType = "miss";
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - 20,
-      lastMotivationAt: now,
-      fuel: { decrement: 5 },
+  // One guarded write: the motivation snapshot must be unchanged
+  // (compare-and-swap) and the fuel must still be there, so N parallel
+  // expeditions from one snapshot pay for, and reward, exactly one.
+  const updated = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { ...spend.guard, fuel: { gte: FUEL_COST } },
+    {
+      ...spend.data,
+      fuel: { decrement: FUEL_COST },
       credits: { increment: creditsGained },
       xp: { increment: xpGained },
       ore: { increment: oreGained },
       herbs: { increment: herbsGained },
-    },
-  });
+    }
+  );
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Another action is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
+
+  await settleLevelProgression(prisma, session.user.id);
 
   return NextResponse.json({
     event,
@@ -91,7 +104,7 @@ export async function POST() {
     xpGained,
     oreGained,
     herbsGained,
-    motivationLeft: currentMotivation - 20,
-    fuelLeft: pilot.fuel - 5,
+    motivationLeft: updated.motivation,
+    fuelLeft: updated.fuel,
   });
 }

@@ -1,6 +1,8 @@
 import { authOptions } from "@/auth";
-import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS, calculateATK, calculateDEF, getCombatBonuses } from "@/lib/constants";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
+import { calculateATK, calculateDEF, getCombatBonuses } from "@/lib/constants";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -15,20 +17,19 @@ const PIT_FIGHTERS = [
   { name: "The Reaper", level: 20, str: 80, spd: 45, end: 2.5, panic: 1, conf: 50, lf: 200, split: 50 },
 ];
 
+const MOTIVATION_COST = 15;
+
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  // Regenerated Life Force is persisted first, so the fight uses current LF.
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
+  const spend = planMotivationSpend(pilot, MOTIVATION_COST);
 
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
-
-  if (currentMotivation < 15) {
+  if (spend.available < MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 15 motivation to enter the pit." }, { status: 400 });
   }
 
@@ -77,16 +78,29 @@ export async function POST() {
   const xpReward = won ? opponent.level * 15 : Math.floor(opponent.level * 3);
   const lfLost = Math.max(0, pilot.lifeForce - Math.max(0, pilotHP));
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - 15,
-      lastMotivationAt: now,
+  // One guarded write. The motivation snapshot and the Life Force the fight
+  // was simulated with must both be unchanged (compare-and-swap), and the entry
+  // fee must still be covered: N parallel fights from one snapshot resolve
+  // exactly one. LF is written as the damage taken, never as an absolute.
+  const updated = await guardedPilotUpdate(
+    prisma,
+    session.user.id,
+    { ...spend.guard, lifeForce: pilot.lifeForce, credits: { gte: entryFee } },
+    {
+      ...spend.data,
       credits: { increment: creditsReward - entryFee },
       xp: { increment: xpReward },
-      lifeForce: Math.max(0, pilotHP),
-    },
-  });
+      lifeForce: { decrement: lfLost },
+    }
+  );
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Another action is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
+
+  await settleLevelProgression(prisma, session.user.id);
 
   return NextResponse.json({
     won,
@@ -98,7 +112,7 @@ export async function POST() {
     netCredits: creditsReward - entryFee,
     xpReward,
     lfLost,
-    lfRemaining: Math.max(0, pilotHP),
-    motivationLeft: currentMotivation - 15,
+    lfRemaining: updated.lifeForce,
+    motivationLeft: updated.motivation,
   });
 }

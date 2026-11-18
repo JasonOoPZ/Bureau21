@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { COURSES, STUDY_COST, MAX_COURSES_FREE } from "@/lib/courses";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { economyErrorResponse, EconomyError, economyTx, guardedPilotUpdate } from "@/lib/economy";
+import { planMotivationSpend } from "@/lib/vitals";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -33,20 +34,11 @@ export async function POST(request: Request) {
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
   // Recalculate motivation with regen
-  const now = new Date();
-  const minutesElapsed = Math.floor(
-    (now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60)
-  );
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(
-    pilot.motivation + regenAmount,
-    GAME_CONSTANTS.MOTIVATION_CAP_FREE
-  );
-
   const totalCost = STUDY_COST * amount;
-  if (currentMotivation < totalCost) {
+  const spend = planMotivationSpend(pilot, totalCost);
+  if (spend.available < totalCost) {
     return NextResponse.json(
-      { error: `Not enough motivation. Need ${totalCost}, have ${currentMotivation}.` },
+      { error: `Not enough motivation. Need ${totalCost}, have ${spend.available}.` },
       { status: 400 }
     );
   }
@@ -83,21 +75,25 @@ export async function POST(request: Request) {
   }
   const newPoints = Math.min(courseData.maxPoints, currentPoints + pointsGained);
 
-  // Upsert study progress
-  await prisma.studyProgress.upsert({
-    where: { pilotId_course: { pilotId: pilot.id, course } },
-    create: { pilotId: pilot.id, course, points: newPoints },
-    update: { points: newPoints },
-  });
+  // Charge first, as a compare-and-swap on the motivation snapshot, then
+  // record the progress in the same transaction: N parallel study requests
+  // from one snapshot are charged, and credited, exactly once.
+  let motivationLeft: number;
+  try {
+    motivationLeft = await economyTx(async (tx) => {
+      const charged = await guardedPilotUpdate(tx, session.user.id, spend.guard, spend.data);
+      if (!charged) throw new EconomyError("Another action is still resolving. Try again.", 409);
 
-  // Deduct motivation
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - totalCost,
-      lastMotivationAt: now,
-    },
-  });
+      await tx.studyProgress.upsert({
+        where: { pilotId_course: { pilotId: pilot.id, course } },
+        create: { pilotId: pilot.id, course, points: newPoints },
+        update: { points: newPoints },
+      });
+      return charged.motivation;
+    });
+  } catch (error) {
+    return economyErrorResponse(error);
+  }
 
   return NextResponse.json({
     message: `Studied ${courseData.name} ×${amount}. Gained ${pointsGained} point${pointsGained !== 1 ? "s" : ""}.`,
@@ -105,6 +101,6 @@ export async function POST(request: Request) {
     pointsGained,
     totalPoints: newPoints,
     maxPoints: courseData.maxPoints,
-    motivationLeft: currentMotivation - totalCost,
+    motivationLeft,
   });
 }

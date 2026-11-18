@@ -8,9 +8,12 @@ type Category = "overall" | "pvp" | "wealth" | "xp";
 
 const ORDER_MAP: Record<Category, Prisma.PilotStateOrderByWithRelationInput[]> = {
   overall: [{ level: "desc" }, { xp: "desc" }, { credits: "desc" }],
+  // `kills` counts PvP wins and PvE patrols alike (no column separates them),
+  // so this board is labelled "Kills" in the UI, not "PVP".
   pvp: [{ kills: "desc" }, { level: "desc" }],
   wealth: [{ credits: "desc" }, { level: "desc" }],
-  xp: [{ xp: "desc" }, { level: "desc" }],
+  // `xp` is only the remainder within the current level, so level ranks first.
+  xp: [{ level: "desc" }, { xp: "desc" }],
 };
 
 export async function GET(request: Request) {
@@ -25,6 +28,7 @@ export async function GET(request: Request) {
   const category: Category = cat in ORDER_MAP ? cat : "overall";
 
   const pilots = await prisma.pilotState.findMany({
+    where: { user: { suspended: false } },
     orderBy: ORDER_MAP[category],
     take: 25,
     select: {
@@ -54,6 +58,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json(
     { leaderboard, category },
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } }
+    { headers: { "Cache-Control": "private, no-store" } }
   );
 }

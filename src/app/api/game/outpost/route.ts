@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { guardedPilotUpdate } from "@/lib/economy";
+import { guardedPilotUpdate, settleLevelProgression } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -43,6 +43,8 @@ export async function POST() {
     const hoursLeft = Math.max(1, Math.ceil(CLAIM_COOLDOWN_HOURS - hoursSince));
     return NextResponse.json({ error: `Outpost supplies replenish in ${hoursLeft}h.` }, { status: 400 });
   }
+
+  await settleLevelProgression(prisma, session.user.id);
 
   return NextResponse.json({
     creditsClaimed: income,
