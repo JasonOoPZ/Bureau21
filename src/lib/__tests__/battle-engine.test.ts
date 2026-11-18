@@ -172,26 +172,42 @@ describe("resolvePvpBattle life force", () => {
     expect(outcome.attackerLfAfter).toBe(1);
   });
 
-  it("clamps starting life force to the level cap of max(15, level * 5)", () => {
+  it("does not clamp starting life force above the level max (allocated HP is kept)", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const outcome = resolvePvpBattle(pilot(), pilot({ lifeForce: 999 }));
 
-    // Level 1 cap is 15; the first hit of 1 damage leaves 14.
-    expect(outcome.rounds[0].defenderLfAfter).toBe(14);
+    // Level 1 max is 15, but the pilot fights with all 999; the first hit of 1 leaves 998.
+    expect(outcome.rounds[0].defenderLfAfter).toBe(998);
   });
 
-  it("raises the life force cap with a hero max LF bonus", () => {
+  it("multiplies starting life force by a hero max LF bonus", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const outcome = resolvePvpBattle(
       pilot(),
-      pilot({ lifeForce: 30 }),
+      pilot({ lifeForce: 15 }),
       undefined,
-      heroBonuses({ maxLfPct: 100 }) // cap 15 -> 30
+      heroBonuses({ maxLfPct: 100 }) // 15 -> 30
     );
 
     expect(outcome.rounds[0].defenderLfAfter).toBe(29);
+  });
+
+  it("spends hero bonus life force first and never returns more than the pilot brought", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const outcome = resolvePvpBattle(
+      pilot(),
+      pilot({ lifeForce: 15 }),
+      undefined,
+      heroBonuses({ maxLfPct: 100 }) // 15 -> 30
+    );
+
+    // The attacker dies on strike 30, after landing 15 hits: 30 - 15 = 15 left,
+    // which is exactly what the defender brought.
+    expect(outcome.winner).toBe("defender");
+    expect(outcome.defenderLfAfter).toBe(15);
   });
 });
 
@@ -210,10 +226,18 @@ describe("resolvePvpBattle round limit", () => {
     expect(outcome.defenderLfAfter).toBe(30);
   });
 
-  it("awards a timed-out draw to the attacker", () => {
+  it("awards a dead-even timed-out draw to the defender", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const outcome = resolvePvpBattle(turtle({ callsign: "A" }), turtle({ callsign: "D" }));
+
+    expect(outcome.winner).toBe("defender");
+  });
+
+  it("awards a timed-out fight to the attacker only when strictly ahead", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const outcome = resolvePvpBattle(turtle({ callsign: "A", lifeForce: 51 }), turtle({ callsign: "D" }));
 
     expect(outcome.winner).toBe("attacker");
   });
@@ -242,13 +266,14 @@ describe("resolvePvpBattle rewards", () => {
     expect(outcome.attackerCredits).toBe(30);
   });
 
-  it("pays the loser 15% participation XP and no credits", () => {
+  it("pays the loser no XP and takes the winner's credits from the loser", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const outcome = resolvePvpBattle(glassCannon({ level: 3 }), pilot({ level: 3 }));
 
-    expect(outcome.defenderXp).toBe(9); // floor(66 * 0.15)
-    expect(outcome.defenderCredits).toBe(0);
+    expect(outcome.defenderXp).toBe(0);
+    expect(outcome.defenderCredits).toBe(-30);
+    expect(outcome.attackerCredits + outcome.defenderCredits).toBe(0);
   });
 
   it("swaps the rewards when the defender wins", () => {
@@ -259,8 +284,31 @@ describe("resolvePvpBattle rewards", () => {
     expect(outcome.winner).toBe("defender");
     expect(outcome.defenderXp).toBe(66);
     expect(outcome.defenderCredits).toBe(30);
-    expect(outcome.attackerXp).toBe(9);
-    expect(outcome.attackerCredits).toBe(0);
+    expect(outcome.attackerXp).toBe(0);
+    expect(outcome.attackerCredits).toBe(-30);
+  });
+
+  it("never takes more credits than the loser has on hand", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const outcome = resolvePvpBattle(glassCannon({ level: 3 }), pilot({ level: 3, credits: 12 }));
+
+    expect(outcome.attackerCredits).toBe(12);
+    expect(outcome.defenderCredits).toBe(-12);
+    expect(outcome.attackerXp).toBe(66);
+  });
+
+  it("limits the loser's payment to maxLoss, paying XP but no credits when it is 0", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const partial = resolvePvpBattle(glassCannon({ level: 3 }), pilot({ level: 3, credits: 1000, maxLoss: 7 }));
+    const exhausted = resolvePvpBattle(glassCannon({ level: 3 }), pilot({ level: 3, credits: 1000, maxLoss: 0 }));
+
+    expect(partial.attackerCredits).toBe(7);
+    expect(partial.defenderCredits).toBe(-7);
+    expect(exhausted.attackerCredits).toBe(0);
+    expect(exhausted.defenderCredits + exhausted.attackerCredits).toBe(0);
+    expect(exhausted.attackerXp).toBe(66);
   });
 
   it("gives a lower-level winner +10% XP per level of difference", () => {
@@ -291,7 +339,31 @@ describe("resolvePvpBattle rewards", () => {
     );
 
     expect(outcome.attackerXp).toBe(99); // 66 * 1.5
-    expect(outcome.defenderXp).toBe(18); // 9 * 2
+    expect(outcome.defenderXp).toBe(0); // the loser earns nothing to multiply
+  });
+
+  it("applies the defender's hero XP bonus when the defender wins", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const outcome = resolvePvpBattle(
+      pilot({ level: 3, speed: 1 }),
+      glassCannon({ level: 3 }),
+      heroBonuses({ xpPct: 50 }),
+      heroBonuses({ xpPct: 100 })
+    );
+
+    expect(outcome.defenderXp).toBe(132); // 66 * 2
+    expect(outcome.attackerXp).toBe(0);
+  });
+
+  it("caps the underdog XP multiplier at 2x", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    // A level 1 pilot beating a level 100 pilot who is already at 0 LF.
+    const outcome = resolvePvpBattle(pilot({ level: 1 }), pilot({ level: 100, lifeForce: 0 }));
+
+    // base 30 + 100 * 12 = 1230, times 2 (uncapped it was 10.9x = 13,407)
+    expect(outcome.attackerXp).toBe(2460);
   });
 });
 
@@ -301,7 +373,8 @@ describe("resolvePvpBattle confidence", () => {
 
     const outcome = resolvePvpBattle(glassCannon(), pilot());
 
-    expect(outcome.attackerConfDelta).toBe(0.05);
+    // The delta is (new confidence - old confidence), so it carries float noise.
+    expect(outcome.attackerConfDelta).toBeCloseTo(0.05, 10);
   });
 
   it("costs the loser 0.0125 confidence when above the floor of 5", () => {
@@ -309,7 +382,25 @@ describe("resolvePvpBattle confidence", () => {
 
     const outcome = resolvePvpBattle(glassCannon(), pilot({ confidence: 5.5 }));
 
-    expect(outcome.defenderConfDelta).toBe(-0.0125);
+    expect(outcome.defenderConfDelta).toBeCloseTo(-0.0125, 10);
+  });
+
+  it("caps the winner's daily momentum at +0.95 so wins never mint a whole point", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const nearCap = resolvePvpBattle(glassCannon({ confidence: 7.93 }), pilot());
+    const atCap = resolvePvpBattle(glassCannon({ confidence: 7.95 }), pilot());
+
+    expect(7.93 + nearCap.attackerConfDelta).toBeCloseTo(7.95, 10);
+    expect(atCap.attackerConfDelta).toBe(0);
+  });
+
+  it("never lets a loss dip into the whole (allocated) part of confidence", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+
+    const outcome = resolvePvpBattle(glassCannon(), pilot({ confidence: 8.005 }));
+
+    expect(8.005 + outcome.defenderConfDelta).toBe(8);
   });
 
   it("does not reduce the loser's confidence at the floor", () => {
@@ -322,13 +413,24 @@ describe("resolvePvpBattle confidence", () => {
 });
 
 describe("resolvePvpBattle log text", () => {
-  it("ends with the winner, the loser, and the winner's rewards", () => {
+  it("names the winner, the loser, and the rewards taken from the loser, then explains the knockout", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const outcome = resolvePvpBattle(glassCannon({ level: 3 }), pilot({ callsign: "Target", level: 3 }));
 
-    const lastLine = outcome.logText.split("\n").at(-1);
-    expect(lastLine).toBe("⚡ Cannon defeats Target! +66 XP, +30 cr.");
+    const lines = outcome.logText.split("\n");
+    expect(lines.at(-2)).toBe("⚡ Cannon defeats Target! +66 XP, +30 cr taken from Target.");
+    expect(lines.at(-1)).toBe("Target is dragged clear of the fight with 1 LF.");
+  });
+
+  it("ends on the result line, with no knockout line, when the fight times out", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+    const turtle = (callsign: string) => pilot({ callsign, level: 10, lifeForce: 50 });
+
+    const outcome = resolvePvpBattle(turtle("A"), turtle("D"));
+
+    // base 30 + 10 * 12 = 150 XP, stake 15 + 10 * 5 = 65 credits
+    expect(outcome.logText.split("\n").at(-1)).toBe("⚡ D defeats A! +150 XP, +65 cr taken from A.");
   });
 
   it("tags critical hits", () => {
@@ -380,16 +482,6 @@ describe("resolvePvpBattle known issues (documented, not endorsed)", () => {
 
     expect(outcome.winner).toBe("attacker");
   });
-
-  it("has no cap on the underdog XP multiplier", () => {
-    fixRandom(NO_VARIANCE_NO_CRIT);
-
-    // A level 1 pilot beating a level 100 pilot who is already at 0 LF.
-    const outcome = resolvePvpBattle(pilot({ level: 1 }), pilot({ level: 100, lifeForce: 0 }));
-
-    // base 30 + 100 * 12 = 1230, times 1 + 99 * 0.1 = 10.9
-    expect(outcome.attackerXp).toBe(13407);
-  });
 });
 
 describe("simulateWinChance", () => {
@@ -415,18 +507,33 @@ describe("simulateWinChance", () => {
     expect(result.avgRounds).toBe(29);
   });
 
-  it("known issue: ignores a hero max LF bonus because it resets life force to the base cap", () => {
+  it("reflects a hero max LF bonus in the simulated fight", () => {
+    fixRandom(NO_VARIANCE_NO_CRIT);
+    const simulate = (attackerBonuses?: HeroBonuses) =>
+      simulateWinChance(pilot({ level: 10 }), pilot({ level: 10 }), attackerBonuses, undefined, 1);
+
+    const unbuffed = simulate();
+    const buffed = simulate(heroBonuses({ maxLfPct: 100 }));
+
+    // Evenly matched at 50 LF each, 20 rounds end 30 v 30 and the tie goes to the defender.
+    expect(unbuffed).toEqual({ winPct: 0, avgRounds: 40, avgLfRemaining: 0 });
+    // Doubled to 100 LF the attacker ends on 80 v 30 and wins. The 20 damage came
+    // out of the bonus, so the attacker keeps the full 50 they brought.
+    expect(buffed).toEqual({ winPct: 100, avgRounds: 40, avgLfRemaining: 50 });
+  });
+
+  it("simulates a pilot holding life force above the level max at what they hold", () => {
     fixRandom(NO_VARIANCE_NO_CRIT);
 
     const result = simulateWinChance(
+      pilot({ level: 10, lifeForce: 70 }),
       pilot({ level: 10 }),
-      pilot({ level: 10 }),
-      heroBonuses({ maxLfPct: 100 }),
+      undefined,
       undefined,
       1
     );
 
-    // A doubled cap would leave 80 of 100 after 20 rounds; the simulation still starts from 50.
-    expect(result.avgLfRemaining).toBe(30);
+    // 70 v 50 ends 50 v 30 after 20 rounds: the allocated HP is not clamped to 50.
+    expect(result).toEqual({ winPct: 100, avgRounds: 40, avgLfRemaining: 50 });
   });
 });

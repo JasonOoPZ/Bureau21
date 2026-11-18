@@ -23,9 +23,13 @@ describe("xpForLevel", () => {
     expect(xpForLevel(1)).toBe(100);
   });
 
-  it("grows 15% per level, rounded down", () => {
-    expect(xpForLevel(3)).toBe(Math.floor(100 * 1.15 * 1.15));
-    expect(xpForLevel(10)).toBe(351);
+  it("needs level * 100 XP, the same threshold level progression uses", () => {
+    expect(xpForLevel(3)).toBe(300);
+    expect(xpForLevel(10)).toBe(1000);
+  });
+
+  it("treats a level below 1 as level 1", () => {
+    expect(xpForLevel(0)).toBe(100);
   });
 
   it("never decreases as level rises", () => {

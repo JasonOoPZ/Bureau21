@@ -38,14 +38,13 @@ describe("applyLevelProgression", () => {
     expect(applyLevelProgression(650, 1)).toEqual({ xp: 50, level: 4, pointsEarned: 24 });
   });
 
-  it("known issue: uses a different XP curve from xpForLevel, which the UI displays", () => {
-    // The house and pilot pages show xpForLevel(5) as the XP needed at level 5,
-    // but a pilot holding that much XP does not level up.
+  it("levels up at exactly the XP requirement xpForLevel shows in the UI", () => {
+    // The house and pilot pages show xpForLevel(5) as the XP needed at level 5.
     const displayedRequirement = xpForLevel(5);
 
-    expect(displayedRequirement).toBe(174);
-    expect(applyLevelProgression(displayedRequirement, 5).level).toBe(5);
-    expect(applyLevelProgression(500, 5).level).toBe(6);
+    expect(displayedRequirement).toBe(500);
+    expect(applyLevelProgression(displayedRequirement - 1, 5).level).toBe(5);
+    expect(applyLevelProgression(displayedRequirement, 5)).toEqual({ xp: 0, level: 6, pointsEarned: 8 });
   });
 });
 
@@ -83,14 +82,50 @@ describe("applyPassiveRegeneration", () => {
     expect(applyPassiveRegeneration(state({ level: 10, lastFuelRegen: secondsAgo(86_400) })).lifeForce).toBe(50);
   });
 
-  it("leaves the regen timestamp untouched when nothing regenerated", () => {
-    vi.useFakeTimers({ now: NOW });
-    const lastFuelRegen = secondsAgo(29);
+  it("leaves the regen timestamp untouched when no 30s boundary was crossed", () => {
+    // 12:00:01 to 12:00:29 sits inside one 30s interval of the fixed clock.
+    const lastFuelRegen = new Date(NOW.getTime() + 1_000);
+    const now = new Date(NOW.getTime() + 29_000);
 
-    const result = applyPassiveRegeneration(state({ lastFuelRegen }));
+    const result = applyPassiveRegeneration(state({ lastFuelRegen }), now);
 
     expect(result).toMatchObject({ fuel: 0, hull: 0, lifeForce: 1 });
     expect(result.lastFuelRegen).toBe(lastFuelRegen);
+  });
+
+  it("counts interval boundaries on a fixed clock, not elapsed time", () => {
+    vi.useFakeTimers({ now: NOW });
+
+    // Only 29s elapsed, but 12:00:00 is a 30s, 60s and 120s boundary.
+    const result = applyPassiveRegeneration(state({ lastFuelRegen: secondsAgo(29) }));
+
+    expect(result).toMatchObject({ fuel: 1, hull: 1, lifeForce: 2 });
+    expect(result.lastFuelRegen).toEqual(NOW);
+  });
+
+  it("counts each boundary exactly once however often regen runs", () => {
+    const start = new Date(NOW.getTime() + 1_000);
+    const end = new Date(NOW.getTime() + 601_000);
+    let current = state({ lastFuelRegen: start });
+
+    for (let ms = start.getTime() + 7_000; ms <= end.getTime(); ms += 7_000) {
+      current = { ...current, ...applyPassiveRegeneration(current, new Date(ms)), fuel: 0 };
+    }
+    const once = applyPassiveRegeneration(state({ lastFuelRegen: start }), new Date(current.lastFuelRegen));
+
+    expect(current.hull).toBe(once.hull);
+    expect(current.lifeForce).toBe(once.lifeForce);
+    expect(once.hull).toBeGreaterThanOrEqual(9);
+  });
+
+  it("uses the explicit now argument instead of the wall clock", () => {
+    vi.useFakeTimers({ now: NOW });
+    const later = new Date(NOW.getTime() + 240_000);
+
+    const result = applyPassiveRegeneration(state({ lastFuelRegen: NOW }), later);
+
+    expect(result).toMatchObject({ fuel: 8, hull: 4, lifeForce: 3 });
+    expect(result.lastFuelRegen).toBe(later);
   });
 
   it("moves the regen timestamp to now once anything regenerated", () => {
@@ -101,27 +136,39 @@ describe("applyPassiveRegeneration", () => {
     expect(result.lastFuelRegen).toEqual(NOW);
   });
 
-  it("known issue: a pilot acting every 30-59s never regenerates hull or life force", () => {
+  it("regenerates hull and life force for a pilot acting every 45s", () => {
     vi.useFakeTimers({ now: NOW });
     let current = state({ lastFuelRegen: NOW });
 
-    // Ten minutes of play, one action every 45 seconds. Each call grants fuel,
-    // which resets the shared timer and discards the progress toward hull and LF.
+    // Ten minutes of play (585s), one action every 45 seconds. Each call grants
+    // fuel and moves the shared timer; hull and LF progress must survive that.
     for (let i = 0; i < 13; i++) {
       vi.advanceTimersByTime(45_000);
       current = { ...current, ...applyPassiveRegeneration(current), fuel: 0 };
     }
 
-    expect(current.hull).toBe(0); // 9 expected from ~10 minutes at 1 per 60s
-    expect(current.lifeForce).toBe(1); // 5 expected at 1 per 120s
+    expect(current.hull).toBe(9); // floor(585 / 60) at 1 per 60s
+    expect(current.lifeForce).toBe(5); // 1 + floor(585 / 120) at 1 per 120s
   });
 
-  it("known issue: pulls life force above the cap back down even with no time elapsed", () => {
+  it("leaves life force above the level max alone (allocated HP is not clamped)", () => {
     vi.useFakeTimers({ now: NOW });
 
-    const result = applyPassiveRegeneration(state({ lifeForce: 40, level: 1 }));
+    const idle = applyPassiveRegeneration(state({ lifeForce: 40, level: 1 }));
+    const afterADay = applyPassiveRegeneration(
+      state({ lifeForce: 40, level: 1, lastFuelRegen: secondsAgo(86_400) })
+    );
 
-    expect(result.lifeForce).toBe(15);
+    expect(idle.lifeForce).toBe(40);
+    expect(afterADay.lifeForce).toBe(40);
+  });
+
+  it("leaves fuel and hull above their caps alone", () => {
+    vi.useFakeTimers({ now: NOW });
+
+    const result = applyPassiveRegeneration(state({ fuel: 12, hull: 130, lastFuelRegen: secondsAgo(600) }));
+
+    expect(result).toMatchObject({ fuel: 12, hull: 130 });
   });
 });
 
