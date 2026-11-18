@@ -7,6 +7,7 @@ import { getStarterCharacter } from "@/lib/starter-characters";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { simulateWinChance } from "@/lib/battle-engine";
 import { prisma } from "@/lib/prisma";
+import { displayMaxLifeForce } from "@/lib/vitals";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
@@ -37,7 +38,7 @@ export default async function PilotProfilePage({ params }: { params: Promise<{ i
   const atk = calculateATK(pilot.strength, pilot.atkSplit, weaponBonus);
   const def = calculateDEF(pilot.strength, pilot.atkSplit, armorBonus);
   const maxXp = xpForLevel(pilot.level);
-  const maxLF = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * 5);
+  const maxLF = displayMaxLifeForce(pilot);
 
   const battleLogs = await prisma.battleLog.findMany({
     where: { pilotId: pilot.id },

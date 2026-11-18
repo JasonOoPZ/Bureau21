@@ -2,7 +2,7 @@ import { authOptions } from "@/auth";
 import { BattleHub } from "@/components/game/battle-hub";
 import { StatAllocator } from "@/components/game/stat-allocator";
 import { TopBar } from "@/components/layout/top-bar";
-import { getOrCreatePilotState } from "@/lib/game-state";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
 import { hpPerPoint } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -19,7 +19,7 @@ export default async function BattlePage({
   if (!session?.user) redirect("/");
 
   const params = await searchParams;
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
 
   const recentLogs = await prisma.battleLog.findMany({
     where: { pilotId: pilot.id },

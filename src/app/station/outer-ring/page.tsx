@@ -1,5 +1,5 @@
 import { authOptions } from "@/auth";
-import { getOrCreatePilotState } from "@/lib/game-state";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
 import { pilotHasGodCard } from "@/lib/item-data";
 import { OuterRingClient } from "@/components/game/outer-ring-client";
 import { TopBar } from "@/components/layout/top-bar";
@@ -12,7 +12,7 @@ export default async function OuterRingPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
 
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
   const godCard = await pilotHasGodCard(session.user.id);
 
   return (

@@ -1,6 +1,7 @@
 import { authOptions } from "@/auth";
 import { GAME_CONSTANTS, computeGymEnergy, getConfidenceCap } from "@/lib/constants";
 import { guardedPilotUpdate } from "@/lib/economy";
+import { hktDayNumber } from "@/lib/hkt";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
@@ -14,6 +15,8 @@ const TRAINING_OPTIONS = {
   endurance:     { cost: 5,  field: "endurance",  gain: 0.02,  label: "Endurance" },
   panic_control: { cost: 10, field: "panic",      gain: -0.05, label: "Panic Control" },
 } as const;
+
+const MAX_GYM_STREAK_DAYS = 30;
 
 type TrainingType = keyof typeof TRAINING_OPTIONS;
 
@@ -68,18 +71,19 @@ export async function POST(request: Request) {
     );
   }
 
-  // Calculate gym streak
+  // Gym streak counts consecutive HKT calendar days, not sessions: training
+  // again on the same day keeps it, the next day extends it, a missed day
+  // (or a first visit) starts over.
   const now = new Date();
-  const lastGym = pilot.lastGymAt;
-  const hoursSinceLast = lastGym
-    ? (now.getTime() - lastGym.getTime()) / (1000 * 60 * 60)
-    : 9999;
+  const daysSinceLast = pilot.lastGymAt
+    ? hktDayNumber(now) - hktDayNumber(pilot.lastGymAt)
+    : null;
 
   let newStreak = pilot.gymStreak;
-  if (hoursSinceLast > 48) {
+  if (daysSinceLast === null || daysSinceLast > 1) {
     newStreak = 0; // streak broken
-  } else if (hoursSinceLast >= 1) {
-    newStreak = Math.min(pilot.gymStreak + 1, 30); // max 30 days
+  } else if (daysSinceLast === 1) {
+    newStreak = Math.min(pilot.gymStreak + 1, MAX_GYM_STREAK_DAYS);
   }
 
   const streakBonus = 1 + newStreak * GAME_CONSTANTS.GYM_STREAK_BONUS_PER_DAY;

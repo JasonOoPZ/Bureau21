@@ -1,9 +1,11 @@
 import { calculateATK, calculateDEF, GAME_CONSTANTS, getCombatBonuses, getConfidenceCap } from "@/lib/constants";
 import type { HeroBonuses } from "@/lib/hero-data";
+import { applyBattleConfidence, displayMaxLifeForce, maxLifeForce } from "@/lib/vitals";
 
 /* ═══════════════════════════════════════════════
    PVP Battle Engine — Bureau 21
-   Confidence: +0.05 per win, -0.0125 per loss (only above floor of 5)
+   Confidence: +0.05 per win, -0.0125 per loss, applied to the day's
+   momentum only (see applyBattleConfidence); never to allocated points.
    ═════════════════════════════════════════════ */
 
 export interface BattleFighter {
@@ -39,6 +41,20 @@ export interface BattleOutcome {
   logText: string;
 }
 
+/**
+ * Credits a defender may still lose right now under the rolling 24h loss cap.
+ * The cap is a share of (credits on hand + credits already lost in the
+ * window), i.e. of what they would hold had they lost nothing, so repeated
+ * losses consume one fixed allowance instead of 10% of a shrinking balance
+ * each time. Never more than they hold; never negative.
+ */
+export function pvpDefenderLossAllowance(credits: number, lostInWindow: number): number {
+  const onHand = Math.max(0, Math.floor(credits));
+  const lost = Math.max(0, Math.floor(lostInWindow));
+  const cap = Math.floor((onHand + lost) * GAME_CONSTANTS.PVP_DEFENDER_DAILY_LOSS_RATIO);
+  return Math.max(0, Math.min(onHand, cap - lost));
+}
+
 export interface PvpPilotInput {
   callsign: string;
   level: number;
@@ -48,11 +64,11 @@ export interface PvpPilotInput {
   confidence: number;
   atkSplit: number;
   characterSlug?: string;
+  /** Credits on hand. When given, the loser never pays more than this. */
+  credits?: number;
+  /** Extra ceiling on what this pilot pays if they lose (the defender's daily loss cap). */
+  maxLoss?: number;
   inventory: { type: string; bonusType: string; bonusAmt: number; equipped: boolean }[];
-}
-
-function maxLF(level: number): number {
-  return Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, level * 5);
 }
 
 function rollDamage(atk: number, def: number, critBonus = 0): { damage: number; crit: boolean } {
@@ -81,12 +97,16 @@ function buildPvpFighter(
 
   const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
   const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, defBonus) * heroDefMult));
-  const playerMaxLf = Math.floor(maxLF(pilot.level) * heroLfMult);
+  // Hero support scales the Life Force the pilot brings into the fight. LF is
+  // never clamped to the level-based max: HP bought with allocation points
+  // lives in `lifeForce` above it.
+  const startLf = Math.floor(pilot.lifeForce * heroLfMult);
+  const playerMaxLf = Math.max(startLf, Math.floor(maxLifeForce(pilot) * heroLfMult));
 
   return {
     fighter: {
       name: pilot.callsign,
-      lf: Math.min(pilot.lifeForce, playerMaxLf),
+      lf: startLf,
       maxLf: playerMaxLf,
       atk: playerATK,
       def: playerDEF,
@@ -149,22 +169,34 @@ export function resolvePvpBattle(
     }
   }
 
-  const attackerWon = defLf <= 0 || (atkLf > 0 && defLf > 0 && atkLf >= defLf);
+  // A knockout decides it. If both are still standing after the last round the
+  // attacker must be strictly ahead: a dead-even stalemate goes to the defender.
+  const attackerWon = defLf <= 0 || (atkLf > 0 && atkLf > defLf);
 
-  // XP: winner gets base XP scaled by opponent level, loser gets participation XP
+  // XP: only the winner earns it, scaled by the loser's level. Paying the
+  // loser made throwing fights a free XP source.
   const loserLevel = attackerWon ? defenderInput.level : attackerInput.level;
   const winnerLevel = attackerWon ? attackerInput.level : defenderInput.level;
   const baseXp = Math.max(20, Math.floor(30 + loserLevel * 12));
   // Underdog bonus: if winner is lower level, scale up
   const levelDiff = loserLevel - winnerLevel;
-  const underdogMult = levelDiff > 0 ? 1 + levelDiff * 0.1 : 1;
+  const underdogMult =
+    levelDiff > 0
+      ? Math.min(GAME_CONSTANTS.PVP_UNDERDOG_MAX_MULTIPLIER, 1 + levelDiff * 0.1)
+      : 1;
 
   const winXp = Math.round(baseXp * underdogMult);
-  const loseXp = Math.max(5, Math.floor(baseXp * 0.15));
+  const loseXp = 0;
 
-  // Credits: winner takes a cut from the battle
-  const winCredits = Math.max(10, Math.floor(15 + loserLevel * 5));
-  const loseCredits = 0;
+  // Credits: the winner's purse is taken from the loser, never minted, and is
+  // limited to what the loser actually has.
+  const stake = Math.max(10, Math.floor(15 + loserLevel * 5));
+  const loser = attackerWon ? defenderInput : attackerInput;
+  const winCredits = Math.max(
+    0,
+    Math.min(stake, Math.floor(loser.credits ?? stake), Math.floor(loser.maxLoss ?? stake))
+  );
+  const loseCredits = -winCredits;
 
   // Apply hero XP multipliers
   const atkHeroXpMult = 1 + ((attackerHeroBonuses?.xpPct ?? 0) / 100);
@@ -178,17 +210,10 @@ export function resolvePvpBattle(
   const atkConfCap = getConfidenceCap(attackerInput.characterSlug);
   const defConfCap = getConfidenceCap(defenderInput.characterSlug);
 
-  // Win: +0.05, Loss: -0.0125 (only deducted if above floor of 5)
-  const attackerConfDelta = attackerWon
-    ? GAME_CONSTANTS.CONFIDENCE_WIN_GAIN
-    : attackerInput.confidence > GAME_CONSTANTS.CONFIDENCE_FLOOR
-      ? -GAME_CONSTANTS.CONFIDENCE_LOSS_PENALTY
-      : 0;
-  const defenderConfDelta = attackerWon
-    ? defenderInput.confidence > GAME_CONSTANTS.CONFIDENCE_FLOOR
-      ? -GAME_CONSTANTS.CONFIDENCE_LOSS_PENALTY
-      : 0
-    : GAME_CONSTANTS.CONFIDENCE_WIN_GAIN;
+  const attackerConfDelta =
+    applyBattleConfidence(attackerInput.confidence, attackerWon, atkConfCap) - attackerInput.confidence;
+  const defenderConfDelta =
+    applyBattleConfidence(defenderInput.confidence, !attackerWon, defConfCap) - defenderInput.confidence;
 
   // Build log text
   const logLines: string[] = [];
@@ -215,7 +240,15 @@ export function resolvePvpBattle(
 
   const winnerName = attackerWon ? attacker.name : defender.name;
   const loserName = attackerWon ? defender.name : attacker.name;
-  logLines.push(`⚡ ${winnerName} defeats ${loserName}! +${attackerWon ? attackerXp : defenderXp} XP, +${attackerWon ? attackerCredits : defenderCredits} cr.`);
+  logLines.push(`⚡ ${winnerName} defeats ${loserName}! +${attackerWon ? attackerXp : defenderXp} XP, +${winCredits} cr taken from ${loserName}.`);
+
+  // Hero-granted bonus LF absorbs damage first and is gone after the fight; a
+  // pilot never leaves with more LF than they brought, nor with less than 1.
+  const attackerLfAfter = Math.max(1, Math.min(attackerInput.lifeForce, atkLf));
+  const defenderLfAfter = Math.max(1, Math.min(defenderInput.lifeForce, defLf));
+  if (atkLf <= 0 || defLf <= 0) {
+    logLines.push(`${loserName} is dragged clear of the fight with 1 LF.`);
+  }
 
   return {
     winner: attackerWon ? "attacker" : "defender",
@@ -225,8 +258,8 @@ export function resolvePvpBattle(
     defenderXp,
     attackerCredits,
     defenderCredits,
-    attackerLfAfter: Math.max(1, atkLf),
-    defenderLfAfter: Math.max(1, defLf),
+    attackerLfAfter,
+    defenderLfAfter,
     attackerConfDelta,
     defenderConfDelta,
     logText: logLines.join("\n"),
@@ -259,8 +292,9 @@ export function simulateWinChance(
 
   for (let i = 0; i < iterations; i++) {
     const result = resolvePvpBattle(
-      { ...attacker, lifeForce: Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, attacker.level * 5) },
-      { ...defender, lifeForce: Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, defender.level * 5) },
+      // Both at full natural LF; the engine applies each side's hero LF bonus.
+      { ...attacker, lifeForce: displayMaxLifeForce(attacker) },
+      { ...defender, lifeForce: displayMaxLifeForce(defender) },
       attackerHeroBonuses,
       defenderHeroBonuses
     );

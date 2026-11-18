@@ -1,11 +1,14 @@
 import { authOptions } from "@/auth";
 import { getOrCreatePilotState } from "@/lib/game-state";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { guardedPilotUpdate } from "@/lib/economy";
+import { planMotivationSpend } from "@/lib/vitals";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+const MOTIVATION_COST = 10;
+
+export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -13,13 +16,9 @@ export async function POST(request: Request) {
 
   const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
 
-  // Cost: 10 motivation
-  const now = new Date();
-  const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
-  const regenAmount = Math.floor(minutesElapsed / GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES);
-  const currentMotivation = Math.min(pilot.motivation + regenAmount, GAME_CONSTANTS.MOTIVATION_CAP_FREE);
+  const spend = planMotivationSpend(pilot, MOTIVATION_COST);
 
-  if (currentMotivation < 10) {
+  if (spend.available < MOTIVATION_COST) {
     return NextResponse.json({ error: "Need 10 motivation to fish." }, { status: 400 });
   }
 
@@ -44,22 +43,26 @@ export async function POST(request: Request) {
     catchName = "Nothing"; catchValue = 0; rarity = "miss";
   }
 
-  await prisma.pilotState.update({
-    where: { userId: session.user.id },
-    data: {
-      motivation: currentMotivation - 10,
-      lastMotivationAt: now,
-      credits: { increment: catchValue },
-      fish: { increment: catchValue > 0 ? 1 : 0 },
-    },
+  // Compare-and-swap on the motivation snapshot: N parallel casts computed
+  // from the same snapshot pay for, and land, exactly one.
+  const updated = await guardedPilotUpdate(prisma, session.user.id, spend.guard, {
+    ...spend.data,
+    credits: { increment: catchValue },
+    fish: { increment: catchValue > 0 ? 1 : 0 },
   });
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Another action is still resolving. Try again." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({
     catchName,
     catchValue,
     rarity,
-    totalFish: pilot.fish + (catchValue > 0 ? 1 : 0),
-    credits: pilot.credits + catchValue,
-    motivationLeft: currentMotivation - 10,
+    totalFish: updated.fish,
+    credits: updated.credits,
+    motivationLeft: updated.motivation,
   });
 }

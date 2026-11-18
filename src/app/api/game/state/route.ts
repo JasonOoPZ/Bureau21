@@ -1,5 +1,6 @@
 import { authOptions } from "@/auth";
-import { getOrCreateMissions, getOrCreatePilotState } from "@/lib/game-state";
+import { getOrCreateMissions } from "@/lib/game-state";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -11,7 +12,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const state = await getOrCreatePilotState(session.user.id, session.user.name);
+  // Persists passive regeneration, so the console shows current vitals.
+  const state = await loadPilotForPlay(session.user.id, session.user.name);
   const missions = await getOrCreateMissions(state.id);
 
   // Re-fetch with inventory included

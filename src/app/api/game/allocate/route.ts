@@ -2,7 +2,7 @@ import { authOptions } from "@/auth";
 import { guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
-import { GAME_CONSTANTS } from "@/lib/constants";
+import { getConfidenceCap } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -65,10 +65,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Confidence is capped: only spend the whole points that actually raise it.
+  // Confidence is capped (100 for the boosted character, 50 otherwise): only
+  // spend the whole points that actually raise it.
+  const confidenceCap = getConfidenceCap(pilot.characterSlug);
   const spend =
     stat === "confidence"
-      ? Math.min(points, Math.floor(GAME_CONSTANTS.CONFIDENCE_CAP - pilot.confidence))
+      ? Math.min(points, Math.floor(confidenceCap - pilot.confidence))
       : points;
 
   if (spend < 1) {
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
   const guard: Prisma.PilotStateWhereInput = {
     unspentPoints: { gte: spend },
     ...(stat === "confidence"
-      ? { confidence: { lte: GAME_CONSTANTS.CONFIDENCE_CAP - spend } }
+      ? { confidence: { lte: confidenceCap - spend } }
       : {}),
   };
 
@@ -110,7 +112,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     stat,
-    points,
+    // points actually spent (fewer than requested when clamped by a cap)
+    points: spend,
+    requested: points,
     gain: `+${spend} ${STAT_LABELS[stat]}`,
     remaining: updated.unspentPoints,
   });

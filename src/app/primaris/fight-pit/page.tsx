@@ -2,7 +2,7 @@ import { authOptions } from "@/auth";
 import { TopBar } from "@/components/layout/top-bar";
 import { FightPitClient } from "@/components/game/fight-pit-client";
 import { GAME_CONSTANTS } from "@/lib/constants";
-import { getOrCreatePilotState } from "@/lib/game-state";
+import { loadPilotForPlay } from "@/lib/pilot-sync";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,7 +11,7 @@ import { PixelBanner } from "@/components/layout/pixel-banner";
 export default async function FightPitPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
-  const pilot = await getOrCreatePilotState(session.user.id, session.user.name);
+  const pilot = await loadPilotForPlay(session.user.id, session.user.name);
 
   const now = new Date();
   const minutesElapsed = Math.floor((now.getTime() - pilot.lastMotivationAt.getTime()) / (1000 * 60));
