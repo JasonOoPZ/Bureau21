@@ -1,25 +1,25 @@
 import type { Mission } from "@prisma/client";
 import { GAME_CONSTANTS, xpForLevel } from "@/lib/constants";
-import { defaultStarterCharacter } from "@/lib/starter-characters";
 import { rollItemDrop } from "@/lib/item-data";
+import { provisionPilot } from "@/lib/pilot-provision";
 import { prisma } from "@/lib/prisma";
 
 export { applyPassiveRegeneration } from "@/lib/vitals";
 
-export async function getOrCreatePilotState(userId: string, displayName?: string | null) {
-  const callsign = (displayName?.trim() || "Rookie Pilot").slice(0, 24);
+const PILOT_INCLUDE = { inventory: true, missions: true } as const;
 
-  return prisma.pilotState.upsert({
-    where: { userId },
-    update: {},
-    create: {
-      userId,
-      callsign,
-      characterSlug: defaultStarterCharacter,
-      appearanceNeedsSetup: true,
-    },
-    include: { inventory: true, missions: true },
-  });
+/**
+ * The user's pilot, created on first use. Creation goes through
+ * `provisionPilot`, so a lazily created pilot claims its callsign exactly
+ * like registration and OAuth sign-in do (it used to copy the display name
+ * unchecked, which could duplicate an existing callsign).
+ */
+export async function getOrCreatePilotState(userId: string, displayName?: string | null) {
+  const existing = await prisma.pilotState.findUnique({ where: { userId }, include: PILOT_INCLUDE });
+  if (existing) return existing;
+
+  await provisionPilot(userId, displayName);
+  return prisma.pilotState.findUniqueOrThrow({ where: { userId }, include: PILOT_INCLUDE });
 }
 
 export function applyLevelProgression(xp: number, level: number) {
@@ -55,64 +55,34 @@ export function missionAction(title: string): string | null {
   return MISSION_CONFIGS.find((config) => config.title === title)?.action ?? null;
 }
 
-/** Ranks duplicates of one mission: completed first, then most progress, then oldest. */
-function isBetterMission(candidate: Mission, incumbent: Mission): boolean {
-  if (candidate.completed !== incumbent.completed) return candidate.completed;
-  if (candidate.currentCount !== incumbent.currentCount) {
-    return candidate.currentCount > incumbent.currentCount;
-  }
-  return candidate.createdAt.getTime() < incumbent.createdAt.getTime();
-}
-
-/**
- * One mission per title. Rows duplicated by the old check-then-insert race are
- * collapsed to a single canonical row (a completed copy wins, so a mission
- * that already paid out can never be progressed and paid a second time).
- */
-export function canonicalMissions(missions: Mission[]): Mission[] {
-  const byTitle = new Map<string, Mission>();
-  for (const mission of missions) {
-    const incumbent = byTitle.get(mission.title);
-    if (!incumbent || isBetterMission(mission, incumbent)) byTitle.set(mission.title, mission);
-  }
-  return [...byTitle.values()];
-}
-
 function missingMissionConfigs(missions: Mission[]) {
   const titles = new Set(missions.map((mission) => mission.title));
   return MISSION_CONFIGS.filter((config) => !titles.has(config.title));
 }
 
 /**
- * Idempotent mission setup. There is no unique constraint on (pilotId, title),
- * so creation runs in a transaction that first row-locks the pilot: concurrent
- * callers queue on the lock and each re-reads the missions the previous one
- * created, so a mission is inserted at most once.
+ * Idempotent mission setup. `Mission` is unique on (pilotId, title), so the
+ * insert simply skips rows that already exist: concurrent callers cannot
+ * create a mission twice, and no lock or read-time dedupe is needed.
  */
 export async function getOrCreateMissions(pilotId: string): Promise<Mission[]> {
   const existing = await prisma.mission.findMany({ where: { pilotId } });
-  if (missingMissionConfigs(existing).length === 0) return canonicalMissions(existing);
+  const missing = missingMissionConfigs(existing);
+  if (missing.length === 0) return existing;
 
-  return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT "id" FROM "PilotState" WHERE "id" = ${pilotId} FOR UPDATE`;
-
-    const current = await tx.mission.findMany({ where: { pilotId } });
-    const missing = missingMissionConfigs(current);
-    if (missing.length === 0) return canonicalMissions(current);
-
-    await tx.mission.createMany({
-      data: missing.map((config) => ({
-        pilotId,
-        title: config.title,
-        description: config.description,
-        targetCount: config.count,
-        rewardXp: config.xp,
-        rewardCredits: config.credits,
-      })),
-    });
-
-    return canonicalMissions(await tx.mission.findMany({ where: { pilotId } }));
+  await prisma.mission.createMany({
+    data: missing.map((config) => ({
+      pilotId,
+      title: config.title,
+      description: config.description,
+      targetCount: config.count,
+      rewardXp: config.xp,
+      rewardCredits: config.credits,
+    })),
+    skipDuplicates: true,
   });
+
+  return prisma.mission.findMany({ where: { pilotId } });
 }
 
 export async function tryDropItem(pilotId: string, action: string): Promise<{ name: string; type: string; tier: number } | null> {

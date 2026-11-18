@@ -1,4 +1,5 @@
 import { authOptions } from "@/auth";
+import { callsignKey } from "@/lib/callsign";
 import { guardedPilotUpdate } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -31,8 +32,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Intel costs ${cost} credits.` }, { status: 400 });
   }
 
-  const target = await prisma.pilotState.findFirst({
-    where: { callsign: { equals: parsed.data.targetCallsign, mode: "insensitive" } },
+  const target = await prisma.pilotState.findUnique({
+    where: { callsignLower: callsignKey(parsed.data.targetCallsign) },
     include: {
       inventory: { where: { equipped: true } },
       syndicateMember: { include: { syndicate: { select: { name: true, tag: true } } } },

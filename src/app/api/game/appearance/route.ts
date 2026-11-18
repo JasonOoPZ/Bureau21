@@ -1,4 +1,10 @@
-import { CallsignTakenError, callsignSchema, claimCallsign } from "@/lib/callsign";
+import {
+  CallsignTakenError,
+  callsignFields,
+  callsignSchema,
+  claimCallsign,
+  isCallsignConflict,
+} from "@/lib/callsign";
 import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { requireUser } from "@/lib/require-user";
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
         // Same rules as the settings rename: unique ignoring case, and
         // User.name kept in step with the callsign.
         await claimCallsign(tx, callsign, userId);
-        await tx.pilotState.update({ where: { userId }, data: { callsign } });
+        await tx.pilotState.update({ where: { userId }, data: callsignFields(callsign) });
         await tx.user.update({ where: { id: userId }, data: { name: callsign } });
       }
 
@@ -84,8 +90,8 @@ export async function POST(request: Request) {
       nextChangeCost: APPEARANCE_CHANGE_COST,
     });
   } catch (error) {
-    if (error instanceof CallsignTakenError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof CallsignTakenError || isCallsignConflict(error)) {
+      return NextResponse.json({ error: new CallsignTakenError().message }, { status: 409 });
     }
     return economyErrorResponse(error);
   }

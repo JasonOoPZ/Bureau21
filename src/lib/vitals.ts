@@ -17,28 +17,33 @@ const HULL_REGEN_MS = 60_000;
 const LIFE_FORCE_REGEN_MS = 120_000;
 const MOTIVATION_REGEN_MS = GAME_CONSTANTS.MOTIVATION_REGEN_MINUTES * 60_000;
 
+/** What a pilot's Life Force maximum is computed from. */
+export interface LifeForceSource {
+  level: number;
+  /** `PilotState.bonusLifeForce`: Life Force bought with allocation points. */
+  bonusLifeForce?: number;
+}
+
 /**
- * The single source of truth for a pilot's natural Life Force maximum.
+ * The single source of truth for a pilot's Life Force maximum: the level-based
+ * amount plus the Life Force bought with allocation points
+ * (`PilotState.bonusLifeForce`). Regen, herbs and level-up refills all fill up
+ * to this value, so allocated HP comes back after it is lost in a fight.
  *
- * There is no column for HP bought with allocation points, so allocated HP is
- * stored directly in `lifeForce` and may sit above this value. Nothing may
- * clamp `lifeForce` down to it: regen and healing only fill *up to* the max.
- *
- * Schema follow-up: once `PilotState.bonusLifeForce` exists, add
- * `+ (pilot.bonusLifeForce ?? 0)` here and allocated HP becomes a real,
- * refillable maximum everywhere at once.
+ * Still nothing clamps `lifeForce` down to it: filling only ever goes up.
  */
-export function maxLifeForce(pilot: { level: number }): number {
-  return Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * LIFE_FORCE_PER_LEVEL);
+export function maxLifeForce(pilot: LifeForceSource): number {
+  const natural = Math.max(GAME_CONSTANTS.STARTING_LIFE_FORCE, pilot.level * LIFE_FORCE_PER_LEVEL);
+  return natural + Math.max(0, pilot.bonusLifeForce ?? 0);
 }
 
 /** Max to show next to a pilot's Life Force (never below what they hold). */
-export function displayMaxLifeForce(pilot: { level: number; lifeForce: number }): number {
+export function displayMaxLifeForce(pilot: LifeForceSource & { lifeForce: number }): number {
   return Math.max(maxLifeForce(pilot), pilot.lifeForce);
 }
 
 /** Life Force a pilot needs to start, or be the target of, a PvP battle. */
-export function pvpMinLifeForce(pilot: { level: number }): number {
+export function pvpMinLifeForce(pilot: LifeForceSource): number {
   return Math.max(
     GAME_CONSTANTS.PVP_MIN_LIFE_FORCE,
     Math.ceil(maxLifeForce(pilot) * GAME_CONSTANTS.PVP_MIN_LIFE_FORCE_RATIO)
@@ -61,6 +66,7 @@ export interface VitalsState {
   hull: number;
   lifeForce: number;
   level: number;
+  bonusLifeForce?: number;
   lastFuelRegen: Date;
 }
 
@@ -152,8 +158,10 @@ export function planMotivationSpend(pilot: MotivationState, cost: number, now: D
    The midnight-HKT reset drops only the fraction. Momentum is capped below 1
    so battles can never mint a permanent point, and a loss can never dip into
    the whole part.
-   Schema follow-up: `PilotState.confidenceMomentum Float @default(0)` would
-   let momentum be stored separately and exceed 1.
+   A separate `confidenceMomentum` column was considered and not added: this
+   encoding already keeps allocated points across the reset, and the only
+   thing a column would buy is daily momentum above +0.95, which is a balance
+   change, not a correctness fix.
    ───────────────────────────────────────────────────────────────────────── */
 
 export const CONFIDENCE_MOMENTUM_CAP = 0.95;

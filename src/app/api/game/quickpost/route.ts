@@ -30,9 +30,8 @@ type RecipientLookup =
  * are matched on User.name. Any duplicate is refused rather than guessed.
  */
 async function resolveRecipient(toCallsign: string): Promise<RecipientLookup> {
-  const pilotLookup = await findPilotByCallsign(prisma, toCallsign);
-  if (pilotLookup.status === "found") return { status: "found", userId: pilotLookup.pilot.userId };
-  if (pilotLookup.status === "ambiguous") return pilotLookup;
+  const pilot = await findPilotByCallsign(prisma, toCallsign);
+  if (pilot) return { status: "found", userId: pilot.userId };
 
   const pilotless = await prisma.user.findMany({
     where: { name: { equals: normalizeCallsign(toCallsign), mode: "insensitive" }, pilotState: null },

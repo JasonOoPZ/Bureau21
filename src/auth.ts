@@ -4,11 +4,9 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { isAccessBlocked, passwordFingerprint } from "@/lib/access";
-import { claimAvailableCallsign } from "@/lib/callsign";
-import { economyTx } from "@/lib/economy";
+import { provisionPilot } from "@/lib/pilot-provision";
 import { prisma } from "@/lib/prisma";
 import { clientIp, isRateLimited, recordRateLimitHit } from "@/lib/rate-limit";
-import { defaultStarterCharacter } from "@/lib/starter-characters";
 import { generateWalletAddress } from "@/lib/wallet";
 
 /** Failed credential sign-ins allowed per window before the key is locked. */
@@ -43,24 +41,6 @@ async function recordLoginFailure(ip: string, email: string): Promise<void> {
   } catch (error) {
     console.error("[auth] could not record failed login", error);
   }
-}
-
-/**
- * First OAuth sign-in: give the new user a pilot with a unique, legal
- * callsign straight away. Without this the pilot is created lazily from the
- * raw Google display name, which can collide with an existing callsign.
- */
-async function provisionPilot(userId: string, displayName: string | null | undefined): Promise<void> {
-  await economyTx(async (tx) => {
-    const existing = await tx.pilotState.findUnique({ where: { userId }, select: { id: true } });
-    if (existing) return;
-
-    const callsign = await claimAvailableCallsign(tx, displayName, userId);
-    await tx.user.update({ where: { id: userId }, data: { name: callsign } });
-    await tx.pilotState.create({
-      data: { userId, callsign, characterSlug: defaultStarterCharacter, appearanceNeedsSetup: true },
-    });
-  });
 }
 
 const providers: Array<ReturnType<typeof Credentials> | ReturnType<typeof Google>> = [

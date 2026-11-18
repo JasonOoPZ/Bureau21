@@ -7,6 +7,7 @@ import {
   settleLevelProgression,
   type Db,
 } from "@/lib/economy";
+import { findPilotByCallsign } from "@/lib/callsign";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { pvpDefenderLossAllowance, resolvePvpBattle } from "@/lib/battle-engine";
 import type { BattleOutcome, PvpPilotInput, PvpTarget } from "@/lib/battle-engine";
@@ -35,6 +36,10 @@ const MS_PER_MINUTE = 60_000;
 const PAIR_WINDOW_MS = 24 * 60 * MS_PER_MINUTE;
 const HERO_XP_WIN = 20;
 const HERO_XP_LOSS = 5;
+/** BattleLog.kind / BattleLog.role values. */
+const PVP_KIND = "pvp";
+const ROLE_ATTACKER = "attacker";
+const ROLE_DEFENDER = "defender";
 
 type Combatant = PilotState & { inventory: InventoryItem[] };
 
@@ -111,14 +116,20 @@ async function assertBattleAllowed(tx: Db, attacker: Combatant, defender: Combat
     }
   }
 
-  // Per-pair daily cap. BattleLog stores the opponent by callsign only, and
-  // each battle writes one row per side, so this counts battles between the
-  // two pilots in either direction.
+  // Per-pair daily cap. Each battle writes one row per side, so the attacker's
+  // rows against this opponent count battles between the two pilots in either
+  // direction. Matched on the opponent's pilot id, so a rename does not reset
+  // it. Rows written before `opponentPilotId` existed that the migration could
+  // not backfill are matched by name; they age out of the 24h window.
   const recentBetweenPair = await tx.battleLog.count({
     where: {
       pilotId: attacker.id,
-      opponentName: defender.callsign,
+      kind: PVP_KIND,
       createdAt: { gte: new Date(now.getTime() - PAIR_WINDOW_MS) },
+      OR: [
+        { opponentPilotId: defender.id },
+        { opponentPilotId: null, opponentName: defender.callsign },
+      ],
     },
   });
   if (recentBetweenPair >= GAME_CONSTANTS.PVP_PAIR_DAILY_CAP) {
@@ -134,16 +145,19 @@ async function assertBattleAllowed(tx: Db, attacker: Combatant, defender: Combat
  * the defender's row lock, and every battle writes its log row in the same
  * transaction, so concurrent battles cannot both spend the same allowance.
  *
- * BattleLog has no attacker/defender column, so the sum covers every PvP
- * credit loss in the window, including fights this pilot started and lost.
- * That only makes the cap stricter, never looser.
+ * Only losses taken while defending count (`role = "defender"`): credits a
+ * pilot lost in fights they started are their own risk and do not use up the
+ * allowance. Rows written before `role` existed (null) are still counted, as
+ * they were before, which is the stricter reading; they age out in 24h.
  */
 async function defenderLossAllowance(tx: Db, defender: Combatant, now: Date): Promise<number> {
   const recent = await tx.battleLog.aggregate({
     where: {
       pilotId: defender.id,
+      kind: PVP_KIND,
       creditsGained: { lt: 0 },
       createdAt: { gte: new Date(now.getTime() - PAIR_WINDOW_MS) },
+      OR: [{ role: ROLE_DEFENDER }, { role: null }],
     },
     _sum: { creditsGained: true },
   });
@@ -155,6 +169,7 @@ function toBattleInput(pilot: Combatant): PvpPilotInput {
     callsign: pilot.callsign,
     level: pilot.level,
     lifeForce: pilot.lifeForce,
+    bonusLifeForce: pilot.bonusLifeForce,
     strength: pilot.strength,
     speed: pilot.speed,
     confidence: pilot.confidence,
@@ -258,9 +273,9 @@ async function runBattle(tx: Db, attackerUserId: string, defenderUserId: string)
   await grantHeroXp(tx, attackerHeroes, attackerWon);
   await grantHeroXp(tx, defenderHeroes, !attackerWon);
 
-  // Auto-herbs: top the attacker back up to their natural max. Guarded so a
-  // herb is only spent when it actually heals, and LF is never lowered.
-  const attackerMaxLf = maxLifeForce({ level: attackerLevel });
+  // Auto-herbs: top the attacker back up to their max. Guarded so a herb is
+  // only spent when it actually heals, and LF is never lowered.
+  const attackerMaxLf = maxLifeForce({ level: attackerLevel, bonusLifeForce: attacker.bonusLifeForce });
   if (attacker.autoHerbs && outcome.attackerLfAfter < attackerMaxLf) {
     await guardedPilotUpdate(
       tx,
@@ -276,6 +291,9 @@ async function runBattle(tx: Db, attackerUserId: string, defenderUserId: string)
     data: [
       {
         pilotId: attacker.id,
+        opponentPilotId: defender.id,
+        role: ROLE_ATTACKER,
+        kind: PVP_KIND,
         opponentName: defender.callsign,
         result: attackerWon ? "win" : "loss",
         xpGained: outcome.attackerXp,
@@ -285,6 +303,9 @@ async function runBattle(tx: Db, attackerUserId: string, defenderUserId: string)
       },
       {
         pilotId: defender.id,
+        opponentPilotId: attacker.id,
+        role: ROLE_DEFENDER,
+        kind: PVP_KIND,
         opponentName: attacker.callsign,
         result: attackerWon ? "loss" : "win",
         xpGained: outcome.defenderXp,
@@ -328,10 +349,7 @@ export async function POST(request: Request) {
   // Resolve target: by userId or callsign lookup
   let resolvedTargetUserId = parsed.data.targetUserId;
   if (!resolvedTargetUserId && parsed.data.targetCallsign) {
-    const found = await prisma.pilotState.findFirst({
-      where: { callsign: { equals: parsed.data.targetCallsign, mode: "insensitive" } },
-      select: { userId: true },
-    });
+    const found = await findPilotByCallsign(prisma, parsed.data.targetCallsign);
     if (!found) return NextResponse.json({ error: "Pilot not found." }, { status: 404 });
     resolvedTargetUserId = found.userId;
   }

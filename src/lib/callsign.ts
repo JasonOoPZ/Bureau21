@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import type { Db } from "@/lib/economy";
 
@@ -5,11 +6,13 @@ import type { Db } from "@/lib/economy";
  * Callsigns identify pilots to other players (transfers, quickposts, PVP
  * targeting), so they must be unique ignoring case.
  *
- * There is no database unique index yet (it needs a schema change, see the
- * PR notes). Until then uniqueness is enforced here: every write of a
- * callsign goes through `claimCallsign`, which serializes writers of the
- * same name with a transaction-scoped advisory lock and then checks both
- * PilotState.callsign and User.name.
+ * The database guarantees it: `PilotState.callsignLower` holds the
+ * normalised name (`callsignKey`) under a unique index, and a trigger keeps
+ * it in step with `callsign` on every write. Every write of a callsign still
+ * goes through `claimCallsign` first, which serializes writers of the same
+ * name with a transaction-scoped advisory lock and also checks `User.name`
+ * (accounts that have no pilot yet reserve their name too), so a clash is
+ * reported as CallsignTakenError instead of a unique-index failure.
  */
 
 export const CALLSIGN_MIN = 2;
@@ -22,6 +25,26 @@ const SUFFIX_ATTEMPTS = 6;
 /** Trim and collapse inner whitespace so "Nova  21" and "Nova 21" are one name. */
 export function normalizeCallsign(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
+}
+
+/** The unique key for a callsign: normalised and lower-cased. */
+export function callsignKey(raw: string): string {
+  return normalizeCallsign(raw).toLowerCase();
+}
+
+/**
+ * The columns to write whenever a callsign is stored. Always spread this
+ * instead of writing `callsign` alone, so the unique key can never go stale.
+ */
+export function callsignFields(callsign: string): { callsign: string; callsignLower: string } {
+  return { callsign, callsignLower: callsignKey(callsign) };
+}
+
+/** True when a write lost a race for a callsign at the unique index. */
+export function isCallsignConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return false;
+  const target = error.meta?.target;
+  return Array.isArray(target) ? target.includes("callsignLower") : String(target ?? "").includes("callsignLower");
 }
 
 export const callsignSchema = z
@@ -43,23 +66,27 @@ export class CallsignTakenError extends Error {
 }
 
 async function lockCallsign(tx: Db, callsign: string): Promise<void> {
-  const lockKey = `callsign:${callsign.toLowerCase()}`;
+  const lockKey = `callsign:${callsignKey(callsign)}`;
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))::text AS locked`;
 }
 
 async function isCallsignTaken(tx: Db, callsign: string, exceptUserId?: string): Promise<boolean> {
-  const notSelf = exceptUserId ? { not: exceptUserId } : undefined;
-  const [pilot, user] = await Promise.all([
-    tx.pilotState.findFirst({
-      where: { callsign: { equals: callsign, mode: "insensitive" }, userId: notSelf },
-      select: { id: true },
-    }),
-    tx.user.findFirst({
-      where: { name: { equals: callsign, mode: "insensitive" }, id: notSelf },
-      select: { id: true },
-    }),
-  ]);
-  return Boolean(pilot || user);
+  // Sequential, not Promise.all: `tx` is one connection.
+  const pilot = await tx.pilotState.findUnique({
+    where: { callsignLower: callsignKey(callsign) },
+    select: { userId: true },
+  });
+  if (pilot && pilot.userId !== exceptUserId) return true;
+
+  // Accounts without a pilot yet hold their name too.
+  const user = await tx.user.findFirst({
+    where: {
+      name: { equals: callsign, mode: "insensitive" },
+      id: exceptUserId ? { not: exceptUserId } : undefined,
+    },
+    select: { id: true },
+  });
+  return Boolean(user);
 }
 
 /**
@@ -99,30 +126,27 @@ export async function claimAvailableCallsign(
   throw new CallsignTakenError();
 }
 
-export type PilotLookup =
-  | { status: "found"; pilot: { id: string; userId: string; callsign: string } }
-  | { status: "not_found" }
-  | { status: "ambiguous" };
-
-/**
- * Resolve a pilot by callsign for anything that moves value or messages.
- * Case-insensitive exact match; refuses to guess when legacy duplicates
- * exist (rows created before uniqueness was enforced).
- */
-export async function findPilotByCallsign(db: Db, rawCallsign: string): Promise<PilotLookup> {
-  const callsign = normalizeCallsign(rawCallsign);
-  if (!callsign) return { status: "not_found" };
-
-  const matches = await db.pilotState.findMany({
-    where: { callsign: { equals: callsign, mode: "insensitive" } },
-    select: { id: true, userId: true, callsign: true },
-    take: 2,
-  });
-
-  if (matches.length === 0) return { status: "not_found" };
-  if (matches.length > 1) return { status: "ambiguous" };
-  return { status: "found", pilot: matches[0] };
+export interface PilotRef {
+  id: string;
+  userId: string;
+  callsign: string;
 }
 
+/**
+ * Resolve a pilot by callsign (transfers, quickposts, attacks, watchlist,
+ * intel). One indexed lookup on the unique key: it ignores case and can never
+ * match two pilots.
+ */
+export async function findPilotByCallsign(db: Db, rawCallsign: string): Promise<PilotRef | null> {
+  const key = callsignKey(rawCallsign);
+  if (!key) return null;
+
+  return db.pilotState.findUnique({
+    where: { callsignLower: key },
+    select: { id: true, userId: true, callsign: true },
+  });
+}
+
+/** Two accounts without a pilot can still share a display name. */
 export const AMBIGUOUS_CALLSIGN_MESSAGE =
-  "More than one pilot uses that callsign, so it cannot be used as a recipient. Ask them to rename.";
+  "More than one account uses that name, so it cannot be used as a recipient. Ask them to rename.";

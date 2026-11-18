@@ -59,6 +59,8 @@ export interface PvpPilotInput {
   callsign: string;
   level: number;
   lifeForce: number;
+  /** Life Force bought with allocation points (part of the pilot's maximum). */
+  bonusLifeForce?: number;
   strength: number;
   speed: number;
   confidence: number;
@@ -98,8 +100,7 @@ function buildPvpFighter(
   const playerATK = Math.max(1, Math.floor(calculateATK(pilot.strength, pilot.atkSplit, weaponBonus) * heroAtkMult));
   const playerDEF = Math.max(0, Math.floor(calculateDEF(pilot.strength, pilot.atkSplit, defBonus) * heroDefMult));
   // Hero support scales the Life Force the pilot brings into the fight. LF is
-  // never clamped to the level-based max: HP bought with allocation points
-  // lives in `lifeForce` above it.
+  // never clamped down to the maximum.
   const startLf = Math.floor(pilot.lifeForce * heroLfMult);
   const playerMaxLf = Math.max(startLf, Math.floor(maxLifeForce(pilot) * heroLfMult));
 

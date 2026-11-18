@@ -57,6 +57,30 @@ export function economyTx<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
   return prisma.$transaction(fn, { maxWait: TX_MAX_WAIT_MS, timeout: TX_TIMEOUT_MS });
 }
 
+const PG_CHECK_VIOLATION = "23514";
+
+/**
+ * True when Postgres rejected a write with a CHECK constraint. Prisma reports
+ * it as P2004 on some paths and as a raw driver error carrying SQLSTATE 23514
+ * on others (`$queryRaw`, driver adapters, unknown request errors), so both
+ * the code and the message are inspected.
+ */
+export function isCheckViolation(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2004") return true;
+    if (error.code === "P2010" && String(error.meta?.code ?? "") === PG_CHECK_VIOLATION) return true;
+  }
+  if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
+    if (code === PG_CHECK_VIOLATION) return true;
+    return (
+      error.message.includes(PG_CHECK_VIOLATION) ||
+      /violates check constraint/i.test(error.message)
+    );
+  }
+  return false;
+}
+
 /**
  * Convert an error thrown by an economy operation into a response.
  * Unknown errors are re-thrown so they still surface as 500s.
@@ -64,6 +88,17 @@ export function economyTx<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
 export function economyErrorResponse(error: unknown): NextResponse {
   if (error instanceof EconomyError) {
     return NextResponse.json({ error: error.message, ...error.extra }, { status: error.status });
+  }
+  // A balance CHECK constraint refused the write (for example "credits >= 0").
+  // The guards in the WHERE clauses should make this unreachable; if a write
+  // ever slips past them the database says no, and that is the player's
+  // "not enough" answer, not a server fault.
+  if (isCheckViolation(error)) {
+    console.error("[economy] balance constraint refused a write", error);
+    return NextResponse.json(
+      { error: "That would take a balance below zero. Nothing was changed." },
+      { status: 400 }
+    );
   }
   // Lock contention / transaction timeout under a request flood: fail closed.
   if (

@@ -1,4 +1,4 @@
-import { AMBIGUOUS_CALLSIGN_MESSAGE, findPilotByCallsign } from "@/lib/callsign";
+import { findPilotByCallsign } from "@/lib/callsign";
 import { GAME_CONSTANTS } from "@/lib/constants";
 import { EconomyError, economyErrorResponse, economyTx, guardedPilotUpdate, type Db } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
@@ -121,11 +121,9 @@ export async function POST(request: Request) {
     if (action === "transfer") {
       if (amt < 1 || amt > pilot.credits) return json({ error: "Insufficient credits." }, 400);
       if (typeof recipientCallsign !== "string" || !recipientCallsign.trim()) return json({ error: "Recipient callsign required." }, 400);
-      // Never guess between pilots: credits sent to the wrong one are gone.
-      const lookup = await findPilotByCallsign(prisma, recipientCallsign);
-      if (lookup.status === "ambiguous") return json({ error: AMBIGUOUS_CALLSIGN_MESSAGE }, 409);
-      if (lookup.status === "not_found") return json({ error: "Pilot not found." }, 404);
-      const recipient = lookup.pilot;
+      // Resolved on the unique callsign key, so it can only ever be one pilot.
+      const recipient = await findPilotByCallsign(prisma, recipientCallsign);
+      if (!recipient) return json({ error: "Pilot not found." }, 404);
       if (recipient.userId === userId) return json({ error: "Cannot transfer to yourself." }, 400);
 
       const updated = await economyTx(async (tx) => {

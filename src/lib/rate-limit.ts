@@ -1,5 +1,4 @@
-import { createHash, randomBytes } from "crypto";
-import { Prisma } from "@prisma/client";
+import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -10,12 +9,10 @@ import { prisma } from "@/lib/prisma";
  *    and a cold start forgets everything. Fine for cheap per-user gameplay
  *    throttles, NOT for brute-force protection.
  *
- * 2. `durableRateLimit` / `claimOnce` - Postgres-backed, shared by every
- *    instance. Used for login, registration, password reset, quickposts and
- *    board votes. It stores its hits in the NextAuth `VerificationToken`
- *    table (unused otherwise: there is no email provider) so it needs no
- *    schema change. Rows are namespaced with the `rl:` identifier prefix.
- *    Follow-up: a dedicated table or Upstash Redis (see PR notes).
+ * 2. `durableRateLimit` - Postgres-backed, shared by every instance. Used
+ *    for login, registration, password reset, quickposts and board posts and
+ *    votes. One `RateLimitHit` row per hit, keyed by a SHA-256 hash and
+ *    expiring with its window.
  */
 
 export interface RateLimitResult {
@@ -92,7 +89,6 @@ export function rateLimit(key: string, maxRequests: number, windowMs: number): R
 
 // ── Durable (Postgres) limiter ──────────────────────────────────────────────
 
-const DURABLE_PREFIX = "rl:";
 /** Roughly one call in 25 also deletes expired limiter rows. */
 const DURABLE_SWEEP_CHANCE = 0.04;
 
@@ -101,29 +97,28 @@ function sha256(value: string): string {
 }
 
 /** Keys contain emails and IPs; only their hash is stored. */
-function durableIdentifier(key: string): string {
-  return `${DURABLE_PREFIX}${sha256(key)}`;
+function durableKey(key: string): string {
+  return sha256(key);
 }
 
 function sweepExpired(): void {
   if (Math.random() >= DURABLE_SWEEP_CHANCE) return;
-  prisma.verificationToken
-    .deleteMany({ where: { identifier: { startsWith: DURABLE_PREFIX }, expires: { lt: new Date() } } })
+  prisma.rateLimitHit
+    .deleteMany({ where: { expires: { lt: new Date() } } })
     .catch((error) => console.error("[rate-limit] sweep failed", error));
 }
 
 /** Count live hits for a key without recording one. */
 export async function isRateLimited(key: string, maxRequests: number, windowMs: number): Promise<RateLimitResult> {
-  const identifier = durableIdentifier(key);
   const now = new Date();
-  const live = { identifier, expires: { gt: now } };
+  const live = { key: durableKey(key), expires: { gt: now } };
 
-  const count = await prisma.verificationToken.count({ where: live });
+  const count = await prisma.rateLimitHit.count({ where: live });
   if (count < maxRequests) {
     return { limited: false, remaining: maxRequests - count, retryAfterMs: 0 };
   }
 
-  const oldest = await prisma.verificationToken.findFirst({
+  const oldest = await prisma.rateLimitHit.findFirst({
     where: live,
     orderBy: { expires: "asc" },
     select: { expires: true },
@@ -134,12 +129,8 @@ export async function isRateLimited(key: string, maxRequests: number, windowMs: 
 
 /** Record one hit for a key. It stops counting after `windowMs`. */
 export async function recordRateLimitHit(key: string, windowMs: number): Promise<void> {
-  await prisma.verificationToken.create({
-    data: {
-      identifier: durableIdentifier(key),
-      token: randomBytes(24).toString("hex"),
-      expires: new Date(Date.now() + windowMs),
-    },
+  await prisma.rateLimitHit.create({
+    data: { key: durableKey(key), expires: new Date(Date.now() + windowMs) },
   });
   sweepExpired();
 }
@@ -148,8 +139,8 @@ export async function recordRateLimitHit(key: string, windowMs: number): Promise
  * Shared sliding-window limiter: check, then record when allowed.
  *
  * Check and record are two statements, so K truly simultaneous requests can
- * overshoot the limit by up to K-1. That is acceptable for throttling; use
- * `claimOnce` where exactly-once matters.
+ * overshoot the limit by up to K-1. That is acceptable for throttling; where
+ * exactly-once matters use a unique constraint (as board votes do).
  *
  * If the database is unreachable it degrades to the in-memory limiter rather
  * than failing open.
@@ -166,32 +157,6 @@ export async function durableRateLimit(key: string, maxRequests: number, windowM
   }
 }
 
-/**
- * Atomic "at most once per window" claim, e.g. one vote per user per post.
- * The row's token is derived from the key and `token` is UNIQUE, so the
- * database rejects a second concurrent claim.
- * Returns true when this call won the claim.
- */
-export async function claimOnce(key: string, windowMs: number): Promise<boolean> {
-  const identifier = durableIdentifier(key);
-  const token = sha256(`once:${key}`);
-
-  await prisma.verificationToken.deleteMany({ where: { token, expires: { lt: new Date() } } });
-  try {
-    await prisma.verificationToken.create({
-      data: { identifier, token, expires: new Date(Date.now() + windowMs) },
-    });
-    return true;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return false;
-    throw error;
-  }
-}
-
-/** Release a claim taken with `claimOnce` (the guarded action did not happen). */
-export async function releaseClaim(key: string): Promise<void> {
-  await prisma.verificationToken.deleteMany({ where: { token: sha256(`once:${key}`) } });
-}
 
 type HeaderSource = Headers | Record<string, string | string[] | undefined> | undefined | null;
 

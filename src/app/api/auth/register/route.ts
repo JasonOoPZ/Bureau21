@@ -2,7 +2,13 @@ import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { CallsignTakenError, callsignSchema, claimCallsign } from "@/lib/callsign";
+import {
+  CallsignTakenError,
+  callsignFields,
+  callsignSchema,
+  claimCallsign,
+  isCallsignConflict,
+} from "@/lib/callsign";
 import { economyTx } from "@/lib/economy";
 import { clientIp, durableRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { defaultStarterCharacter, starterCharacters } from "@/lib/starter-characters";
@@ -96,7 +102,7 @@ export async function POST(request: Request) {
           ...(walletAddress ? { walletAddress } : {}),
           pilotState: {
             create: {
-              callsign: pilotName,
+              ...callsignFields(pilotName),
               characterSlug: starterCharacter ?? defaultStarterCharacter,
               appearanceNeedsSetup: true,
             },
@@ -107,8 +113,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof CallsignTakenError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof CallsignTakenError || isCallsignConflict(error)) {
+      return NextResponse.json({ error: new CallsignTakenError().message }, { status: 409 });
     }
     if (error instanceof EmailInUseError) {
       return genericFailure();

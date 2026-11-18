@@ -1,4 +1,10 @@
-import { CallsignTakenError, callsignSchema as callsignField, claimCallsign } from "@/lib/callsign";
+import {
+  CallsignTakenError,
+  callsignFields,
+  callsignSchema as callsignField,
+  claimCallsign,
+  isCallsignConflict,
+} from "@/lib/callsign";
 import { economyErrorResponse, economyTx } from "@/lib/economy";
 import { getOrCreatePilotState } from "@/lib/game-state";
 import { prisma } from "@/lib/prisma";
@@ -98,12 +104,12 @@ export async function POST(request: Request) {
       // other players resolve it from (PilotState.callsign and User.name).
       await economyTx(async (tx) => {
         await claimCallsign(tx, callsign, userId);
-        await tx.pilotState.update({ where: { userId }, data: { callsign } });
+        await tx.pilotState.update({ where: { userId }, data: callsignFields(callsign) });
         await tx.user.update({ where: { id: userId }, data: { name: callsign } });
       });
     } catch (error) {
-      if (error instanceof CallsignTakenError) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+      if (error instanceof CallsignTakenError || isCallsignConflict(error)) {
+        return NextResponse.json({ error: new CallsignTakenError().message }, { status: 409 });
       }
       return economyErrorResponse(error);
     }
