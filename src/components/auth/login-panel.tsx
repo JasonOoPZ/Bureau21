@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import Image from "next/image";
+import { LandingExperience } from "./landing-experience";
 import { FormEvent, useMemo, useState } from "react";
 
 type AuthMode = "signin" | "onboarding";
@@ -138,61 +138,14 @@ export function LoginPanel() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
-      <Image
-        className="absolute inset-0 -z-30 h-full w-full object-cover scale-105 blur-[2px]"
-        src="/bureau21-welcome.png"
-        alt="Bureau 21 landing background"
-        fill
-        priority
-      />
-      <div className="absolute inset-0 -z-20 bg-gradient-to-b from-black/70 via-slate-950/60 to-black/80" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(600px_circle_at_20%_15%,rgba(6,182,212,0.15),transparent),radial-gradient(500px_circle_at_80%_10%,rgba(168,85,247,0.12),transparent),radial-gradient(700px_circle_at_50%_95%,rgba(245,158,11,0.08),transparent)]" />
-      <div className="pointer-events-none absolute inset-0 -z-[5] opacity-[0.025] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(255,255,255,0.1)_2px,rgba(255,255,255,0.1)_4px)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-[4] h-40 bg-gradient-to-b from-black/50 to-transparent" />
-
-      <section className="relative mx-auto flex min-h-[56vh] max-w-5xl flex-col items-center justify-center px-4 pt-14 text-center">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-          <p className="font-display text-[10px] uppercase tracking-[0.6em] text-emerald-300/80">Signal Acquired</p>
-        </div>
-
-        <h1 className="mt-5 font-display text-6xl font-black uppercase leading-none tracking-tight sm:text-7xl lg:text-8xl">
-          <span className="bg-gradient-to-b from-white via-white to-slate-400 bg-clip-text text-transparent drop-shadow-[0_0_40px_rgba(255,255,255,0.15)]">Bureau</span>
-          <span className="ml-3 bg-gradient-to-b from-cyan-300 via-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_50px_rgba(34,211,238,0.3)] sm:ml-4">21</span>
-        </h1>
-
-        <p className="mt-5 max-w-lg text-sm leading-relaxed text-slate-300/90 sm:text-base">
-          A <span className="font-semibold text-amber-300">free-to-play</span> browser{" "}
-          <span className="font-display font-bold text-fuchsia-400">MMORPG</span> set aboard a
-          deep-space orbital station. Build your pilot, run missions, and dominate through{" "}
-          <span className="font-semibold text-red-400">PVP</span>{" "}
-          <span className="text-slate-500">&amp;</span>{" "}
-          <span className="font-semibold text-sky-400">PVE</span> combat.
-        </p>
-
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <span className="font-display rounded-full border border-cyan-400/40 bg-cyan-950/50 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(34,211,238,0.1)]">Browser-First</span>
-          <span className="font-display rounded-full border border-red-400/35 bg-red-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-red-300 shadow-[0_0_18px_rgba(239,68,68,0.1),inset_0_1px_0_rgba(239,68,68,0.08)]">PVP &amp; PVE</span>
-          <span className="font-display rounded-full border border-fuchsia-400/35 bg-fuchsia-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-fuchsia-300 shadow-[0_0_18px_rgba(192,38,211,0.1),inset_0_1px_0_rgba(192,38,211,0.08)]">MMORPG</span>
-          <span className="font-display rounded-full border border-amber-400/35 bg-amber-950/40 px-5 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-amber-300 shadow-[0_0_18px_rgba(245,158,11,0.1),inset_0_1px_0_rgba(245,158,11,0.08)]">Free-to-Play</span>
-        </div>
-
-        <div className="mt-12 flex flex-col items-center gap-1.5">
-          <span className="font-display text-[8px] uppercase tracking-[0.4em] text-slate-500">Board the Station</span>
-          <svg className="h-4 w-4 animate-bounce text-cyan-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </section>
-
+    <LandingExperience onBoard={() => setMode("onboarding")} onSignIn={() => setMode("signin")}>
       <section className="relative mx-auto max-w-md px-4 pb-20 pt-4">
         <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-950/85 shadow-[0_8px_80px_rgba(0,0,0,0.5),0_0_40px_rgba(8,145,178,0.08)] backdrop-blur-2xl">
           <div className="h-[2px] bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
           <div className="p-5 sm:p-7">
             <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-black/50 p-1 font-display text-xs uppercase tracking-[0.2em]">
-              <button type="button" onClick={() => setMode("signin")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "signin" ? "bg-cyan-500/20 text-cyan-200 shadow-[inset_0_1px_0_rgba(34,211,238,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign In</button>
-              <button type="button" onClick={() => setMode("onboarding")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "onboarding" ? "bg-amber-500/20 text-amber-200 shadow-[inset_0_1px_0_rgba(245,158,11,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign Up</button>
+              <button type="button" aria-pressed={mode === "signin"} onClick={() => setMode("signin")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "signin" ? "bg-cyan-500/20 text-cyan-200 shadow-[inset_0_1px_0_rgba(34,211,238,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign In</button>
+              <button type="button" aria-pressed={mode === "onboarding"} onClick={() => setMode("onboarding")} className={`rounded-md px-3 py-2.5 transition-all ${mode === "onboarding" ? "bg-amber-500/20 text-amber-200 shadow-[inset_0_1px_0_rgba(245,158,11,0.15)]" : "text-slate-500 hover:text-slate-300"}`}>Sign Up</button>
             </div>
 
             <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="mb-5 flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700/80 bg-slate-900/80 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
@@ -252,11 +205,11 @@ export function LoginPanel() {
             )}
 
             {notice ? (
-              <p className="mt-5 rounded-lg border border-cyan-500/20 bg-cyan-950/20 p-3 font-display text-[10px] uppercase tracking-[0.15em] text-cyan-200/90">{notice}</p>
+              <p role="status" className="mt-5 rounded-lg border border-cyan-500/20 bg-cyan-950/20 p-3 font-display text-[10px] uppercase tracking-[0.15em] text-cyan-200/90">{notice}</p>
             ) : null}
           </div>
         </div>
       </section>
-    </main>
+    </LandingExperience>
   );
 }
